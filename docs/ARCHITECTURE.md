@@ -72,13 +72,13 @@ Input Directory          Tool Pipeline              Output Directory
 **Responsibilities**:
 - Check required files exist (metadata.yaml, docker-compose.yml, config.yml)
 - Validate JSON and YAML syntax
-- Validate against JSON schemas
+- Validate using Pydantic models
 - Perform cross-file consistency checks
 - Collect and format validation errors
 
 **Key Design Decisions**:
 - Fails fast on first validation error (or collects all errors with --strict)
-- Uses jsonschema library for declarative validation
+- Uses Pydantic models for type-safe validation with Python type hints
 - Custom validators for cross-file checks
 - Clear error messages with file paths and line numbers
 
@@ -95,8 +95,8 @@ Input Directory          Tool Pipeline              Output Directory
 - Check Docker Compose schema version
 
 **Stage 3 - Schema Validation**:
-- Validate metadata.yaml against schema
-- Validate config.yml against schema
+- Validate metadata.yaml using Pydantic model
+- Validate config.yml using Pydantic model
 - Check required fields present
 - Validate format constraints (names, versions, emails)
 
@@ -491,8 +491,8 @@ Package changes and checksums
 │   └── systemd/
 │       └── service.j2
 └── schemas/
-    ├── metadata.schema.json
-    └── config.schema.json
+    ├── metadata.py
+    └── config.py
 
 /usr/share/doc/container-packaging-tools/
 ├── README.md
@@ -833,11 +833,11 @@ ERROR: <Category>: <Problem>
 
 ### Schema Documentation
 
-**JSON Schemas**:
-- Embedded descriptions
-- Examples for each field
-- Format specifications
-- Validation rules
+**Pydantic Models**:
+- Python docstrings for model classes
+- `Field` descriptions for each attribute
+- Examples provided via `Field`'s `example` parameter
+- Custom validators for complex validation logic
 
 ## References
 
@@ -856,6 +856,7 @@ ERROR: <Category>: <Problem>
 - [Docker Compose Specification](https://docs.docker.com/compose/compose-file/) - Compose format
 - [Jinja2 Documentation](https://jinja.palletsprojects.com/) - Template engine
 - [JSON Schema](https://json-schema.org/) - Validation specification
+- [Pydantic Documentation](https://docs.pydantic.dev/) - Data validation and settings management
 
 ## Document History
 

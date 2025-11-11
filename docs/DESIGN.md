@@ -132,7 +132,7 @@ The metadata file uses YAML format for human readability (comments, no quotes re
 
 ```python
 from pydantic import BaseModel, Field, HttpUrl, EmailStr, field_validator
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 
 class WebUI(BaseModel):
     enabled: bool
@@ -849,7 +849,7 @@ if __name__ == "__main__":
 
 ### Phase 1 (Current)
 - Basic package generation
-- JSON schema validation
+- Schema validation using Pydantic
 - Template system
 - systemd service generation
 - AppStream metadata generation
