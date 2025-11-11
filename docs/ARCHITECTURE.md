@@ -408,7 +408,8 @@ Package changes and checksums
 
 **Code Quality**:
 - ruff: Fast Python linter and formatter (replaces flake8 and black)
-- ty (typos): Spell checker for code
+- ty: Fast Rust-based Python type checker (similar to mypy)
+- typos: Spell checker for code
 
 ### Build Tools
 
