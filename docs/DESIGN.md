@@ -73,11 +73,13 @@ The tool is distributed as a Debian package: `container-packaging-tools`
 │   │   ├── changelog.j2
 │   │   ├── copyright.j2
 │   │   └── compat
-│   └── systemd/
-│       └── service.j2                  # systemd service template
+│   ├── systemd/
+│   │   └── service.j2                  # systemd service template
+│   └── appstream/
+│       └── metainfo.xml.j2             # AppStream metadata template
 └── schemas/
-    ├── metadata.schema.json            # JSON schema for metadata.json
-    └── config.schema.json              # JSON schema for config.yml
+    ├── metadata.py                     # Pydantic model for metadata.yaml
+    └── config.py                       # Pydantic model for config.yml
 
 /usr/share/doc/container-packaging-tools/
 ├── README.md
@@ -90,7 +92,7 @@ The tool is distributed as a Debian package: `container-packaging-tools`
 ```
 Depends: python3 (>= 3.9),
          python3-jinja2,
-         python3-jsonschema,
+         python3-pydantic (>= 2.0),
          python3-yaml,
          dpkg-dev,
          debhelper (>= 12)
@@ -102,13 +104,13 @@ The tool expects a directory containing these files:
 
 ### Required Files
 
-1. **metadata.json** - Package metadata and configuration
+1. **metadata.yaml** - Package metadata and configuration
 2. **docker-compose.yml** - Docker Compose configuration
 3. **config.yml** - User-configurable parameters
 
 ### Optional Files
 
-4. **icon.png** - Application icon (64x64+ PNG, square)
+4. **icon.svg** or **icon.png** - Application icon (SVG preferred, or PNG 64x64+, square)
 5. **screenshot*.png** - Screenshots
 6. **README.md** - Additional documentation
 
@@ -116,162 +118,79 @@ The tool expects a directory containing these files:
 
 ```
 app-definition/
-├── metadata.json          # Required
+├── metadata.yaml          # Required
 ├── docker-compose.yml     # Required
 ├── config.yml             # Required
-├── icon.png               # Optional
+├── icon.svg               # Optional (or icon.png)
 ├── screenshot1.png        # Optional
 └── README.md              # Optional
 ```
 
-### metadata.json Schema
+### metadata.yaml Format
 
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "required": [
-    "name",
-    "package_name",
-    "version",
-    "description",
-    "maintainer",
-    "license",
-    "tags",
-    "debian_section",
-    "architecture"
-  ],
-  "properties": {
-    "name": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Human-readable application name"
-    },
-    "package_name": {
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9+.-]+$",
-      "description": "Debian package name (lowercase, must end with -container)"
-    },
-    "version": {
-      "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[0-9]+)?$",
-      "description": "Package version (semver + optional Debian revision)"
-    },
-    "upstream_version": {
-      "type": "string",
-      "description": "Original application version"
-    },
-    "description": {
-      "type": "string",
-      "maxLength": 80,
-      "description": "Short description for package lists"
-    },
-    "long_description": {
-      "type": "string",
-      "description": "Detailed multi-line description"
-    },
-    "homepage": {
-      "type": "string",
-      "format": "uri",
-      "description": "Project homepage URL"
-    },
-    "icon": {
-      "type": "string",
-      "description": "Relative path to icon file"
-    },
-    "screenshots": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Array of screenshot filenames"
-    },
-    "maintainer": {
-      "type": "string",
-      "pattern": "^[^<>]+<[^@]+@[^>]+>$",
-      "description": "Package maintainer (Name <email>)"
-    },
-    "license": {
-      "type": "string",
-      "description": "SPDX license identifier"
-    },
-    "tags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "minItems": 1,
-      "description": "Array of Debian tags (debtags)"
-    },
-    "debian_section": {
-      "type": "string",
-      "enum": ["admin", "comm", "database", "devel", "doc", "editors", "games", "gnome", "graphics", "kde", "mail", "net", "news", "science", "sound", "text", "utils", "web", "x11"],
-      "description": "Debian section"
-    },
-    "architecture": {
-      "type": "string",
-      "enum": ["all", "amd64", "arm64", "armhf", "i386"],
-      "description": "Target architecture"
-    },
-    "depends": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Package dependencies (Debian control syntax)"
-    },
-    "recommends": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Recommended packages"
-    },
-    "suggests": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Suggested packages"
-    },
-    "web_ui": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "path": {
-          "type": "string"
-        },
-        "port": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 65535
-        },
-        "protocol": {
-          "type": "string",
-          "enum": ["http", "https"]
-        }
-      },
-      "description": "Web UI configuration"
-    },
-    "default_config": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      },
-      "description": "Default environment variables"
-    }
-  }
-}
+The metadata file uses YAML format for human readability (comments, no quotes required, etc.). The structure is validated using a Pydantic model:
+
+```python
+from pydantic import BaseModel, Field, HttpUrl, EmailStr, field_validator
+from typing import Optional, List, Dict
+
+class WebUI(BaseModel):
+    enabled: bool
+    path: Optional[str] = None
+    port: Optional[int] = Field(None, ge=1, le=65535)
+    protocol: Optional[str] = Field(None, pattern="^(http|https)$")
+
+class PackageMetadata(BaseModel):
+    """Pydantic model for package metadata."""
+
+    # Required fields
+    name: str = Field(min_length=1, description="Human-readable application name")
+    package_name: str = Field(pattern=r"^[a-z0-9][a-z0-9+.-]+$",
+                              description="Debian package name (must end with -container)")
+    version: str = Field(pattern=r"^[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9]+)?$",
+                        description="Package version (semver + optional Debian revision)")
+    description: str = Field(max_length=80, description="Short description for package lists")
+    maintainer: str = Field(pattern=r"^[^<>]+<[^@]+@[^>]+>$",
+                           description="Package maintainer (Name <email>)")
+    license: str = Field(description="SPDX license identifier")
+    tags: List[str] = Field(min_length=1, description="Debian tags (debtags)")
+    debian_section: Literal["admin", "comm", "database", "devel", "doc", "editors",
+                           "games", "gnome", "graphics", "kde", "mail", "net", "news",
+                           "science", "sound", "text", "utils", "web", "x11"]
+    architecture: Literal["all", "amd64", "arm64", "armhf", "i386"]
+
+    # Optional fields
+    upstream_version: Optional[str] = None
+    long_description: Optional[str] = None
+    homepage: Optional[HttpUrl] = None
+    icon: Optional[str] = None
+    screenshots: Optional[List[str]] = None
+    depends: Optional[List[str]] = None
+    recommends: Optional[List[str]] = None
+    suggests: Optional[List[str]] = None
+    web_ui: Optional[WebUI] = None
+    appstream_categories: Optional[List[str]] = None
+    default_config: Optional[Dict[str, str]] = None
+
+    @field_validator('package_name')
+    def package_name_must_end_with_container(cls, v):
+        if not v.endswith('-container'):
+            raise ValueError('package_name must end with -container')
+        return v
+
+    @field_validator('tags')
+    def tags_must_include_container_app(cls, v):
+        if 'role::container-app' not in v:
+            raise ValueError('tags must include role::container-app')
+        return v
 ```
 
 ### docker-compose.yml Requirements
 
 - Must be valid Docker Compose v3.8+ format
 - Should use environment variable substitution: `${VAR:-default}`
-- Should define named volumes for persistence
-- Should use `restart: unless-stopped`
+- Should use bind mounts for persistence (not named volumes)
+- Must NOT include restart policies (systemd manages lifecycle)
 - Should set meaningful `container_name`
 
 ### config.yml Schema
@@ -363,8 +282,8 @@ output-directory/
 │   │   └── <package>.service    # systemd service file
 │   ├── docker-compose.yml       # Copied from input
 │   ├── config.yml               # Copied from input
-│   ├── metadata.json            # Copied from input
-│   ├── icon.png                 # Copied from input (if present)
+│   ├── metadata.yaml            # Copied from input
+│   ├── icon.(svg|png)           # Copied from input (if present)
 │   └── .env.template            # Generated from default_config
 └── <package-name>_<version>_<arch>.deb  # Built package (after dpkg-buildpackage)
 ```
@@ -403,13 +322,16 @@ override_dh_auto_install:
 		debian/<package>/var/lib/container-apps/<package>/docker-compose.yml
 	install -D -m 644 config.yml \
 		debian/<package>/etc/container-apps/<package>/config.yml
-	install -D -m 644 metadata.json \
-		debian/<package>/var/lib/container-apps/<package>/metadata.json
+	install -D -m 644 metadata.yaml \
+		debian/<package>/var/lib/container-apps/<package>/metadata.yaml
 	install -D -m 644 .env.template \
 		debian/<package>/var/lib/container-apps/<package>/.env.template
 
-	# Install icon if present
-	if [ -f icon.png ]; then \
+	# Install icon if present (SVG or PNG)
+	if [ -f icon.svg ]; then \
+		install -D -m 644 icon.svg \
+			debian/<package>/usr/share/pixmaps/<package>.svg; \
+	elif [ -f icon.png ]; then \
 		install -D -m 644 icon.png \
 			debian/<package>/usr/share/pixmaps/<package>.png; \
 	fi
@@ -589,6 +511,8 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
+**Note**: Type=oneshot with RemainAfterExit=yes ensures systemd tracks the service state. The restart policy is handled by systemd (automatic restart on failure), not by Docker Compose.
+
 ## Path Conventions
 
 All generated packages follow these standard paths:
@@ -600,7 +524,7 @@ All generated packages follow these standard paths:
 
 **Contents**:
 - `docker-compose.yml` - Docker Compose configuration
-- `metadata.json` - Application metadata (for UI consumption)
+- `metadata.yaml` - Application metadata (for UI consumption)
 - `.env.template` - Environment variable template
 
 ### Configuration Directory
@@ -628,9 +552,16 @@ All generated packages follow these standard paths:
 **Permissions**: `root:root`, `0644` (files), `0755` (directories)
 
 ### Icon
-**Path**: `/usr/share/pixmaps/<package-name>.png`
-**Purpose**: Application icon for desktop/UI
+**Path**: `/usr/share/pixmaps/<package-name>.(svg|png)`
+**Purpose**: Application icon for Cockpit/UI (SVG preferred, PNG supported)
 **Permissions**: `root:root`, `0644`
+**Note**: `/usr/share/pixmaps` is appropriate for Cockpit modules and system utilities
+
+### AppStream Metadata
+**Path**: `/usr/share/metainfo/<package-name>.metainfo.xml`
+**Purpose**: Application metadata for software centers (GNOME Software, KDE Discover)
+**Permissions**: `root:root`, `0644`
+**Note**: Enables discovery in Linux software centers beyond Cockpit
 
 ### Documentation
 **Path**: `/usr/share/doc/<package-name>/`
@@ -648,7 +579,7 @@ All generated packages follow these standard paths:
 The tool validates all input files before generating packages:
 
 1. **JSON Schema Validation**:
-   - Validate `metadata.json` against schema
+   - Validate `metadata.yaml` against schema
    - Check required fields present
    - Verify format constraints (package name, version, email, etc.)
 
@@ -656,6 +587,8 @@ The tool validates all input files before generating packages:
    - Parse YAML syntax
    - Verify Docker Compose schema (v3.8+)
    - Check for environment variable substitution
+   - Warn if restart policies are present (systemd manages lifecycle)
+   - Recommend bind mounts over named volumes
 
 3. **Config Validation**:
    - Parse YAML syntax
@@ -665,7 +598,7 @@ The tool validates all input files before generating packages:
 4. **File Checks**:
    - Verify required files present
    - Check file permissions
-   - Validate image formats (PNG for icons)
+   - Validate image formats (SVG or PNG for icons, PNG for screenshots)
 
 5. **Cross-Validation**:
    - Ensure config.yml field IDs present in default_config or docker-compose.yml
@@ -696,14 +629,14 @@ Validation errors include:
 
 **Example Error Output**:
 ```
-ERROR: Validation failed for metadata.json
+ERROR: Validation failed for metadata.yaml
   Line 12: Field 'package_name' must end with '-container'
     Current value: 'signalk-server'
     Suggested fix: 'signalk-server-container'
 
 ERROR: docker-compose.yml missing required environment variable
   Line 8: Environment variable 'HTTP_PORT' used but not in default_config
-  Add to metadata.json: "default_config": {"HTTP_PORT": "3000"}
+  Add to metadata.yaml: "default_config": {"HTTP_PORT": "3000"}
 ```
 
 ## Build Process
@@ -807,7 +740,7 @@ tests/
 │   │   ├── simple-app/          # Minimal valid app
 │   │   └── complex-app/         # Full-featured app
 │   └── invalid/
-│       ├── missing-metadata/    # Missing metadata.json
+│       ├── missing-metadata/    # Missing metadata.yaml
 │       ├── bad-package-name/    # Invalid package name
 │       └── schema-violation/    # Schema validation failure
 ├── test_validation.py
@@ -828,7 +761,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
-        run: sudo apt install python3-jinja2 python3-jsonschema python3-yaml dpkg-dev debhelper
+        run: sudo apt install python3-jinja2 python3-pydantic python3-yaml dpkg-dev debhelper
       - name: Run unit tests
         run: python3 -m pytest tests/
       - name: Test package generation
@@ -847,18 +780,18 @@ jobs:
 #!/usr/bin/env python3
 
 import argparse
-import json
 import sys
 from pathlib import Path
-from typing import Dict, Any
 
 from jinja2 import Environment, FileSystemLoader
-from jsonschema import validate, ValidationError
+from pydantic import ValidationError
 import yaml
+
+from schemas.metadata import PackageMetadata
+from schemas.config import ConfigSchema
 
 VERSION = "1.0.0"
 TEMPLATES_DIR = Path("/usr/share/container-packaging-tools/templates")
-SCHEMAS_DIR = Path("/usr/share/container-packaging-tools/schemas")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -874,8 +807,7 @@ def main():
 
     try:
         # Load and validate metadata
-        metadata = load_metadata(args.input_dir)
-        validate_metadata(metadata)
+        metadata = load_and_validate_metadata(args.input_dir)
 
         if args.validate:
             print("Validation successful!")
@@ -883,11 +815,11 @@ def main():
 
         # Generate package
         generate_package(metadata, args.input_dir, args.output)
-        print(f"Package generated successfully: {metadata['package_name']}")
+        print(f"Package generated successfully: {metadata.package_name}")
         return 0
 
     except ValidationError as e:
-        print(f"ERROR: Validation failed: {e}", file=sys.stderr)
+        print(f"ERROR: Validation failed:\n{e}", file=sys.stderr)
         return 1
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
@@ -896,18 +828,13 @@ def main():
             traceback.print_exc()
         return 1
 
-def load_metadata(input_dir: Path) -> Dict[str, Any]:
-    """Load and parse metadata.json"""
-    metadata_file = Path(input_dir) / "metadata.json"
+def load_and_validate_metadata(input_dir: Path) -> PackageMetadata:
+    """Load and validate metadata.yaml using Pydantic"""
+    metadata_file = Path(input_dir) / "metadata.yaml"
     with open(metadata_file) as f:
-        return json.load(f)
-
-def validate_metadata(metadata: Dict[str, Any]):
-    """Validate metadata against JSON schema"""
-    schema_file = SCHEMAS_DIR / "metadata.schema.json"
-    with open(schema_file) as f:
-        schema = json.load(f)
-    validate(instance=metadata, schema=schema)
+        data = yaml.safe_load(f)
+    # Pydantic validates during model construction
+    return PackageMetadata.model_validate(data)
 
 def generate_package(metadata: Dict[str, Any], input_dir: Path, output_dir: Path):
     """Generate Debian package from app definition"""
@@ -925,9 +852,9 @@ if __name__ == "__main__":
 - JSON schema validation
 - Template system
 - systemd service generation
+- AppStream metadata generation
 
 ### Phase 2
-- AppStream metadata generation
 - Multi-architecture support
 - Automated testing in generated packages
 - Container image validation
@@ -958,4 +885,4 @@ if __name__ == "__main__":
 - [systemd Service Units](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
 - [Docker Compose Specification](https://docs.docker.com/compose/compose-file/)
 - [Jinja2 Documentation](https://jinja.palletsprojects.com/)
-- [JSON Schema](https://json-schema.org/)
+- [Pydantic Documentation](https://docs.pydantic.dev/)
