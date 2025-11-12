@@ -154,6 +154,8 @@ def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
         value_str = (
             str(value)
             .replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
             .replace('"', '\\"')
             .replace("$", "$$")
             .replace("`", "\\`")

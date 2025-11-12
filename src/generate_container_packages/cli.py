@@ -255,8 +255,9 @@ def check_dependencies() -> None:
         import pydantic  # noqa: F401
         import yaml  # noqa: F401
     except ImportError as e:
+        module_name = getattr(e, "name", None) or "unknown module"
         raise ImportError(
-            f"Missing required Python dependency: {e.name}\n"
+            f"Missing required Python dependency: {module_name}\n"
             "Install with: pip install -e ."
         ) from e
 
