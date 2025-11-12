@@ -19,7 +19,7 @@
   <icon type="local">/usr/share/pixmaps/{{ package.name }}.{{ icon_extension }}</icon>
   {% endif %}
   <releases>
-    <release version="{{ package.version }}" date="{{ timestamp[:10] }}">
+    <release version="{{ package.version }}" date="{{ date_only }}">
       <description>
         <p>Initial release</p>
       </description>

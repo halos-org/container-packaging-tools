@@ -6,10 +6,7 @@ case "$1" in
         # Remove configuration directory and all contents
         rm -rf {{ paths.etc }}
 
-        # Remove service file
-        rm -f {{ paths.systemd }}/{{ package.name }}.service
-
-        # Reload systemd
+        # Reload systemd (service file removed automatically by dpkg)
         systemctl daemon-reload || true
         ;;
 

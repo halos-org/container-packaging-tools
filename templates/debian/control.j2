@@ -10,7 +10,7 @@ Homepage: {{ package.homepage }}
 
 Package: {{ package.name }}
 Architecture: {{ package.architecture }}
-Depends: ${misc:Depends}, docker-compose{% if package.depends %}, {{ package.depends }}{% endif %}
+Depends: ${misc:Depends}, docker-compose | docker-compose-plugin{% if package.depends %}, {{ package.depends }}{% endif %}
 
 {% if package.recommends %}
 Recommends: {{ package.recommends }}

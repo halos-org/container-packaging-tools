@@ -28,6 +28,8 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         "web_ui": metadata.get("web_ui", {}),
         "default_config": metadata.get("default_config", {}),
         "timestamp": app_def.timestamp,
+        "timestamp_rfc2822": app_def.timestamp_rfc2822,
+        "date_only": app_def.date_only,
         "tool_version": app_def.tool_version,
         "has_icon": app_def.icon_path is not None,
         "icon_extension": _get_icon_extension(app_def.icon_path),
@@ -54,7 +56,7 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
         "section": metadata["debian_section"],
         "description": metadata["description"],
         "long_description": format_long_description(
-            metadata.get("long_description", metadata["description"])
+            metadata.get("long_description", "")
         ),
         "homepage": metadata.get("homepage", ""),
         "maintainer": metadata["maintainer"],

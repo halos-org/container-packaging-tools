@@ -40,7 +40,12 @@ class AppDefinition:
         self.screenshot_paths = screenshot_paths or []
 
         # Computed fields
-        self.timestamp = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc)
+        self.timestamp = now.isoformat()  # ISO 8601 for general use
+        self.timestamp_rfc2822 = now.strftime(
+            "%a, %d %b %Y %H:%M:%S %z"
+        )  # RFC 2822 for Debian changelog
+        self.date_only = now.strftime("%Y-%m-%d")  # YYYY-MM-DD for AppStream
         self.tool_version = __version__
 
 
