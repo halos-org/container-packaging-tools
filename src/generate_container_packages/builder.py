@@ -63,8 +63,13 @@ def build_package(
 
         return deb_file
 
+    except BuildError:
+        # Re-raise expected build errors without preservation message
+        # (cleanup still happens in finally block)
+        raise
+
     except Exception:
-        # Preserve build directory on error if requested
+        # Preserve build directory on unexpected error if requested
         if keep_temp:
             print(f"Build directory preserved at: {build_dir}")
         raise
@@ -75,9 +80,7 @@ def build_package(
             shutil.rmtree(build_dir)
 
 
-def prepare_build_directory(
-    app_def: AppDefinition, rendered_dir: Path, source_dir: Path
-) -> None:
+def prepare_build_directory(app_def: AppDefinition, rendered_dir: Path, source_dir: Path) -> None:
     """Prepare build directory with all required files.
 
     Args:
@@ -237,14 +240,11 @@ def run_dpkg_buildpackage(source_dir: Path) -> subprocess.CompletedProcess:
 
     except FileNotFoundError as e:
         raise BuildError(
-            "dpkg-buildpackage not found.\n"
-            "Install with: sudo apt install dpkg-dev debhelper"
+            "dpkg-buildpackage not found.\nInstall with: sudo apt install dpkg-dev debhelper"
         ) from e
 
 
-def collect_artifacts(
-    build_dir: Path, output_dir: Path, pkg_name: str, version: str
-) -> list[Path]:
+def collect_artifacts(build_dir: Path, output_dir: Path, pkg_name: str, version: str) -> list[Path]:
     """Collect build artifacts and move to output directory.
 
     Args:

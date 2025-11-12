@@ -102,9 +102,7 @@ def main() -> int:
             # Step 4: Build package
             output_dir = Path(args.output).resolve()
             logger.info(f"Building package (output: {output_dir})...")
-            deb_file = build_package(
-                app_def, rendered_dir, output_dir, keep_temp=args.keep_temp
-            )
+            deb_file = build_package(app_def, rendered_dir, output_dir, keep_temp=args.keep_temp)
             logger.info(f"✓ Package built successfully: {deb_file}")
 
             # Success message
@@ -122,13 +120,13 @@ def main() -> int:
 
     except ValidationError as e:
         logger.error("Validation failed:")
-        print(f"\nERROR: Validation failed\n", file=sys.stderr)
+        print("\nERROR: Validation failed\n", file=sys.stderr)
         print(str(e), file=sys.stderr)
         return EXIT_VALIDATION_ERROR
 
     except TemplateError as e:
         logger.error(f"Template rendering failed: {e}")
-        print(f"\nERROR: Template rendering failed\n", file=sys.stderr)
+        print("\nERROR: Template rendering failed\n", file=sys.stderr)
         print(str(e), file=sys.stderr)
         if args.debug:
             traceback.print_exc()
@@ -136,7 +134,7 @@ def main() -> int:
 
     except BuildError as e:
         logger.error(f"Package build failed: {e}")
-        print(f"\nERROR: Package build failed\n", file=sys.stderr)
+        print("\nERROR: Package build failed\n", file=sys.stderr)
         print(str(e), file=sys.stderr)
         if args.debug:
             traceback.print_exc()
@@ -148,7 +146,7 @@ def main() -> int:
 
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
-        print(f"\nERROR: Unexpected error\n", file=sys.stderr)
+        print("\nERROR: Unexpected error\n", file=sys.stderr)
         print(str(e), file=sys.stderr)
         if args.debug or args.verbose:
             traceback.print_exc()
@@ -213,9 +211,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
 
     # Version
-    parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
-    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     return parser
 
@@ -257,15 +253,13 @@ def check_dependencies() -> None:
     except ImportError as e:
         module_name = getattr(e, "name", None) or "unknown module"
         raise ImportError(
-            f"Missing required Python dependency: {module_name}\n"
-            "Install with: pip install -e ."
+            f"Missing required Python dependency: {module_name}\nInstall with: pip install -e ."
         ) from e
 
     # Check system tools (dpkg-buildpackage)
     if not shutil.which("dpkg-buildpackage"):
         raise FileNotFoundError(
-            "dpkg-buildpackage not found.\n"
-            "Install with: sudo apt install dpkg-dev debhelper"
+            "dpkg-buildpackage not found.\nInstall with: sudo apt install dpkg-dev debhelper"
         )
 
 
