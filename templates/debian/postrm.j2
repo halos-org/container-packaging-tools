@@ -4,7 +4,7 @@ set -e
 case "$1" in
     purge)
         # Remove configuration directory and all contents
-        rm -rf {{ paths.etc }}
+        rm -rf "{{ paths.etc }}"
 
         # Reload systemd (service file removed automatically by dpkg)
         systemctl daemon-reload || true

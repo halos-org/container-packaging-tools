@@ -4,11 +4,11 @@ set -e
 case "$1" in
     configure)
         # Create configuration directory if it doesn't exist
-        mkdir -p {{ paths.etc }}
+        mkdir -p "{{ paths.etc }}"
 
         # Generate .env from template if it doesn't exist
-        if [ ! -f {{ paths.etc }}/.env ]; then
-            cp {{ paths.lib }}/.env.template {{ paths.etc }}/.env
+        if [ ! -f "{{ paths.etc }}/.env" ]; then
+            cp "{{ paths.lib }}/.env.template" "{{ paths.etc }}/.env"
         fi
 
         # Reload systemd to recognize new service

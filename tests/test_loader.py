@@ -246,6 +246,7 @@ class TestIntegration:
         # Validate first
         validation_result = validate_input_directory(VALID_FIXTURES / "simple-app")
         assert validation_result.success is True
+        assert validation_result.metadata is not None
 
         # Then load
         app_def = load_input_files(VALID_FIXTURES / "simple-app")

@@ -47,13 +47,9 @@ class TestBuildContext:
         assert context["service"]["name"] == "test-app-container.service"
         assert context["service"]["description"] == "Test App Container"
         assert (
-            context["service"]["working_directory"]
-            == "/var/lib/container-apps/test-app-container"
+            context["service"]["working_directory"] == "/var/lib/container-apps/test-app-container"
         )
-        assert (
-            context["service"]["env_file"]
-            == "/etc/container-apps/test-app-container/.env"
-        )
+        assert context["service"]["env_file"] == "/etc/container-apps/test-app-container/.env"
 
         # Verify paths
         assert context["paths"]["lib"] == "/var/lib/container-apps/test-app-container"
@@ -137,9 +133,7 @@ class TestBuildContext:
         }
 
         icon_path = Path("/tmp/icon.png")
-        app_def = AppDefinition(
-            metadata=metadata, compose={}, config={}, icon_path=icon_path
-        )
+        app_def = AppDefinition(metadata=metadata, compose={}, config={}, icon_path=icon_path)
 
         context = build_context(app_def)
 

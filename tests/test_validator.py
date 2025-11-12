@@ -110,6 +110,7 @@ class TestValidateMetadata:
         assert metadata.name == "Full Featured Test App"
         assert metadata.upstream_version == "2.1.3"
         assert metadata.icon == "icon.svg"
+        assert metadata.screenshots is not None
         assert len(metadata.screenshots) == 2
         assert metadata.depends is not None
         assert metadata.web_ui is not None
@@ -229,7 +230,7 @@ class TestFormatPydanticError:
         }
 
         try:
-            PackageMetadata(**invalid_data)
+            PackageMetadata(**invalid_data)  # type: ignore[arg-type]
             pytest.fail("Should have raised ValidationError")
         except ValidationError as e:
             formatted = format_pydantic_error("metadata.yaml", e)
@@ -256,7 +257,7 @@ class TestFormatPydanticError:
         }
 
         try:
-            PackageMetadata(**invalid_data)
+            PackageMetadata(**invalid_data)  # type: ignore[arg-type]
             pytest.fail("Should have raised ValidationError")
         except ValidationError as e:
             formatted = format_pydantic_error("metadata.yaml", e)

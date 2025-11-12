@@ -77,8 +77,7 @@ def render_all_templates(
         # systemd service
         "systemd/service.j2": debian_dir / f"{context['package']['name']}.service",
         # AppStream metadata
-        "appstream/metainfo.xml.j2": debian_dir
-        / f"{context['package']['name']}.metainfo.xml",
+        "appstream/metainfo.xml.j2": debian_dir / f"{context['package']['name']}.metainfo.xml",
     }
 
     # Render each template
@@ -88,15 +87,13 @@ def render_all_templates(
             rendered = template.render(context)
             write_rendered_file(rendered, output_path)
         except TemplateError as e:
-            raise TemplateError(
-                f"Failed to render template {template_path}: {e}"
-            ) from e
+            raise TemplateError(f"Failed to render template {template_path}: {e}") from e
 
     # Copy static files (compat)
     _copy_static_files(template_dir, debian_dir)
 
     # Set executable permissions on debian/rules and maintainer scripts
-    _set_executable_permissions(debian_dir, context["package"]["name"])
+    _set_executable_permissions(debian_dir)
 
 
 def write_rendered_file(content: str, output_path: Path) -> None:
@@ -134,9 +131,7 @@ def _find_template_directory() -> Path:
         return dev_path
 
     raise FileNotFoundError(
-        "Cannot find templates directory. Checked:\n"
-        f"  - {installed_path}\n"
-        f"  - {dev_path}"
+        f"Cannot find templates directory. Checked:\n  - {installed_path}\n  - {dev_path}"
     )
 
 
@@ -154,12 +149,11 @@ def _copy_static_files(template_dir: Path, output_dir: Path) -> None:
         compat_dst.write_text(compat_src.read_text())
 
 
-def _set_executable_permissions(debian_dir: Path, package_name: str) -> None:
+def _set_executable_permissions(debian_dir: Path) -> None:
     """Set executable permissions on scripts.
 
     Args:
         debian_dir: Path to debian/ directory
-        package_name: Package name
     """
     # Scripts that need to be executable
     executable_files = [

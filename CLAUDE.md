@@ -8,8 +8,6 @@ Tooling for generating Debian packages from container application definitions.
 
 ## Git Workflow Policy
 
-**IMPORTANT:** Always ask before pushing, creating/pushing tags, or running destructive git operations that affect remote repositories. Local commits and branch operations are fine.
-
 **Branch Workflow:** Never push to main directly - always use feature branches and PRs.
 
 ## Project Purpose
@@ -31,6 +29,13 @@ All development tasks are tracked as GitHub issues. See the [Issues page](https:
 6. **Polish** (Issues #23-24): Security review and final validation
 
 See [PROJECT_PLANNING_GUIDE.md](../PROJECT_PLANNING_GUIDE.md) in the parent directory for the development workflow.
+
+## Planning Documentation
+
+Important planning documents are in the `docs/` directory:
+- @docs/DESIGN.md: High-level design
+- @docs/SPEC.md: Technical specification
+- @docs/ARCHITECTURE.md: System architecture
 
 ## Repository Structure
 

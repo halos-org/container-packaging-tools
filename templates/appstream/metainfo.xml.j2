@@ -4,7 +4,11 @@
   <name>{{ package.human_name }}</name>
   <summary>{{ package.description }}</summary>
   <description>
-{{ package.long_description }}
+    {%- for paragraph in package.long_description.split('\n\n') %}
+    {%- if paragraph.strip() %}
+    <p>{{ paragraph.strip() | e }}</p>
+    {%- endif %}
+    {%- endfor %}
   </description>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>{{ package.license }}</project_license>
