@@ -193,8 +193,9 @@ class TestCrossValidate:
 
         assert result.success is True
         # Icon exists, so no icon-related warning
-        [w for w in result.warnings if "icon" in w.message.lower()]
+        icon_warnings = [w for w in result.warnings if "icon" in w.message.lower()]
         # Should have zero or very few icon warnings if file exists
+        assert len(icon_warnings) == 0
 
     def test_config_field_default_mismatch_warning(self):
         """Test warning when config field has no default value."""
