@@ -237,7 +237,8 @@ def run_dpkg_buildpackage(source_dir: Path) -> subprocess.CompletedProcess:
 
     except FileNotFoundError as e:
         raise BuildError(
-            "dpkg-buildpackage not found. Install dpkg-dev package."
+            "dpkg-buildpackage not found.\n"
+            "Install with: sudo apt install dpkg-dev debhelper"
         ) from e
 
 
