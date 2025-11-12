@@ -1,0 +1,29 @@
+# Simple App - Minimal valid container app definition
+name: Simple Test App
+package_name: simple-test-app-container
+version: 1.0.0
+upstream_version: 1.0.0
+description: A simple test application for validation
+long_description: |
+  This is a simple test application used for validating the container
+  packaging tools. It contains only the minimum required fields.
+homepage: https://example.com/simple-app
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - role::container-app
+  - implemented-in::docker
+debian_section: net
+architecture: all
+
+# Web UI configuration
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+# Default configuration
+default_config:
+  APP_PORT: "8080"
+  LOG_LEVEL: "info"

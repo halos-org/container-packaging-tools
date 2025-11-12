@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    image: node:18-alpine
+    container_name: full-test-app
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - APP_PORT=${APP_PORT:-3000}
+      - APP_HOST=${APP_HOST:-0.0.0.0}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/app.db}
+      - ENABLE_AUTH=${ENABLE_AUTH:-true}
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
+      - MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE:-100}
+      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+    volumes:
+      - /var/lib/container-apps/full-test-app-container/data:/data:rw
+      - /var/lib/container-apps/full-test-app-container/config:/config:rw
+      - /var/lib/container-apps/full-test-app-container/backups:/backups:rw
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: "no"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

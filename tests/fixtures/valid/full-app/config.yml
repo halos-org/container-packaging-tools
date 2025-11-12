@@ -1,0 +1,94 @@
+version: "1.0"
+groups:
+  - id: network
+    label: Network Settings
+    description: Configure network and accessibility options
+    fields:
+      - id: APP_PORT
+        label: Application Port
+        type: integer
+        default: 3000
+        required: true
+        min: 1024
+        max: 65535
+        description: Port on which the application will listen
+
+      - id: APP_HOST
+        label: Bind Address
+        type: string
+        default: "0.0.0.0"
+        required: true
+        description: IP address to bind to (0.0.0.0 for all interfaces)
+
+  - id: database
+    label: Database Configuration
+    description: Database connection and storage settings
+    fields:
+      - id: DATABASE_URL
+        label: Database URL
+        type: string
+        default: "sqlite:///data/app.db"
+        required: true
+        description: Database connection string
+
+  - id: security
+    label: Security Settings
+    description: Authentication and security options
+    fields:
+      - id: ENABLE_AUTH
+        label: Enable Authentication
+        type: boolean
+        default: true
+        required: false
+        description: Require users to authenticate
+
+      - id: SESSION_SECRET
+        label: Session Secret
+        type: password
+        default: "change-me-in-production"
+        required: true
+        description: Secret key for session encryption (change in production!)
+
+  - id: application
+    label: Application Settings
+    description: General application behavior
+    fields:
+      - id: LOG_LEVEL
+        label: Log Level
+        type: enum
+        default: debug
+        required: false
+        options:
+          - debug
+          - info
+          - warning
+          - error
+          - critical
+        description: Logging verbosity level
+
+      - id: MAX_UPLOAD_SIZE
+        label: Maximum Upload Size (MB)
+        type: integer
+        default: 100
+        required: false
+        min: 1
+        max: 1000
+        description: Maximum file upload size in megabytes
+
+  - id: backup
+    label: Backup Settings
+    description: Automated backup configuration
+    fields:
+      - id: BACKUP_ENABLED
+        label: Enable Backups
+        type: boolean
+        default: true
+        required: false
+        description: Enable automated backups
+
+      - id: BACKUP_SCHEDULE
+        label: Backup Schedule
+        type: string
+        default: "0 2 * * *"
+        required: false
+        description: Cron schedule for backups (default: daily at 2 AM)

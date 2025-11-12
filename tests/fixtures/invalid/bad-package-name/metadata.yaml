@@ -1,0 +1,21 @@
+# Bad package name - doesn't end with -container
+name: Bad Package Name App
+package_name: bad-package-name  # Should end with -container
+version: 1.0.0
+description: Test app with invalid package name
+homepage: https://example.com
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - role::container-app
+debian_section: net
+architecture: all
+
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+default_config:
+  PORT: "8080"

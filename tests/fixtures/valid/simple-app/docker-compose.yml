@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    image: nginx:alpine
+    container_name: simple-test-app
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - /var/lib/container-apps/simple-test-app-container/data:/usr/share/nginx/html:rw
+    restart: "no"

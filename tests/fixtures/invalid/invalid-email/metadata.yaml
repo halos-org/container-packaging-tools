@@ -1,0 +1,21 @@
+# Invalid maintainer email format
+name: Invalid Email App
+package_name: invalid-email-container
+version: 1.0.0
+description: Test app with invalid maintainer email
+homepage: https://example.com
+maintainer: Test Developer test@example  # Missing angle brackets and domain extension
+license: MIT
+tags:
+  - role::container-app
+debian_section: net
+architecture: all
+
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+default_config:
+  PORT: "8080"

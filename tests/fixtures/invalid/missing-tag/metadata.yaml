@@ -1,0 +1,21 @@
+# Missing required role::container-app tag
+name: Missing Tag App
+package_name: missing-tag-container
+version: 1.0.0
+description: Test app missing required tag
+homepage: https://example.com
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - implemented-in::docker  # Missing role::container-app
+debian_section: net
+architecture: all
+
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+default_config:
+  PORT: "8080"

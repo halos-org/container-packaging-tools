@@ -1,0 +1,21 @@
+# Invalid version format
+name: Invalid Version App
+package_name: invalid-version-container
+version: v1.0  # Invalid - should be semver format like 1.0.0
+description: Test app with invalid version format
+homepage: https://example.com
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - role::container-app
+debian_section: net
+architecture: all
+
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+default_config:
+  PORT: "8080"

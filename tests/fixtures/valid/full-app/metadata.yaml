@@ -1,0 +1,59 @@
+# Full App - Complete container app definition with all optional fields
+name: Full Featured Test App
+package_name: full-test-app-container
+version: 2.1.3-1
+upstream_version: 2.1.3
+description: A full-featured test application with all options
+long_description: |
+  This is a comprehensive test application that demonstrates all available
+  configuration options in the container packaging system. It includes
+  optional fields, dependencies, and extended metadata.
+
+  Features:
+  - Complete metadata definition
+  - All optional fields populated
+  - Multiple configuration groups
+  - Dependencies and recommendations
+homepage: https://example.com/full-app
+icon: icon.svg
+screenshots:
+  - screenshot1.png
+  - screenshot2.png
+maintainer: Full Stack Developer <fullstack@example.com>
+license: Apache-2.0
+tags:
+  - role::container-app
+  - implemented-in::docker
+  - interface::web
+  - use::organizing
+  - works-with::network-traffic
+debian_section: web
+architecture: all
+
+# Dependencies
+depends:
+  - docker-ce
+  - docker-compose-plugin
+recommends:
+  - cockpit
+suggests:
+  - nginx-proxy
+
+# Web UI configuration
+web_ui:
+  enabled: true
+  path: /app
+  port: 3000
+  protocol: https
+
+# Default configuration with multiple environment variables
+default_config:
+  APP_PORT: "3000"
+  APP_HOST: "0.0.0.0"
+  LOG_LEVEL: "debug"
+  DATABASE_URL: "sqlite:///data/app.db"
+  ENABLE_AUTH: "true"
+  SESSION_SECRET: "change-me-in-production"
+  MAX_UPLOAD_SIZE: "100"
+  BACKUP_ENABLED: "true"
+  BACKUP_SCHEDULE: "0 2 * * *"

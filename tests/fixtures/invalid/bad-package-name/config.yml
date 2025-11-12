@@ -1,0 +1,9 @@
+version: "1.0"
+groups:
+  - id: general
+    label: General
+    fields:
+      - id: PORT
+        label: Port
+        type: integer
+        default: 8080
