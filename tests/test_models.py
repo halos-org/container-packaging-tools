@@ -221,3 +221,269 @@ class TestPackageMetadata:
         assert "required" in schema
         assert "name" in schema["properties"]
         assert "package_name" in schema["properties"]
+
+
+class TestConfigField:
+    """Tests for ConfigField model."""
+
+    def test_valid_config_field(self):
+        """Test valid configuration field."""
+        data = {
+            "id": "APP_PORT",
+            "label": "Application Port",
+            "type": "integer",
+            "default": 8080,
+            "required": True,
+            "min": 1024,
+            "max": 65535,
+            "description": "Port for the application",
+        }
+        from schemas.config import ConfigField
+
+        field = ConfigField(**data)
+        assert field.id == "APP_PORT"
+        assert field.type == "integer"
+        assert field.min == 1024
+
+    def test_enum_field_with_options(self):
+        """Test enum field with valid options."""
+        data = {
+            "id": "LOG_LEVEL",
+            "label": "Log Level",
+            "type": "enum",
+            "default": "info",
+            "required": False,
+            "options": ["debug", "info", "warning", "error"],
+        }
+        from schemas.config import ConfigField
+
+        field = ConfigField(**data)
+        assert field.type == "enum"
+        assert len(field.options) == 4
+
+    def test_enum_field_without_options(self):
+        """Test enum field without options raises ValidationError."""
+        data = {
+            "id": "LOG_LEVEL",
+            "label": "Log Level",
+            "type": "enum",
+            "default": "info",
+            "required": False,
+        }
+        from schemas.config import ConfigField
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigField(**data)
+        assert "options" in str(exc_info.value).lower()
+
+    def test_invalid_field_id_lowercase(self):
+        """Test field ID with lowercase raises ValidationError."""
+        data = {
+            "id": "app_port",  # Should be UPPER_SNAKE_CASE
+            "label": "Application Port",
+            "type": "integer",
+            "default": 8080,
+            "required": True,
+        }
+        from schemas.config import ConfigField
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigField(**data)
+        assert "id" in str(exc_info.value).lower()
+
+    def test_invalid_field_id_hyphen(self):
+        """Test field ID with hyphen raises ValidationError."""
+        data = {
+            "id": "APP-PORT",  # Should use underscore not hyphen
+            "label": "Application Port",
+            "type": "integer",
+            "default": 8080,
+            "required": True,
+        }
+        from schemas.config import ConfigField
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigField(**data)
+        assert "id" in str(exc_info.value).lower()
+
+    def test_all_field_types(self):
+        """Test all valid field types."""
+        from schemas.config import ConfigField
+
+        types = ["string", "integer", "boolean", "enum", "path", "password"]
+        for field_type in types:
+            data = {
+                "id": "TEST_FIELD",
+                "label": "Test",
+                "type": field_type,
+                "default": "test",
+                "required": False,
+            }
+            if field_type == "enum":
+                data["options"] = ["test"]
+            field = ConfigField(**data)
+            assert field.type == field_type
+
+
+class TestConfigGroup:
+    """Tests for ConfigGroup model."""
+
+    def test_valid_config_group(self):
+        """Test valid configuration group."""
+        data = {
+            "id": "general",
+            "label": "General Settings",
+            "description": "Basic settings",
+            "fields": [
+                {
+                    "id": "APP_PORT",
+                    "label": "Port",
+                    "type": "integer",
+                    "default": 8080,
+                    "required": True,
+                }
+            ],
+        }
+        from schemas.config import ConfigGroup
+
+        group = ConfigGroup(**data)
+        assert group.id == "general"
+        assert len(group.fields) == 1
+
+    def test_invalid_group_id_uppercase(self):
+        """Test group ID with uppercase raises ValidationError."""
+        data = {
+            "id": "GENERAL",  # Should be lowercase_snake_case
+            "label": "General",
+            "fields": [
+                {
+                    "id": "PORT",
+                    "label": "Port",
+                    "type": "string",
+                    "default": "8080",
+                    "required": True,
+                }
+            ],
+        }
+        from schemas.config import ConfigGroup
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigGroup(**data)
+        assert "id" in str(exc_info.value).lower()
+
+    def test_invalid_group_id_hyphen(self):
+        """Test group ID with hyphen raises ValidationError."""
+        data = {
+            "id": "general-settings",  # Should use underscore
+            "label": "General",
+            "fields": [
+                {
+                    "id": "PORT",
+                    "label": "Port",
+                    "type": "string",
+                    "default": "8080",
+                    "required": True,
+                }
+            ],
+        }
+        from schemas.config import ConfigGroup
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigGroup(**data)
+        assert "id" in str(exc_info.value).lower()
+
+    def test_empty_fields_array(self):
+        """Test group with no fields raises ValidationError."""
+        data = {"id": "general", "label": "General", "fields": []}
+        from schemas.config import ConfigGroup
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigGroup(**data)
+        assert "fields" in str(exc_info.value).lower()
+
+
+class TestConfigSchema:
+    """Tests for ConfigSchema model."""
+
+    @pytest.fixture
+    def valid_config_schema(self):
+        """Minimal valid config schema."""
+        return {
+            "version": "1.0",
+            "groups": [
+                {
+                    "id": "general",
+                    "label": "General Settings",
+                    "fields": [
+                        {
+                            "id": "APP_PORT",
+                            "label": "Application Port",
+                            "type": "integer",
+                            "default": 8080,
+                            "required": True,
+                        }
+                    ],
+                }
+            ],
+        }
+
+    def test_valid_config_schema(self, valid_config_schema):
+        """Test valid configuration schema."""
+        from schemas.config import ConfigSchema
+
+        schema = ConfigSchema(**valid_config_schema)
+        assert schema.version == "1.0"
+        assert len(schema.groups) == 1
+        assert schema.groups[0].id == "general"
+
+    def test_complex_config_schema(self, valid_config_schema):
+        """Test complex configuration schema with multiple groups."""
+        valid_config_schema["groups"].append(
+            {
+                "id": "database",
+                "label": "Database Settings",
+                "description": "Database connection",
+                "fields": [
+                    {
+                        "id": "DB_URL",
+                        "label": "Database URL",
+                        "type": "string",
+                        "default": "sqlite:///data/app.db",
+                        "required": True,
+                    },
+                    {
+                        "id": "DB_POOL_SIZE",
+                        "label": "Connection Pool Size",
+                        "type": "integer",
+                        "default": 10,
+                        "required": False,
+                        "min": 1,
+                        "max": 100,
+                    },
+                ],
+            }
+        )
+        from schemas.config import ConfigSchema
+
+        schema = ConfigSchema(**valid_config_schema)
+        assert len(schema.groups) == 2
+        assert schema.groups[1].id == "database"
+        assert len(schema.groups[1].fields) == 2
+
+    def test_invalid_version(self, valid_config_schema):
+        """Test invalid version format raises ValidationError."""
+        valid_config_schema["version"] = "2.0"
+        from schemas.config import ConfigSchema
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigSchema(**valid_config_schema)
+        assert "version" in str(exc_info.value).lower()
+
+    def test_empty_groups_array(self, valid_config_schema):
+        """Test schema with no groups raises ValidationError."""
+        valid_config_schema["groups"] = []
+        from schemas.config import ConfigSchema
+
+        with pytest.raises(ValidationError) as exc_info:
+            ConfigSchema(**valid_config_schema)
+        assert "groups" in str(exc_info.value).lower()
