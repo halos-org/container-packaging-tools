@@ -28,7 +28,12 @@ class TestBuildContext:
         }
 
         app_def = AppDefinition(
-            metadata=metadata, compose={}, config={}, icon_path=None, screenshot_paths=[]
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+            screenshot_paths=[],
         )
 
         context = build_context(app_def)
@@ -90,6 +95,7 @@ class TestBuildContext:
             metadata=metadata,
             compose={},
             config={},
+            input_dir=Path("/test/dir"),
             icon_path=icon_path,
             screenshot_paths=screenshot_paths,
         )
@@ -133,7 +139,13 @@ class TestBuildContext:
         }
 
         icon_path = Path("/tmp/icon.png")
-        app_def = AppDefinition(metadata=metadata, compose={}, config={}, icon_path=icon_path)
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=icon_path,
+        )
 
         context = build_context(app_def)
 

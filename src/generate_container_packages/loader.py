@@ -21,6 +21,7 @@ class AppDefinition:
         metadata: dict[str, Any],
         compose: dict[str, Any],
         config: dict[str, Any],
+        input_dir: Path,
         icon_path: Optional[Path] = None,
         screenshot_paths: Optional[list[Path]] = None,
     ):
@@ -30,12 +31,14 @@ class AppDefinition:
             metadata: Parsed metadata.yaml contents
             compose: Parsed docker-compose.yml contents
             config: Parsed config.yml contents
+            input_dir: Path to input directory
             icon_path: Path to icon file (if exists)
             screenshot_paths: List of paths to screenshot files
         """
         self.metadata = metadata
         self.compose = compose
         self.config = config
+        self.input_dir = input_dir
         self.icon_path = icon_path
         self.screenshot_paths = screenshot_paths or []
 
@@ -88,6 +91,7 @@ def load_input_files(directory: Path) -> AppDefinition:
         metadata=metadata,
         compose=compose,
         config=config,
+        input_dir=directory,
         icon_path=icon_path,
         screenshot_paths=screenshot_paths,
     )

@@ -84,7 +84,13 @@ class TestRenderAllTemplates:
             "architecture": "all",
         }
 
-        app_def = AppDefinition(metadata=metadata, compose={}, config={}, icon_path=None)
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
 
         # Use actual template directory
         template_dir = Path(__file__).parent.parent / "templates"
@@ -122,7 +128,13 @@ class TestRenderAllTemplates:
             "architecture": "all",
         }
 
-        app_def = AppDefinition(metadata=metadata, compose={}, config={}, icon_path=None)
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
 
         template_dir = Path(__file__).parent.parent / "templates"
         output_dir = tmp_path / "output"
@@ -154,7 +166,13 @@ class TestRenderAllTemplates:
             "architecture": "all",
         }
 
-        app_def = AppDefinition(metadata=metadata, compose={}, config={}, icon_path=None)
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
 
         template_dir = Path(__file__).parent.parent / "templates"
         output_dir = tmp_path / "output"
@@ -188,7 +206,13 @@ class TestRenderAllTemplates:
         }
 
         icon_path = Path("/tmp/test-icon.svg")
-        app_def = AppDefinition(metadata=metadata, compose={}, config={}, icon_path=icon_path)
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=icon_path,
+        )
 
         template_dir = Path(__file__).parent.parent / "templates"
         output_dir = tmp_path / "output"
@@ -215,7 +239,13 @@ class TestRenderAllTemplates:
             "web_ui": {"enabled": True, "path": "/admin", "port": 8080},
         }
 
-        app_def = AppDefinition(metadata=metadata, compose={}, config={}, icon_path=None)
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
 
         template_dir = Path(__file__).parent.parent / "templates"
         output_dir = tmp_path / "output"

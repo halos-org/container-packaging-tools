@@ -24,16 +24,19 @@ class TestAppDefinition:
         metadata = {"name": "Test App"}
         compose = {"version": "3.8"}
         config = {"version": "1.0"}
+        input_dir = Path("/test/dir")
 
         app_def = AppDefinition(
             metadata=metadata,
             compose=compose,
             config=config,
+            input_dir=input_dir,
         )
 
         assert app_def.metadata == metadata
         assert app_def.compose == compose
         assert app_def.config == config
+        assert app_def.input_dir == input_dir
         assert app_def.icon_path is None
         assert app_def.screenshot_paths == []
         assert app_def.timestamp is not None
@@ -44,6 +47,7 @@ class TestAppDefinition:
         metadata = {"name": "Test App"}
         compose = {"version": "3.8"}
         config = {"version": "1.0"}
+        input_dir = Path("/test/dir")
         icon_path = Path("/path/to/icon.svg")
         screenshot_paths = [Path("/path/to/screenshot1.png")]
 
@@ -51,6 +55,7 @@ class TestAppDefinition:
             metadata=metadata,
             compose=compose,
             config=config,
+            input_dir=input_dir,
             icon_path=icon_path,
             screenshot_paths=screenshot_paths,
         )
@@ -64,11 +69,13 @@ class TestAppDefinition:
         metadata = {"name": "Test App"}
         compose = {"version": "3.8"}
         config = {"version": "1.0"}
+        input_dir = Path("/test/dir")
 
         app_def = AppDefinition(
             metadata=metadata,
             compose=compose,
             config=config,
+            input_dir=input_dir,
         )
 
         # Should be ISO 8601 format (contains T and Z or +)
