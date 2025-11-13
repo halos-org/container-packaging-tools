@@ -6,6 +6,14 @@ Tooling for generating Debian packages from container application definitions.
 
 `container-packaging-tools` is a Debian package that provides command-line tools to convert simple container app definitions into full-fledged Debian packages. It eliminates the need for package maintainers to understand Debian packaging internals.
 
+## Requirements
+
+- **Debian 12 (Trixie) or newer** - Required for Python 3.11+ and Pydantic v2.0+
+- **Raspberry Pi OS** (Trixie-based) is also supported
+- **Ubuntu 24.04+** or other Debian-based distributions with compatible package versions
+
+Note: Older distributions like Ubuntu 22.04 do not have Pydantic v2.0+ available in their repositories.
+
 ## Installation
 
 ```bash

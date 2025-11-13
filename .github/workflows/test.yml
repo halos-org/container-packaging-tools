@@ -142,10 +142,21 @@ jobs:
       - name: Build Debian package in Docker
         run: |
           # Run as root to avoid permission issues in CI
-          docker run --rm --user root -v $(pwd):/workspace -w /workspace \
+          set -o pipefail
+          BUILD_LOG=$(mktemp)
+          if ! docker run --rm --user root -v $(pwd):/workspace -w /workspace \
             container-packaging-tools-devtools:latest \
-            bash -c "dpkg-buildpackage -us -uc -b || true"
-          # Check if package was built despite buildinfo error
+            bash -c "dpkg-buildpackage -us -uc -b" 2>&1 | tee "$BUILD_LOG"; then
+            # Check for known buildinfo error and ignore only that
+            if grep -q "dpkg-genbuildinfo: error: binary build with no binary artifacts" "$BUILD_LOG"; then
+              echo "Ignoring expected buildinfo error."
+            else
+              echo "dpkg-buildpackage failed with unexpected error:"
+              cat "$BUILD_LOG"
+              exit 1
+            fi
+          fi
+          # Verify package was built
           if [ ! -f ./container-packaging-tools_0.1.0_all.deb ]; then
             echo "Error: Package was not built"
             exit 1
