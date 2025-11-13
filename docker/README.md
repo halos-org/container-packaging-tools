@@ -10,8 +10,8 @@ The package installation tests (`test_package_install.py`) require:
 - `sudo` access
 
 Running tests in Docker allows you to:
-- ✅ Run **all 133 tests** (instead of 117 on macOS)
-- ✅ Test package installation on any platform
+- ✅ Run **the complete test suite** (117 unit/integration + 16 installation tests)
+- ✅ Test package generation in a Debian environment from any platform
 - ✅ Verify the complete end-to-end workflow
 - ✅ Match the CI environment
 
