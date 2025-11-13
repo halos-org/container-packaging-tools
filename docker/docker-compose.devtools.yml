@@ -1,0 +1,23 @@
+services:
+  devtools:
+    build:
+      context: .
+      dockerfile: Dockerfile.devtools
+    image: container-packaging-tools-devtools:latest
+
+    # Mount the project directory
+    volumes:
+      - ..:/workspace
+
+    # Working directory
+    working_dir: /workspace
+
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+
+    # Run as non-root user
+    user: vscode
+
+    # Override command for interactive use
+    command: /bin/bash

@@ -56,83 +56,120 @@ function dev:clean {
 }
 
 ################################################################################
-# Test Commands
+# Docker Commands
+
+function docker:build {
+  #@ Build development Docker image
+  #@ Category: Docker
+  echo "🐳 Building development Docker image..."
+  docker compose -f docker/docker-compose.devtools.yml build devtools
+  echo "✅ Docker image built successfully"
+}
+
+function docker:shell {
+  #@ Open interactive shell in development container
+  #@ Category: Docker
+  echo "🐚 Opening shell in development container..."
+  echo "   Working directory: /workspace"
+  echo "   Exit with: exit or Ctrl+D"
+  echo ""
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools bash
+}
+
+function docker:clean {
+  #@ Remove development Docker containers and images
+  #@ Category: Docker
+  echo "🧹 Cleaning Docker containers and images..."
+  docker compose -f docker/docker-compose.devtools.yml down --rmi all --volumes
+  echo "✅ Docker cleanup complete"
+}
+
+################################################################################
+# Test Commands (Docker-based)
 
 function test {
-  #@ Run all tests
+  #@ Run all tests in Docker container
   #@ Category: Testing
   echo "🧪 Running all tests..."
-  pytest
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run pytest"
 }
 
 function test:unit {
-  #@ Run unit tests only
+  #@ Run unit tests only in Docker container
   #@ Category: Testing
   echo "🧪 Running unit tests..."
-  pytest tests/test_*.py -k "not integration"
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run pytest tests/test_*.py -k 'not integration'"
 }
 
 function test:integration {
-  #@ Run integration tests only
+  #@ Run integration tests only in Docker container
   #@ Category: Testing
   echo "🧪 Running integration tests..."
-  pytest tests/test_integration*.py
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run pytest tests/test_integration*.py"
 }
 
 function test:coverage {
-  #@ Run tests with coverage report
+  #@ Run tests with coverage report in Docker container
   #@ Category: Testing
   echo "🧪 Running tests with coverage..."
-  pytest --cov=src --cov-report=term-missing --cov-report=html
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run pytest --cov=src --cov-report=term-missing --cov-report=html"
   echo "✅ Coverage report generated in htmlcov/"
 }
 
 ################################################################################
-# Code Quality Commands
+# Code Quality Commands (Docker-based)
 
 function lint {
-  #@ Run linter (ruff check)
+  #@ Run linter (ruff check) in Docker container
   #@ Category: Quality
   echo "🔍 Running linter..."
-  ruff check src/ tests/
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run ruff check src/ tests/"
   echo "✅ Lint passed"
 }
 
+function lint:fix {
+  #@ Run linter with auto-fix in Docker container
+  #@ Category: Quality
+  echo "🔧 Running linter with auto-fix..."
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run ruff check --fix src/ tests/"
+  echo "✅ Lint fixes applied"
+}
+
 function format {
-  #@ Format code (ruff format)
+  #@ Format code (ruff format) in Docker container
   #@ Category: Quality
   echo "✨ Formatting code..."
-  ruff format src/ tests/
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run ruff format src/ tests/"
   echo "✅ Code formatted"
 }
 
 function format:check {
-  #@ Check formatting without changes
+  #@ Check formatting without changes in Docker container
   #@ Category: Quality
   echo "🔍 Checking code formatting..."
-  ruff format --check src/ tests/
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uv run ruff format --check src/ tests/"
   echo "✅ Format check passed"
 }
 
 function typecheck {
-  #@ Run type checker (ty or mypy)
+  #@ Run type checker (ty) in Docker container
   #@ Category: Quality
   echo "🔍 Type checking..."
-  if command -v uvx &> /dev/null; then
-    uvx ty check
-  elif command -v mypy &> /dev/null; then
-    echo "⚠️  ty not available, falling back to mypy"
-    mypy src/
-  else
-    echo "❌ Neither ty nor mypy installed"
-    echo "Install with: uv tool install ty or pip install mypy"
-    return 1
-  fi
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && uvx ty check"
   echo "✅ Type check passed"
 }
 
 function check {
-  #@ Run all quality checks (lint, format, typecheck)
+  #@ Run all quality checks (lint, format, typecheck) in Docker
   #@ Category: Quality
   echo "🔍 Running all quality checks..."
   lint
@@ -145,10 +182,11 @@ function check {
 # Build Commands
 
 function build {
-  #@ Build Debian package
+  #@ Build Debian package in Docker container
   #@ Category: Build
   echo "🏗️  Building Debian package..."
-  dpkg-buildpackage -us -uc
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+    bash -c "uv sync --dev && dpkg-buildpackage -us -uc"
   echo "✅ Build complete"
 }
 
