@@ -131,7 +131,8 @@ jobs:
 
       - name: Build Debian package in Docker
         run: |
-          docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+          # Run as root to avoid permission issues in CI
+          docker compose -f docker/docker-compose.devtools.yml run --rm --user root devtools \
             bash -c "dpkg-buildpackage -us -uc -b || true"
           # Check if package was built despite buildinfo error
           if [ ! -f ./container-packaging-tools_0.1.0_all.deb ]; then
