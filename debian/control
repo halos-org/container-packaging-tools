@@ -20,9 +20,6 @@ Architecture: all
 Depends: ${misc:Depends},
  ${python3:Depends},
  python3 (>= 3.11),
- python3-pydantic (>= 2.0),
- python3-jinja2,
- python3-yaml,
  dpkg-dev
 Description: Generate Debian packages from container application definitions
  container-packaging-tools is a command-line tool that converts simple
