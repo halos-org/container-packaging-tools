@@ -1,0 +1,38 @@
+services:
+  test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    volumes:
+      - ..:/workspace
+    working_dir: /workspace
+    command: bash -c "uv sync && uv run pytest -v"
+
+  test-install:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    volumes:
+      - ..:/workspace
+    working_dir: /workspace
+    command: bash -c "uv sync && uv run pytest -v -m install"
+
+  test-all:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    volumes:
+      - ..:/workspace
+    working_dir: /workspace
+    command: bash -c "uv sync && uv run pytest -v --tb=short"
+
+  shell:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    volumes:
+      - ..:/workspace
+    working_dir: /workspace
+    command: bash
+    stdin_open: true
+    tty: true

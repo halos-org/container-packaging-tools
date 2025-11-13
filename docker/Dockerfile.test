@@ -1,0 +1,33 @@
+FROM debian:bookworm
+
+# Install Debian packaging tools and Python dependencies
+RUN apt-get update && apt-get install -y \
+    debhelper \
+    dh-python \
+    build-essential \
+    dpkg-dev \
+    fakeroot \
+    devscripts \
+    lintian \
+    python3-all \
+    python3-pip \
+    python3-venv \
+    sudo \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast dependency management
+RUN pip3 install --no-cache-dir uv --break-system-packages
+
+# Create a user for testing (some tests check non-root behavior)
+RUN useradd -m -s /bin/bash testuser && \
+    echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Set working directory
+WORKDIR /workspace
+
+# Switch to test user
+USER testuser
+
+# Default command runs all tests
+CMD ["bash", "-c", "uv sync && uv run pytest -v"]
