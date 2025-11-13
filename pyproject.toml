@@ -69,6 +69,8 @@ addopts = [
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
+    "install: marks tests that require package installation (dpkg, sudo)",
+    "docker: marks tests that require Docker to be running",
 ]
 
 [tool.coverage.run]
