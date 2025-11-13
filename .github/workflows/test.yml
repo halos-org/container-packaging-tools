@@ -125,31 +125,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Install dependencies
+      - name: Build Docker image
         run: |
-          uv sync --dev
+          docker compose -f docker/docker-compose.devtools.yml build
 
-      - name: Install Debian build tools
+      - name: Build Debian package in Docker
         run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev debhelper dh-python python3-all python3-setuptools pybuild-plugin-pyproject python3-jinja2 python3-yaml build-essential
-          # Install pydantic v2 via pip since Ubuntu's python3-pydantic is too old
-          sudo pip3 install --break-system-packages --ignore-installed 'pydantic>=2.0'
-
-      - name: Build Debian package
-        run: |
-          # Use --no-sign to skip signing and set DEB_BUILD_OPTIONS to skip buildinfo
-          DEB_BUILD_OPTIONS="nocheck" dpkg-buildpackage -us -uc -b -d --no-sign || true
+          docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+            bash -c "dpkg-buildpackage -us -uc -b || true"
           # Check if package was built despite buildinfo error
           if [ ! -f ./container-packaging-tools_0.1.0_all.deb ]; then
             echo "Error: Package was not built"
@@ -158,14 +141,14 @@ jobs:
 
       - name: List built packages
         run: |
-          ls -lh ./*.deb || echo "No .deb files found"
+          ls -lh ./*.deb
 
       - name: Upload Debian package artifacts
         uses: actions/upload-artifact@v4
         with:
           name: debian-packages
           path: ./*.deb
-          if-no-files-found: warn
+          if-no-files-found: error
 
   install-test:
     name: Test Package Installation
@@ -177,16 +160,16 @@ jobs:
         with:
           name: debian-packages
 
-      - name: Install package
+      - name: Install package dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip python3-venv
-          if ! sudo dpkg -i *.deb; then
-            echo "dpkg failed, attempting to fix dependencies..."
-            sudo apt-get install -f -y
-            echo "Retrying dpkg installation..."
-            sudo dpkg -i *.deb
-          fi
+          sudo apt-get install -y python3-jinja2 python3-yaml dpkg-dev
+          # Install pydantic v2 since Ubuntu doesn't have it
+          sudo pip3 install --break-system-packages 'pydantic>=2.0'
+
+      - name: Install package
+        run: |
+          sudo dpkg -i *.deb
 
       - name: Verify installation
         run: |
