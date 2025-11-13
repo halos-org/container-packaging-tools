@@ -42,7 +42,7 @@ def run_command(cmd, check=True, capture_output=True, **kwargs):
     )
     if check and result.returncode != 0:
         raise subprocess.CalledProcessError(
-            result.returncode, str(cmd_list), result.stdout, result.stderr
+            result.returncode, cmd_list, output=result.stdout, stderr=result.stderr
         )
     return result
 
