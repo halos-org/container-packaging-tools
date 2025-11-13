@@ -37,11 +37,7 @@ jobs:
 
       - name: Run type checker
         run: |
-          # Try ty first, fall back to mypy if unavailable
-          if ! uvx ty check 2>/dev/null; then
-            echo "ty not available, using mypy instead"
-            uv run mypy src/
-          fi
+          uv run mypy src/
 
   unit-tests:
     name: Unit Tests (Python ${{ matrix.python-version }})
