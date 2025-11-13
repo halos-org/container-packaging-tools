@@ -193,7 +193,9 @@ class TestCheckDependencies:
         with pytest.raises(FileNotFoundError, match="dpkg-buildpackage not found"):
             check_dependencies()
 
-    @mock.patch("builtins.__import__", side_effect=ImportError("No module named 'jinja2'"))
+    @mock.patch(
+        "builtins.__import__", side_effect=ImportError("No module named 'jinja2'")
+    )
     def test_missing_python_dependency(self, mock_import):
         """Test that check fails when Python dependency is missing."""
         with pytest.raises(ImportError, match="Missing required Python dependency"):
@@ -262,7 +264,15 @@ class TestMain:
         """Test handling of ValidationError during file loading."""
         input_dir = str(VALID_FIXTURES / "simple-app")
         mock_load.side_effect = ValidationError.from_exception_data(
-            "TestModel", [{"type": "missing", "loc": ("field",), "msg": "Field required", "input": {}}]
+            "TestModel",
+            [
+                {
+                    "type": "missing",
+                    "loc": ("field",),
+                    "msg": "Field required",
+                    "input": {},
+                }
+            ],
         )
 
         with mock.patch.object(sys, "argv", ["prog", input_dir]):
@@ -370,7 +380,9 @@ class TestMain:
     @mock.patch("generate_container_packages.cli.build_package")
     @mock.patch("generate_container_packages.cli.render_all_templates")
     @mock.patch("generate_container_packages.cli.load_input_files")
-    def test_successful_build(self, mock_load, mock_render, mock_build, capsys, tmp_path):
+    def test_successful_build(
+        self, mock_load, mock_render, mock_build, capsys, tmp_path
+    ):
         """Test successful package build."""
         from generate_container_packages.loader import AppDefinition
 
@@ -413,10 +425,13 @@ class TestMain:
         output_dir.mkdir()
 
         # Mock all the build steps to test output directory handling
-        with mock.patch("generate_container_packages.cli.load_input_files") as mock_load, mock.patch(
-            "generate_container_packages.cli.render_all_templates"
-        ) as mock_render, mock.patch("generate_container_packages.cli.build_package") as mock_build:
-
+        with (
+            mock.patch("generate_container_packages.cli.load_input_files") as mock_load,
+            mock.patch(
+                "generate_container_packages.cli.render_all_templates"
+            ) as mock_render,
+            mock.patch("generate_container_packages.cli.build_package") as mock_build,
+        ):
             from generate_container_packages.loader import AppDefinition
 
             mock_app_def = mock.Mock(spec=AppDefinition)
@@ -427,7 +442,9 @@ class TestMain:
             deb_file.write_text("mock deb")
             mock_build.return_value = deb_file
 
-            with mock.patch.object(sys, "argv", ["prog", input_dir, "-o", str(output_dir)]):
+            with mock.patch.object(
+                sys, "argv", ["prog", input_dir, "-o", str(output_dir)]
+            ):
                 exit_code = main()
 
             assert exit_code == EXIT_SUCCESS
@@ -439,14 +456,15 @@ class TestMain:
         """Test that temporary render directory is cleaned up."""
         input_dir = str(VALID_FIXTURES / "simple-app")
 
-        with mock.patch("generate_container_packages.cli.load_input_files") as mock_load, mock.patch(
-            "generate_container_packages.cli.render_all_templates"
-        ) as mock_render, mock.patch("generate_container_packages.cli.build_package") as mock_build, mock.patch(
-            "tempfile.mkdtemp"
-        ) as mock_mkdtemp, mock.patch(
-            "shutil.rmtree"
-        ) as mock_rmtree:
-
+        with (
+            mock.patch("generate_container_packages.cli.load_input_files") as mock_load,
+            mock.patch(
+                "generate_container_packages.cli.render_all_templates"
+            ) as mock_render,
+            mock.patch("generate_container_packages.cli.build_package") as mock_build,
+            mock.patch("tempfile.mkdtemp") as mock_mkdtemp,
+            mock.patch("shutil.rmtree") as mock_rmtree,
+        ):
             from generate_container_packages.loader import AppDefinition
 
             temp_dir = tmp_path / "temp_render"
@@ -470,12 +488,16 @@ class TestMain:
 
     @mock.patch("generate_container_packages.cli.render_all_templates")
     @mock.patch("generate_container_packages.cli.load_input_files")
-    def test_temporary_directory_cleanup_on_error(self, mock_load, mock_render, tmp_path):
+    def test_temporary_directory_cleanup_on_error(
+        self, mock_load, mock_render, tmp_path
+    ):
         """Test that temporary directory is cleaned up even on error."""
         input_dir = str(VALID_FIXTURES / "simple-app")
 
-        with mock.patch("tempfile.mkdtemp") as mock_mkdtemp, mock.patch("shutil.rmtree") as mock_rmtree:
-
+        with (
+            mock.patch("tempfile.mkdtemp") as mock_mkdtemp,
+            mock.patch("shutil.rmtree") as mock_rmtree,
+        ):
             from generate_container_packages.loader import AppDefinition
 
             temp_dir = tmp_path / "temp_render"

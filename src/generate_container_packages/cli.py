@@ -102,7 +102,9 @@ def main() -> int:
             # Step 4: Build package
             output_dir = Path(args.output).resolve()
             logger.info(f"Building package (output: {output_dir})...")
-            deb_file = build_package(app_def, rendered_dir, output_dir, keep_temp=args.keep_temp)
+            deb_file = build_package(
+                app_def, rendered_dir, output_dir, keep_temp=args.keep_temp
+            )
             logger.info(f"✓ Package built successfully: {deb_file}")
 
             # Success message
@@ -211,7 +213,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
 
     # Version
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
 
     return parser
 

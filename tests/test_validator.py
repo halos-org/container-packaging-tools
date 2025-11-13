@@ -137,7 +137,14 @@ class TestValidateConfig:
         # Verify field types are properly validated
         for group in config.groups:
             for field in group.fields:
-                assert field.type in ["string", "integer", "boolean", "enum", "path", "password"]
+                assert field.type in [
+                    "string",
+                    "integer",
+                    "boolean",
+                    "enum",
+                    "path",
+                    "password",
+                ]
 
 
 class TestValidateCompose:
@@ -302,4 +309,6 @@ class TestIntegration:
                 assert result.success is False, (
                     f"Fixture {fixture_dir.name} should have failed validation"
                 )
-                assert len(result.errors) > 0, f"Fixture {fixture_dir.name} should have errors"
+                assert len(result.errors) > 0, (
+                    f"Fixture {fixture_dir.name} should have errors"
+                )

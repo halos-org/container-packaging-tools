@@ -77,7 +77,8 @@ def render_all_templates(
         # systemd service
         "systemd/service.j2": debian_dir / f"{context['package']['name']}.service",
         # AppStream metadata
-        "appstream/metainfo.xml.j2": debian_dir / f"{context['package']['name']}.metainfo.xml",
+        "appstream/metainfo.xml.j2": debian_dir
+        / f"{context['package']['name']}.metainfo.xml",
     }
 
     # Render each template
@@ -87,7 +88,9 @@ def render_all_templates(
             rendered = template.render(context)
             write_rendered_file(rendered, output_path)
         except TemplateError as e:
-            raise TemplateError(f"Failed to render template {template_path}: {e}") from e
+            raise TemplateError(
+                f"Failed to render template {template_path}: {e}"
+            ) from e
 
     # Copy static files (compat)
     _copy_static_files(template_dir, debian_dir)

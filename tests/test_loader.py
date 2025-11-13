@@ -242,7 +242,9 @@ class TestIntegration:
                 assert app_def.compose is not None, (
                     f"Failed to load compose from {fixture_dir.name}"
                 )
-                assert app_def.config is not None, f"Failed to load config from {fixture_dir.name}"
+                assert app_def.config is not None, (
+                    f"Failed to load config from {fixture_dir.name}"
+                )
                 assert app_def.timestamp is not None
                 assert app_def.tool_version is not None
 

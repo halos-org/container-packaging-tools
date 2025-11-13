@@ -157,7 +157,9 @@ class TestPackageMetadata:
 
     def test_invalid_maintainer_email(self, valid_metadata):
         """Test invalid maintainer email format raises ValidationError."""
-        valid_metadata["maintainer"] = "Test Developer test@example.com"  # Missing angle brackets
+        valid_metadata["maintainer"] = (
+            "Test Developer test@example.com"  # Missing angle brackets
+        )
         with pytest.raises(ValidationError) as exc_info:
             PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
         assert "maintainer" in str(exc_info.value).lower()

@@ -80,7 +80,9 @@ def build_package(
             shutil.rmtree(build_dir)
 
 
-def prepare_build_directory(app_def: AppDefinition, rendered_dir: Path, source_dir: Path) -> None:
+def prepare_build_directory(
+    app_def: AppDefinition, rendered_dir: Path, source_dir: Path
+) -> None:
     """Prepare build directory with all required files.
 
     Args:
@@ -244,7 +246,9 @@ def run_dpkg_buildpackage(source_dir: Path) -> subprocess.CompletedProcess:
         ) from e
 
 
-def collect_artifacts(build_dir: Path, output_dir: Path, pkg_name: str, version: str) -> list[Path]:
+def collect_artifacts(
+    build_dir: Path, output_dir: Path, pkg_name: str, version: str
+) -> list[Path]:
     """Collect build artifacts and move to output directory.
 
     Args:

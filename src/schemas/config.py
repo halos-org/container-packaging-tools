@@ -22,9 +22,15 @@ class ConfigField(BaseModel):
     )
     default: Any = Field(description="Default value for the field")
     required: bool = Field(description="Whether the field is required")
-    min: Optional[int] = Field(None, description="Minimum value (for integer/string types)")
-    max: Optional[int] = Field(None, description="Maximum value (for integer/string types)")
-    options: Optional[list[str]] = Field(None, description="Valid options (required for enum type)")
+    min: Optional[int] = Field(
+        None, description="Minimum value (for integer/string types)"
+    )
+    max: Optional[int] = Field(
+        None, description="Maximum value (for integer/string types)"
+    )
+    options: Optional[list[str]] = Field(
+        None, description="Valid options (required for enum type)"
+    )
     description: Optional[str] = Field(None, description="Help text for the field")
 
     @model_validator(mode="after")
@@ -59,5 +65,7 @@ class ConfigSchema(BaseModel):
     environment variable values.
     """
 
-    version: str = Field(pattern=r"^1\.0$", description="Schema version (currently 1.0)")
+    version: str = Field(
+        pattern=r"^1\.0$", description="Schema version (currently 1.0)"
+    )
     groups: list[ConfigGroup] = Field(min_length=1, description="Configuration groups")

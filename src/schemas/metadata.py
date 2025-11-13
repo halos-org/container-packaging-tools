@@ -10,7 +10,9 @@ class WebUI(BaseModel):
 
     enabled: bool = Field(description="Whether web UI is available")
     path: Optional[str] = Field(None, description="URL path to access the web UI")
-    port: Optional[int] = Field(None, ge=1, le=65535, description="Port the web UI listens on")
+    port: Optional[int] = Field(
+        None, ge=1, le=65535, description="Port the web UI listens on"
+    )
     protocol: Optional[Literal["http", "https"]] = Field(
         None, description="Protocol used by web UI"
     )
@@ -36,16 +38,24 @@ class PackageMetadata(BaseModel):
     )
 
     # Optional version field
-    upstream_version: Optional[str] = Field(None, description="Original application version")
+    upstream_version: Optional[str] = Field(
+        None, description="Original application version"
+    )
 
     # Description fields
-    description: str = Field(max_length=80, description="Short description for package lists")
-    long_description: Optional[str] = Field(None, description="Detailed multi-line description")
+    description: str = Field(
+        max_length=80, description="Short description for package lists"
+    )
+    long_description: Optional[str] = Field(
+        None, description="Detailed multi-line description"
+    )
 
     # URLs and assets
     homepage: Optional[HttpUrl] = Field(None, description="Project homepage URL")
     icon: Optional[str] = Field(None, description="Relative path to icon file")
-    screenshots: Optional[list[str]] = Field(None, description="Array of screenshot filenames")
+    screenshots: Optional[list[str]] = Field(
+        None, description="Array of screenshot filenames"
+    )
 
     # Maintainer info
     maintainer: str = Field(
@@ -82,9 +92,15 @@ class PackageMetadata(BaseModel):
     )
 
     # Dependencies
-    depends: Optional[list[str]] = Field(None, description="Package dependencies (Depends)")
-    recommends: Optional[list[str]] = Field(None, description="Recommended packages (Recommends)")
-    suggests: Optional[list[str]] = Field(None, description="Suggested packages (Suggests)")
+    depends: Optional[list[str]] = Field(
+        None, description="Package dependencies (Depends)"
+    )
+    recommends: Optional[list[str]] = Field(
+        None, description="Recommended packages (Recommends)"
+    )
+    suggests: Optional[list[str]] = Field(
+        None, description="Suggested packages (Suggests)"
+    )
 
     # Web UI configuration
     web_ui: Optional[WebUI] = Field(None, description="Web interface configuration")

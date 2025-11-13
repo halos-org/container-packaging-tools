@@ -55,7 +55,9 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
         "architecture": metadata["architecture"],
         "section": metadata["debian_section"],
         "description": metadata["description"],
-        "long_description": format_long_description(metadata.get("long_description", "")),
+        "long_description": format_long_description(
+            metadata.get("long_description", "")
+        ),
         "homepage": metadata.get("homepage", ""),
         "maintainer": metadata["maintainer"],
         "license": metadata["license"],
@@ -69,7 +71,9 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_service_context(package_name: str, metadata: dict[str, Any]) -> dict[str, Any]:
+def _build_service_context(
+    package_name: str, metadata: dict[str, Any]
+) -> dict[str, Any]:
     """Build systemd service context.
 
     Args:
