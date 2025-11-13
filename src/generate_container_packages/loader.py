@@ -1,8 +1,8 @@
 """File loading and data model construction."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -22,8 +22,8 @@ class AppDefinition:
         compose: dict[str, Any],
         config: dict[str, Any],
         input_dir: Path,
-        icon_path: Optional[Path] = None,
-        screenshot_paths: Optional[list[Path]] = None,
+        icon_path: Path | None = None,
+        screenshot_paths: list[Path] | None = None,
     ):
         """Initialize AppDefinition.
 
@@ -43,7 +43,7 @@ class AppDefinition:
         self.screenshot_paths = screenshot_paths or []
 
         # Computed fields
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         self.timestamp = now.isoformat()  # ISO 8601 for general use
 
         # RFC 2822 for Debian changelog (with colon in timezone offset)
