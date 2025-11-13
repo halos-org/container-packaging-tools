@@ -90,7 +90,7 @@ The tool is distributed as a Debian package: `container-packaging-tools`
 
 **Dependencies**:
 ```
-Depends: python3 (>= 3.9),
+Depends: python3 (>= 3.11),
          python3-jinja2,
          python3-pydantic (>= 2.0),
          python3-yaml,

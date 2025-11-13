@@ -187,18 +187,19 @@ The tool must generate AppStream metadata for software center integration:
 
 ### TR1: Programming Language and Runtime
 
-The tool must be implemented in Python 3.9 or later for:
+The tool must be implemented in Python 3.11 or later for:
 
-- Wide availability on Debian/Ubuntu systems
+- Wide availability on Debian Bookworm (Stable) and later systems
+- Strong typing support including modern union types (X | Y syntax)
 - Rich ecosystem of libraries for YAML, JSON, templating
 - Ease of maintenance and contribution
 - Good error handling and reporting capabilities
 
 ### TR2: Dependencies
 
-The tool must depend only on packages available in Debian Trixie:
+The tool must depend only on packages available in Debian Bookworm (Stable) and later:
 
-- python3 (>= 3.9)
+- python3 (>= 3.11)
 - python3-jinja2 (templating)
 - python3-pydantic (>= 2.0) (validation with type hints)
 - python3-yaml (YAML parsing)
