@@ -1,6 +1,6 @@
 """Pydantic models for validating metadata.yaml files."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
@@ -9,11 +9,11 @@ class WebUI(BaseModel):
     """Web UI configuration for the container application."""
 
     enabled: bool = Field(description="Whether web UI is available")
-    path: Optional[str] = Field(None, description="URL path to access the web UI")
-    port: Optional[int] = Field(
+    path: str | None = Field(None, description="URL path to access the web UI")
+    port: int | None = Field(
         None, ge=1, le=65535, description="Port the web UI listens on"
     )
-    protocol: Optional[Literal["http", "https"]] = Field(
+    protocol: Literal["http", "https"] | None = Field(
         None, description="Protocol used by web UI"
     )
 
@@ -38,7 +38,7 @@ class PackageMetadata(BaseModel):
     )
 
     # Optional version field
-    upstream_version: Optional[str] = Field(
+    upstream_version: str | None = Field(
         None, description="Original application version"
     )
 
@@ -46,14 +46,14 @@ class PackageMetadata(BaseModel):
     description: str = Field(
         max_length=80, description="Short description for package lists"
     )
-    long_description: Optional[str] = Field(
+    long_description: str | None = Field(
         None, description="Detailed multi-line description"
     )
 
     # URLs and assets
-    homepage: Optional[HttpUrl] = Field(None, description="Project homepage URL")
-    icon: Optional[str] = Field(None, description="Relative path to icon file")
-    screenshots: Optional[list[str]] = Field(
+    homepage: HttpUrl | None = Field(None, description="Project homepage URL")
+    icon: str | None = Field(None, description="Relative path to icon file")
+    screenshots: list[str] | None = Field(
         None, description="Array of screenshot filenames"
     )
 
@@ -92,21 +92,21 @@ class PackageMetadata(BaseModel):
     )
 
     # Dependencies
-    depends: Optional[list[str]] = Field(
+    depends: list[str] | None = Field(
         None, description="Package dependencies (Depends)"
     )
-    recommends: Optional[list[str]] = Field(
+    recommends: list[str] | None = Field(
         None, description="Recommended packages (Recommends)"
     )
-    suggests: Optional[list[str]] = Field(
+    suggests: list[str] | None = Field(
         None, description="Suggested packages (Suggests)"
     )
 
     # Web UI configuration
-    web_ui: Optional[WebUI] = Field(None, description="Web interface configuration")
+    web_ui: WebUI | None = Field(None, description="Web interface configuration")
 
     # Default configuration
-    default_config: Optional[dict[str, str]] = Field(
+    default_config: dict[str, str] | None = Field(
         None, description="Default environment variables"
     )
 

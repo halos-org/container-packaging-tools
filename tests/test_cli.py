@@ -11,7 +11,6 @@ import pytest
 from jinja2 import TemplateError
 from pydantic import ValidationError
 
-from generate_container_packages import __version__
 from generate_container_packages.builder import BuildError
 from generate_container_packages.cli import (
     EXIT_BUILD_ERROR,
@@ -135,7 +134,7 @@ class TestCreateArgumentParser:
         parser = create_argument_parser()
         with pytest.raises(SystemExit) as exc_info:
             parser.parse_args(["--version"])
-        assert exc_info.value.code == 0
+        assert exc_info.value.code == 0  # type: ignore[attr-defined]
 
 
 class TestSetupLogging:
@@ -180,6 +179,10 @@ class TestSetupLogging:
 class TestCheckDependencies:
     """Tests for check_dependencies function."""
 
+    @pytest.mark.skipif(
+        shutil.which("dpkg-buildpackage") is None,
+        reason="dpkg-buildpackage not available",
+    )
     def test_dependencies_available(self):
         """Test that check passes when dependencies are available."""
         # In Docker environment, dpkg-buildpackage should be available
@@ -191,7 +194,6 @@ class TestCheckDependencies:
         monkeypatch.setattr(shutil, "which", lambda x: None)
         with pytest.raises(FileNotFoundError, match="dpkg-buildpackage not found"):
             check_dependencies()
-
 
 
 class TestMain:
@@ -255,7 +257,7 @@ class TestMain:
     def test_validation_error_during_load(self, mock_load, capsys):
         """Test handling of ValidationError during file loading."""
         input_dir = str(VALID_FIXTURES / "simple-app")
-        mock_load.side_effect = ValidationError.from_exception_data(
+        mock_load.side_effect = ValidationError.from_exception_data(  # type: ignore[arg-type]
             "TestModel",
             [
                 {
@@ -298,9 +300,12 @@ class TestMain:
         assert "Template rendering failed" in captured.err
 
     @mock.patch("generate_container_packages.cli.build_package")
+    @mock.patch("generate_container_packages.cli.check_dependencies")
     @mock.patch("generate_container_packages.cli.render_all_templates")
     @mock.patch("generate_container_packages.cli.load_input_files")
-    def test_build_error(self, mock_load, mock_render, mock_build, capsys, tmp_path):
+    def test_build_error(
+        self, mock_load, mock_render, mock_check_deps, mock_build, capsys, tmp_path
+    ):
         """Test handling of BuildError during package building."""
         from generate_container_packages.loader import AppDefinition
 
@@ -322,9 +327,12 @@ class TestMain:
         assert "Package build failed" in captured.err
 
     @mock.patch("generate_container_packages.cli.build_package")
+    @mock.patch("generate_container_packages.cli.check_dependencies")
     @mock.patch("generate_container_packages.cli.render_all_templates")
     @mock.patch("generate_container_packages.cli.load_input_files")
-    def test_keyboard_interrupt(self, mock_load, mock_render, mock_build, capsys):
+    def test_keyboard_interrupt(
+        self, mock_load, mock_render, mock_check_deps, mock_build, capsys
+    ):
         """Test handling of KeyboardInterrupt."""
         from generate_container_packages.loader import AppDefinition
 
@@ -346,9 +354,12 @@ class TestMain:
         assert "Interrupted by user" in captured.err
 
     @mock.patch("generate_container_packages.cli.build_package")
+    @mock.patch("generate_container_packages.cli.check_dependencies")
     @mock.patch("generate_container_packages.cli.render_all_templates")
     @mock.patch("generate_container_packages.cli.load_input_files")
-    def test_unexpected_exception(self, mock_load, mock_render, mock_build, capsys):
+    def test_unexpected_exception(
+        self, mock_load, mock_render, mock_check_deps, mock_build, capsys
+    ):
         """Test handling of unexpected exceptions."""
         from generate_container_packages.loader import AppDefinition
 
@@ -370,10 +381,11 @@ class TestMain:
         assert "Unexpected error" in captured.err
 
     @mock.patch("generate_container_packages.cli.build_package")
+    @mock.patch("generate_container_packages.cli.check_dependencies")
     @mock.patch("generate_container_packages.cli.render_all_templates")
     @mock.patch("generate_container_packages.cli.load_input_files")
     def test_successful_build(
-        self, mock_load, mock_render, mock_build, capsys, tmp_path
+        self, mock_load, mock_render, mock_check_deps, mock_build, capsys, tmp_path
     ):
         """Test successful package build."""
         from generate_container_packages.loader import AppDefinition
@@ -421,7 +433,8 @@ class TestMain:
             mock.patch("generate_container_packages.cli.load_input_files") as mock_load,
             mock.patch(
                 "generate_container_packages.cli.render_all_templates"
-            ) as mock_render,
+            ) as _mock_render,
+            mock.patch("generate_container_packages.cli.check_dependencies"),
             mock.patch("generate_container_packages.cli.build_package") as mock_build,
         ):
             from generate_container_packages.loader import AppDefinition
@@ -452,7 +465,8 @@ class TestMain:
             mock.patch("generate_container_packages.cli.load_input_files") as mock_load,
             mock.patch(
                 "generate_container_packages.cli.render_all_templates"
-            ) as mock_render,
+            ) as _mock_render,
+            mock.patch("generate_container_packages.cli.check_dependencies"),
             mock.patch("generate_container_packages.cli.build_package") as mock_build,
             mock.patch("tempfile.mkdtemp") as mock_mkdtemp,
             mock.patch("shutil.rmtree") as mock_rmtree,
@@ -487,6 +501,7 @@ class TestMain:
         input_dir = str(VALID_FIXTURES / "simple-app")
 
         with (
+            mock.patch("generate_container_packages.cli.check_dependencies"),
             mock.patch("tempfile.mkdtemp") as mock_mkdtemp,
             mock.patch("shutil.rmtree") as mock_rmtree,
         ):

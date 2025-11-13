@@ -62,12 +62,20 @@ def has_sudo():
     return shutil.which("sudo") is not None
 
 
+def has_dpkg_buildpackage():
+    """Check if dpkg-buildpackage is available."""
+    return shutil.which("dpkg-buildpackage") is not None
+
+
 # Skip all tests if not on Debian or missing required tools
 pytestmark = [
     pytest.mark.install,
     pytest.mark.skipif(
-        not is_debian_system() or not has_dpkg() or not has_sudo(),
-        reason="Requires Debian system with dpkg and sudo",
+        not is_debian_system()
+        or not has_dpkg()
+        or not has_sudo()
+        or not has_dpkg_buildpackage(),
+        reason="Requires Debian system with dpkg, dpkg-buildpackage, and sudo",
     ),
 ]
 
@@ -149,7 +157,9 @@ class TestPackageInstallation:
         run_command(["sudo", "systemctl", "daemon-reload"])
 
         # Verify systemd recognizes the service
-        result = run_command(["systemctl", "list-unit-files", "simple-test-app-container.service"])
+        result = run_command(
+            ["systemctl", "list-unit-files", "simple-test-app-container.service"]
+        )
         assert "simple-test-app-container.service" in result.stdout
 
         # Note: We don't start the service because it requires Docker
@@ -249,7 +259,9 @@ class TestMaintainerScripts:
         run_command(["sudo", "dpkg", "-i", str(built_package)], check=False)
 
         # Remove triggers prerm
-        result = run_command(["sudo", "dpkg", "-r", "simple-test-app-container"], check=False)
+        result = run_command(
+            ["sudo", "dpkg", "-r", "simple-test-app-container"], check=False
+        )
         # If removal succeeds, prerm succeeded
         assert result.returncode == 0
 
@@ -259,7 +271,9 @@ class TestMaintainerScripts:
         run_command(["sudo", "dpkg", "-i", str(built_package)], check=False)
 
         # Purge triggers postrm
-        result = run_command(["sudo", "dpkg", "-P", "simple-test-app-container"], check=False)
+        result = run_command(
+            ["sudo", "dpkg", "-P", "simple-test-app-container"], check=False
+        )
         # If purge succeeds, postrm succeeded
         assert result.returncode == 0
 
@@ -318,7 +332,8 @@ class TestServiceWithDocker:
         # image is not available. We're mainly testing that the service
         # unit is properly configured and systemd can attempt to start it.
         run_command(
-            ["sudo", "systemctl", "start", "simple-test-app-container.service"], check=False
+            ["sudo", "systemctl", "start", "simple-test-app-container.service"],
+            check=False,
         )
 
         # Check if systemd recognized the service (command runs without error)
@@ -327,18 +342,25 @@ class TestServiceWithDocker:
         )
 
         # Cleanup: stop service if it started
-        run_command(["sudo", "systemctl", "stop", "simple-test-app-container.service"], check=False)
+        run_command(
+            ["sudo", "systemctl", "stop", "simple-test-app-container.service"],
+            check=False,
+        )
 
     def test_service_can_stop(self, built_package):
         """Test that service can be stopped."""
         # Install and try to start
         run_command(["sudo", "dpkg", "-i", str(built_package)], check=False)
         run_command(["sudo", "systemctl", "daemon-reload"])
-        run_command(["sudo", "systemctl", "start", "simple-test-app-container.service"], check=False)
+        run_command(
+            ["sudo", "systemctl", "start", "simple-test-app-container.service"],
+            check=False,
+        )
 
         # Stop service
         result = run_command(
-            ["sudo", "systemctl", "stop", "simple-test-app-container.service"], check=False
+            ["sudo", "systemctl", "stop", "simple-test-app-container.service"],
+            check=False,
         )
         # Should succeed even if service wasn't running
         assert result.returncode == 0

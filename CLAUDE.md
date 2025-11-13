@@ -10,6 +10,20 @@ Tooling for generating Debian packages from container application definitions.
 
 **Branch Workflow:** Never push to main directly - always use feature branches and PRs.
 
+**Pre-Push Requirements:** ALWAYS run these checks locally before pushing to PR:
+```bash
+# Code quality checks
+./run lint              # Linter must pass
+./run format:check      # Formatting must pass
+uvx ty check src/       # Type checker must pass
+
+# Test checks (matching CI)
+uv run pytest tests/test_*.py -m "not integration and not install" -q  # Unit tests
+uv run pytest tests/test_*.py -m "integration and not install" -q      # Integration tests
+```
+
+All checks must pass locally before pushing. This prevents wasting CI resources and iteration cycles.
+
 ## Project Purpose
 
 This package provides `generate-container-packages` command that converts simple container app definitions into full Debian packages. The goal is to make it easy for developers to add new container apps without understanding Debian packaging internals.

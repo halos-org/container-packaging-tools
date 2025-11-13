@@ -1,0 +1,194 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, feat/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Run linter (ruff check)
+        run: |
+          uv run ruff check src/ tests/
+
+      - name: Check formatting (ruff format)
+        run: |
+          uv run ruff format --check src/ tests/
+
+      - name: Run type checker
+        run: |
+          uvx ty check src/
+
+  unit-tests:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Run unit tests with coverage
+        run: |
+          uv run pytest tests/test_*.py -m "not integration and not install" \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-report=html
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload coverage HTML report
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Run integration tests
+        run: |
+          # Run integration tests using pytest markers (excluding install marker)
+          # Check if any integration tests exist
+          if uv run pytest --co -m "integration and not install" -q > /dev/null 2>&1; then
+            uv run pytest -m "integration and not install" -v
+          else
+            echo "No integration tests found, skipping..."
+            echo "Integration tests will be added in issues #17-18"
+          fi
+
+  build-package:
+    name: Build Debian Package
+    runs-on: ubuntu-latest
+    needs: [quality, unit-tests, integration-tests]
+    # Disabled until issue #19 (debian/ directory creation) is complete
+    if: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Install Debian build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev debhelper dh-python python3-all python3-setuptools
+
+      - name: Build Debian package
+        run: |
+          dpkg-buildpackage -us -uc
+
+      - name: List built packages
+        run: |
+          ls -lh ../*.deb || echo "No .deb files found"
+
+      - name: Upload Debian package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-packages
+          path: ../*.deb
+          if-no-files-found: warn
+
+  install-test:
+    name: Test Package Installation
+    runs-on: ubuntu-latest
+    needs: build-package
+    # Disabled until issue #19 (debian/ directory creation) is complete
+    if: false
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: debian-packages
+
+      - name: Install package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip python3-venv
+          if ! sudo dpkg -i *.deb; then
+            echo "dpkg failed, attempting to fix dependencies..."
+            sudo apt-get install -f -y
+            echo "Retrying dpkg installation..."
+            sudo dpkg -i *.deb
+          fi
+
+      - name: Verify installation
+        run: |
+          which generate-container-packages
+          generate-container-packages --help
+
+      - name: Test basic functionality
+        run: |
+          generate-container-packages --version || echo "Version command not implemented yet"
