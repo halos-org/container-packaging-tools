@@ -259,7 +259,7 @@ The metadata model contains all package-level information:
 
 **Validation Rules**:
 - Package name must match pattern: lowercase, hyphens, must end with `-container`
-- Version must follow semver with optional Debian revision
+- Version must be valid Debian version (semver, date-based, CalVer, or hybrid)
 - Maintainer must match pattern: `Name <email@domain>`
 - Tags must include `role::container-app`
 - All fields must conform to JSON schema

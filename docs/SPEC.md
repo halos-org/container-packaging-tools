@@ -160,8 +160,24 @@ The tool must enforce naming conventions:
 
 - Package names must end with `-container` suffix
 - Package names must use lowercase with hyphens
-- Version numbers must follow semantic versioning with optional Debian revision
+- Version numbers must be valid Debian versions (supports semver, date-based, CalVer, hybrid schemes)
 - Filenames must follow Debian standards
+
+**Supported Version Formats**:
+
+The tool supports any versioning scheme compatible with Debian package versioning. Common patterns include:
+
+- **Semantic Versioning (semver)**: `1.2.3`, `2.8.0-1` (with Debian revision)
+  - Used by Signal K, OpenCPN, and many modern applications
+- **Date-based**: `20250113`, `20250113-1` (YYYYMMDD format)
+  - Used by AvNav and applications with frequent time-based releases
+- **Calendar Versioning (CalVer)**: `2025.01.13`, `2025.1-1`
+  - Alternative date-based format with better human readability
+- **Hybrid schemes**: `5.8.4+git20250113`, `3.2.1~rc1`
+  - Combines base version with additional metadata (git date, release candidate, etc.)
+- **Epoch versioning**: `1:2.8.0` (for handling version scheme changes)
+
+Version validation uses `dpkg --compare-versions` to ensure compatibility with Debian's version comparison algorithm.
 
 ### FR9: Tagging and Categorization
 

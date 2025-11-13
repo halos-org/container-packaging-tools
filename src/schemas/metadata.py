@@ -1,5 +1,6 @@
 """Pydantic models for validating metadata.yaml files."""
 
+import subprocess
 from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
@@ -33,8 +34,8 @@ class PackageMetadata(BaseModel):
         description="Debian package name (must end with -container)",
     )
     version: str = Field(
-        pattern=r"^[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9]+)?$",
-        description="Package version (semver + optional Debian revision)",
+        min_length=1,
+        description="Package version (semver, date-based, CalVer, etc. + optional Debian revision)",
     )
 
     # Optional version field
@@ -124,4 +125,57 @@ class PackageMetadata(BaseModel):
         """Validate that tags include role::container-app."""
         if "role::container-app" not in v:
             raise ValueError("Tags must include 'role::container-app'")
+        return v
+
+    @field_validator("version")
+    @classmethod
+    def validate_version_format(cls, v: str) -> str:
+        """Validate version is compatible with Debian package versioning.
+
+        Uses dpkg --compare-versions to ensure the version is valid and comparable.
+        Supports semantic versioning, date-based, CalVer, and hybrid schemes.
+        """
+        # Check basic format constraints
+        if not v or v.isspace():
+            raise ValueError("Version cannot be empty or whitespace")
+
+        # Validate using dpkg --compare-versions
+        # We compare the version to itself to check if it's a valid version string
+        try:
+            result = subprocess.run(
+                ["dpkg", "--compare-versions", v, "eq", v],
+                capture_output=True,
+                check=False,
+                timeout=1,
+                text=True,
+            )
+            # Check for warnings in stderr (indicates bad syntax)
+            # dpkg prints warnings like "version 'v1.0' has bad syntax"
+            if result.stderr and (
+                "bad syntax" in result.stderr or "error" in result.stderr.lower()
+            ):
+                raise ValueError(
+                    f"Invalid Debian version format: '{v}'. "
+                    "Version must be valid according to Debian policy. "
+                    "Examples: 1.2.3, 20250113, 2025.01.13, 5.8.4+git20250113"
+                )
+            # Exit code 0 means versions are equal (valid format)
+            if result.returncode != 0:
+                raise ValueError(
+                    f"Invalid Debian version format: '{v}'. "
+                    "Version must be valid according to Debian policy. "
+                    "Examples: 1.2.3, 20250113, 2025.01.13, 5.8.4+git20250113"
+                )
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            # If dpkg is not available or times out, do basic validation
+            # Allow alphanumeric, dots, dashes, plus signs, tildes, and colons
+            import re
+
+            if not re.match(r"^[0-9][0-9a-zA-Z.+~:-]*$", v):
+                raise ValueError(
+                    f"Invalid version format: '{v}'. "
+                    "Version must start with a digit and contain only "
+                    "alphanumeric characters, dots, dashes, plus signs, tildes, and colons"
+                ) from e
+
         return v

@@ -147,8 +147,8 @@ class PackageMetadata(BaseModel):
     name: str = Field(min_length=1, description="Human-readable application name")
     package_name: str = Field(pattern=r"^[a-z0-9][a-z0-9+.-]+$",
                               description="Debian package name (must end with -container)")
-    version: str = Field(pattern=r"^[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9]+)?$",
-                        description="Package version (semver + optional Debian revision)")
+    version: str = Field(min_length=1,
+                        description="Package version (flexible: semver, date-based, CalVer, etc.)")
     description: str = Field(max_length=80, description="Short description for package lists")
     maintainer: str = Field(pattern=r"^[^<>]+<[^@]+@[^>]+>$",
                            description="Package maintainer (Name <email>)")

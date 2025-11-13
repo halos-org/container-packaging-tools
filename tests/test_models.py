@@ -137,16 +137,54 @@ class TestPackageMetadata:
         assert "version" in str(exc_info.value).lower()
 
     def test_valid_version_with_debian_revision(self, valid_metadata):
-        """Test version with Debian revision is valid."""
+        """Test version with Debian revision is valid (semver)."""
         valid_metadata["version"] = "1.2.3-1"
         metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
         assert metadata.version == "1.2.3-1"
 
     def test_valid_version_without_patch(self, valid_metadata):
-        """Test version without patch number is valid."""
+        """Test version without patch number is valid (semver)."""
         valid_metadata["version"] = "2.1"
         metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
         assert metadata.version == "2.1"
+
+    def test_valid_version_date_based(self, valid_metadata):
+        """Test date-based version is valid (YYYYMMDD format)."""
+        valid_metadata["version"] = "20250113"
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert metadata.version == "20250113"
+
+    def test_valid_version_calver(self, valid_metadata):
+        """Test CalVer version is valid (YYYY.MM.DD format)."""
+        valid_metadata["version"] = "2025.01.13"
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert metadata.version == "2025.01.13"
+
+    def test_valid_version_hybrid(self, valid_metadata):
+        """Test hybrid version is valid (semver + git date)."""
+        valid_metadata["version"] = "5.8.4+git20250113"
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert metadata.version == "5.8.4+git20250113"
+
+    def test_valid_version_with_epoch(self, valid_metadata):
+        """Test version with epoch is valid."""
+        valid_metadata["version"] = "1:2.8.0"
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert metadata.version == "1:2.8.0"
+
+    def test_invalid_version_empty(self, valid_metadata):
+        """Test empty version raises ValidationError."""
+        valid_metadata["version"] = ""
+        with pytest.raises(ValidationError) as exc_info:
+            PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert "version" in str(exc_info.value).lower()
+
+    def test_invalid_version_whitespace(self, valid_metadata):
+        """Test whitespace-only version raises ValidationError."""
+        valid_metadata["version"] = "   "
+        with pytest.raises(ValidationError) as exc_info:
+            PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert "version" in str(exc_info.value).lower()
 
     def test_description_too_long(self, valid_metadata):
         """Test description exceeding 80 characters raises ValidationError."""
