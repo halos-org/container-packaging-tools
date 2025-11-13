@@ -64,7 +64,7 @@ jobs:
 
       - name: Run unit tests with coverage
         run: |
-          uv run pytest tests/test_*.py -m "not integration" \
+          uv run pytest tests/test_*.py -m "not integration and not install" \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml \

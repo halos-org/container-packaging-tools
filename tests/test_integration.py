@@ -14,6 +14,9 @@ from generate_container_packages.loader import load_input_files
 from generate_container_packages.renderer import render_all_templates
 from generate_container_packages.validator import validate_input_directory
 
+# Mark all tests in this file as integration tests
+pytestmark = pytest.mark.integration
+
 
 class TestPipelineValidation:
     """Test validation phase of the pipeline."""

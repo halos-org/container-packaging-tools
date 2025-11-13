@@ -22,9 +22,15 @@ class ConfigField(BaseModel):
     )
     default: Any = Field(description="Default value for the field")
     required: bool = Field(description="Whether the field is required")
-    min: int | None = Field(None, description="Minimum value (for integer/string types)")
-    max: int | None = Field(None, description="Maximum value (for integer/string types)")
-    options: list[str] | None = Field(None, description="Valid options (required for enum type)")
+    min: int | None = Field(
+        None, description="Minimum value (for integer/string types)"
+    )
+    max: int | None = Field(
+        None, description="Maximum value (for integer/string types)"
+    )
+    options: list[str] | None = Field(
+        None, description="Valid options (required for enum type)"
+    )
     description: str | None = Field(None, description="Help text for the field")
 
     @model_validator(mode="after")

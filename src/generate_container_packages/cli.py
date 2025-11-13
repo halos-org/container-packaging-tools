@@ -78,14 +78,6 @@ def main() -> int:
                     print(f"  - {warning.message}")
             return EXIT_SUCCESS
 
-        # Check build dependencies only if actually building
-        try:
-            check_dependencies()
-        except (ImportError, FileNotFoundError) as e:
-            logger.error(f"Dependency check failed: {e}")
-            print(f"\nERROR: {e}\n", file=sys.stderr)
-            return EXIT_DEPENDENCY_ERROR
-
         # Step 2: Load input files
         logger.info("Loading input files...")
         app_def = load_input_files(input_dir)
@@ -98,6 +90,9 @@ def main() -> int:
         try:
             render_all_templates(app_def, rendered_dir)
             logger.info("✓ Templates rendered")
+
+            # Check build dependencies before building
+            check_dependencies()
 
             # Step 4: Build package
             output_dir = Path(args.output).resolve()
@@ -141,6 +136,11 @@ def main() -> int:
         if args.debug:
             traceback.print_exc()
         return EXIT_BUILD_ERROR
+
+    except (ImportError, FileNotFoundError) as e:
+        logger.error(f"Dependency check failed: {e}")
+        print(f"\nERROR: {e}\n", file=sys.stderr)
+        return EXIT_DEPENDENCY_ERROR
 
     except KeyboardInterrupt:
         print("\n\nInterrupted by user", file=sys.stderr)
