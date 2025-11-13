@@ -1,0 +1,5 @@
+pydantic
+pydantic-core
+annotated-types
+typing-extensions
+typing-inspection
