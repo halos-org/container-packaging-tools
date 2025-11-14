@@ -257,17 +257,16 @@ class TestMain:
     def test_validation_error_during_load(self, mock_load, capsys):
         """Test handling of ValidationError during file loading."""
         input_dir = str(VALID_FIXTURES / "simple-app")
-        mock_load.side_effect = ValidationError.from_exception_data(  # type: ignore[arg-type]
-            "TestModel",
-            [
-                {
-                    "type": "missing",
-                    "loc": ("field",),
-                    "msg": "Field required",
-                    "input": {},
-                }
-            ],
-        )
+        # Create a ValidationError by attempting to validate invalid data
+        from pydantic import BaseModel, Field
+
+        class TestModel(BaseModel):
+            required_field: str = Field(..., description="Required field")
+
+        try:
+            TestModel.model_validate({})  # Missing required field
+        except ValidationError as e:
+            mock_load.side_effect = e
 
         with mock.patch.object(sys, "argv", ["prog", input_dir]):
             exit_code = main()
