@@ -33,6 +33,27 @@ Command-line tools for converting container application definitions into Debian 
 
 **Note:** Older distributions like Ubuntu 22.04 or Debian 12 (Bookworm) do not have Pydantic v2.0+ available in their repositories.
 
+## Agentic Coding Setup (Claude Code, GitHub Copilot, etc.)
+
+For development with AI assistants, use the halos-distro workspace for full context:
+
+```bash
+# Clone the workspace
+git clone https://github.com/hatlabs/halos-distro.git
+cd halos-distro
+
+# Get all sub-repositories including container-packaging-tools
+./run repos:clone
+
+# Work from workspace root for AI-assisted development
+# Claude Code gets full context across all repos
+```
+
+See `halos-distro/docs/` for development workflows:
+- `HUMAN_DEVELOPMENT_GUIDANCE.md` - Quick start guide
+- `IMPLEMENTATION_CHECKLIST.md` - Development checklist
+- `DEVELOPMENT_WORKFLOW.md` - Detailed workflows
+
 ## Installation
 
 ```bash
