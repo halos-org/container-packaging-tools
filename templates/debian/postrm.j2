@@ -6,8 +6,11 @@ case "$1" in
         # Remove configuration directory and all contents
         rm -rf "{{ paths.etc }}"
 
-        # Reload systemd (service file removed automatically by dpkg)
-        systemctl daemon-reload || true
+        # Only interact with systemd if it's running (not in containers or minimal envs)
+        if [ -d /run/systemd/system ]; then
+            # Reload systemd (service file removed automatically by dpkg)
+            systemctl daemon-reload || true
+        fi
         ;;
 
     remove)
