@@ -25,7 +25,7 @@ jobs:
         event-type: package-updated
         client-payload: |
           {
-            "repository": "container-packaging-tools",
+            "repository": "${{ github.repository }}",
             "distro": "any",
             "channel": "stable",
             "component": "main",
