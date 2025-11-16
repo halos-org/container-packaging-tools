@@ -248,6 +248,25 @@ class TestPackageMetadata:
             metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
             assert metadata.architecture == arch
 
+    def test_all_official_debian_sections(self, valid_metadata):
+        """Test all official Debian sections from Policy Manual 4.7.2.0."""
+        # Complete list from https://www.debian.org/doc/debian-policy/ch-archive.html
+        official_sections = [
+            "admin", "cli-mono", "comm", "database", "debug", "devel", "doc",
+            "editors", "education", "electronics", "embedded", "fonts", "games",
+            "gnome", "gnu-r", "gnustep", "graphics", "hamradio", "haskell",
+            "httpd", "interpreters", "introspection", "java", "javascript", "kde",
+            "kernel", "libdevel", "libs", "lisp", "localization", "mail", "math",
+            "metapackages", "misc", "net", "news", "ocaml", "oldlibs", "otherosfs",
+            "perl", "php", "python", "ruby", "rust", "science", "shells", "sound",
+            "tasks", "tex", "text", "utils", "vcs", "video", "web", "x11", "xfce",
+            "zope",
+        ]
+        for section in official_sections:
+            valid_metadata["debian_section"] = section
+            metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+            assert metadata.debian_section == section
+
     def test_invalid_homepage_url(self, valid_metadata):
         """Test invalid homepage URL raises ValidationError."""
         valid_metadata["homepage"] = "not-a-url"
