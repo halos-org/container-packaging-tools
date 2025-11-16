@@ -22,11 +22,13 @@ jobs:
       with:
         token: ${{ secrets.REPO_DISPATCH_PAT }}
         repository: hatlabs/apt.hatlabs.fi
-        event-type: container-packaging-tools-release
+        event-type: package-updated
         client-payload: |
           {
-            "package": "container-packaging-tools",
+            "repository": "container-packaging-tools",
+            "distro": "any",
+            "channel": "stable",
+            "component": "main",
             "version": "${{ steps.version.outputs.version }}",
-            "tag_name": "${{ github.event.release.tag_name }}",
             "release_url": "${{ github.event.release.html_url }}"
           }
