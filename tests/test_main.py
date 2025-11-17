@@ -27,4 +27,4 @@ def test_main_version():
     )
 
     assert result.returncode == 0
-    assert "0.1.0" in result.stdout or "0.1.0" in result.stderr
+    assert "0.2.0" in result.stdout or "0.2.0" in result.stderr
