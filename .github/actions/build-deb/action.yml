@@ -11,17 +11,17 @@ runs:
       uses: actions/cache@v4
       with:
         path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-devtools-${{ hashFiles('docker/Dockerfile.devtools') }}
+        key: ${{ runner.os }}-buildx-debtools-${{ hashFiles('docker/Dockerfile.debtools') }}
         restore-keys: |
-          ${{ runner.os }}-buildx-devtools-
+          ${{ runner.os }}-buildx-debtools-
 
-    - name: Build devtools Docker image
+    - name: Build debtools Docker image
       shell: bash
       run: |
         cd docker
         docker buildx build \
-          --file Dockerfile.devtools \
-          --tag devtools:latest \
+          --file Dockerfile.debtools \
+          --tag debtools:latest \
           --cache-from type=local,src=/tmp/.buildx-cache \
           --cache-to type=local,dest=/tmp/.buildx-cache,mode=max \
           --load \
