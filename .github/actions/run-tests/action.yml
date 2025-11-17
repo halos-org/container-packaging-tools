@@ -4,6 +4,9 @@ description: 'Run all backend tests for container-packaging-tools'
 runs:
   using: 'composite'
   steps:
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v2
+
     - name: Run backend tests
       run: .github/scripts/run-backend-tests.sh
       shell: bash
