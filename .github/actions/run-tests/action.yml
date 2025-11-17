@@ -1,0 +1,16 @@
+name: 'Run Tests'
+description: 'Run all tests for container-packaging-tools'
+runs:
+  using: 'composite'
+  steps:
+    - name: Run backend tests
+      shell: bash
+      run: ${{ github.action_path }}/../../scripts/run-backend-tests.sh
+
+    - name: Run backend linting
+      shell: bash
+      run: ${{ github.action_path }}/../../scripts/run-backend-linting.sh
+
+    - name: Run backend type checking
+      shell: bash
+      run: ${{ github.action_path }}/../../scripts/run-backend-typecheck.sh

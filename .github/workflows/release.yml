@@ -4,6 +4,10 @@ on:
   release:
     types: [published]
 
+env:
+  APT_DISTRO: any
+  APT_COMPONENT: main
+
 jobs:
   trigger-packaging:
     runs-on: ubuntu-latest
@@ -26,9 +30,9 @@ jobs:
         client-payload: |
           {
             "repository": "${{ github.repository }}",
-            "distro": "any",
+            "distro": "${{ env.APT_DISTRO }}",
             "channel": "stable",
-            "component": "main",
+            "component": "${{ env.APT_COMPONENT }}",
             "version": "${{ steps.version.outputs.version }}",
             "release_url": "${{ github.event.release.html_url }}"
           }

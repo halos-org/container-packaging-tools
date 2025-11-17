@@ -1,0 +1,135 @@
+name: Main Branch CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  APT_DISTRO: any
+  APT_COMPONENT: main
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-venv python3-dev >/dev/null 2>&1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v2
+
+      - uses: ./.github/actions/run-tests
+
+  build-and-release:
+    name: Build Package and Create Release
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential dpkg-dev debhelper dh-python \
+            python3-all python3-pydantic python3-jinja2 python3-yaml nodejs npm \
+            devscripts >/dev/null 2>&1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(dpkg-parsechangelog -S Version)
+          TAG_VERSION=$(echo "$VERSION" | sed 's/-[^-]*$//')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag_version=${TAG_VERSION}" >> $GITHUB_OUTPUT
+          echo "📦 Package version: $VERSION (tag: $TAG_VERSION)"
+
+      - name: Check if release exists
+        id: check
+        run: |
+          if gh release view "${{ steps.version.outputs.tag_version }}" &>/dev/null; then
+            echo "action=skip"
+          else
+            echo "action=create"
+          fi >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build package
+        if: steps.check.outputs.action == 'create'
+        run: |
+          echo "🏗️  Building package..."
+          dpkg-buildpackage -b -uc -us
+          echo "✅ Build complete"
+          ls -lh ../container-packaging-tools_*.deb
+
+      - name: Rename package with distro+component suffix
+        if: steps.check.outputs.action == 'create'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          OLD_NAME="../container-packaging-tools_${VERSION}_all.deb"
+          NEW_NAME="../container-packaging-tools_${VERSION}_all+${APT_DISTRO}+${APT_COMPONENT}.deb"
+
+          if [ -f "$OLD_NAME" ]; then
+            echo "📦 Renaming package: $(basename $OLD_NAME) → $(basename $NEW_NAME)"
+            mv "$OLD_NAME" "$NEW_NAME"
+            echo "PACKAGE_PATH=$NEW_NAME" >> $GITHUB_ENV
+            echo "PACKAGE_NAME=$(basename $NEW_NAME)" >> $GITHUB_ENV
+            ls -lh "$NEW_NAME"
+          else
+            echo "❌ Package file not found: $OLD_NAME"
+            exit 1
+          fi
+
+      - name: Create pre-release
+        if: steps.check.outputs.action == 'create'
+        run: |
+          gh release create \
+            "${{ steps.version.outputs.version }}" \
+            "${{ env.PACKAGE_PATH }}" \
+            --title "Version ${{ steps.version.outputs.version }}" \
+            --notes "Pre-release build for testing" \
+            --prerelease \
+            --repo ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create draft release
+        if: steps.check.outputs.action == 'create'
+        run: |
+          gh release create \
+            "v${{ steps.version.outputs.tag_version }}" \
+            "${{ env.PACKAGE_PATH }}" \
+            --title "Release ${{ steps.version.outputs.tag_version }}" \
+            --notes "Stable release" \
+            --draft \
+            --repo ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Dispatch to apt.hatlabs.fi
+        if: steps.check.outputs.action == 'create'
+        run: |
+          gh api repos/hatlabs/apt.hatlabs.fi/dispatches \
+            --input - <<< '{
+              "event_type": "package_release",
+              "client_payload": {
+                "repository": "${{ github.repository }}",
+                "distro": "${{ env.APT_DISTRO }}",
+                "channel": "unstable",
+                "component": "${{ env.APT_COMPONENT }}"
+              }
+            }'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,6 +3,8 @@
 import subprocess
 import sys
 
+from generate_container_packages import __version__
+
 
 def test_main_entry_point():
     """Test that __main__.py can be executed as a module."""
@@ -27,4 +29,4 @@ def test_main_version():
     )
 
     assert result.returncode == 0
-    assert "0.1.0" in result.stdout or "0.1.0" in result.stderr
+    assert __version__ in result.stdout or __version__ in result.stderr

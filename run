@@ -28,6 +28,67 @@ readonly PROJECT_ROOT=$(pwd)
 readonly SCRIPT="$PROJECT_ROOT/$(basename "$0")"
 
 ################################################################################
+# Development Commands
+
+function dev:version:bump {
+  #@ Bump version (patch/minor/major)
+  #@ Category: Development
+  local part="${1:-patch}"
+
+  if [[ ! "$part" =~ ^(patch|minor|major)$ ]]; then
+    echo "❌ Error: Version part must be 'patch', 'minor', or 'major'"
+    echo "Usage: ./run dev:version:bump [patch|minor|major]"
+    return 1
+  fi
+
+  echo "📦 Bumping $part version..."
+
+  # Check if bumpversion is available
+  if ! command -v bumpversion &> /dev/null; then
+    echo "❌ bumpversion not found. Please install it:"
+    echo "   Run: pip3 install --user bump2version"
+    echo "   Or: brew install bumpversion (on macOS)"
+    return 1
+  fi
+
+  # Read current version
+  CURRENT_VERSION=$(cat VERSION)
+
+  # Bump version with automatic commit (includes VERSION, pyproject.toml, and __init__.py)
+  bumpversion --current-version "$CURRENT_VERSION" \
+    --commit \
+    --message "chore: bump version to {new_version}" \
+    "$part"
+
+  # Read the new version that bumpversion created
+  NEW_VERSION=$(cat VERSION)
+
+  # Update debian/changelog and amend the commit
+  echo "📝 Updating debian/changelog to ${NEW_VERSION}-1..."
+  docker run --rm \
+    -v "$PWD:/workspace" \
+    -w /workspace \
+    -e DEBEMAIL="matti.airas@hatlabs.fi" \
+    -e DEBFULLNAME="Matti Airas" \
+    debian:trixie-slim \
+    bash -c "apt-get update -qq && apt-get install -y -qq devscripts >/dev/null 2>&1 && dch --newversion '${NEW_VERSION}-1' --distribution unstable 'Version bump to ${NEW_VERSION}'"
+
+  # Amend the commit to include debian/changelog
+  git add debian/changelog
+  git commit --amend --no-edit
+
+  echo "✅ Version bump complete: $NEW_VERSION"
+  echo ""
+  echo "Files updated and committed:"
+  echo "  - VERSION"
+  echo "  - pyproject.toml"
+  echo "  - src/generate_container_packages/__init__.py"
+  echo "  - debian/changelog"
+  echo ""
+  echo "Commit created by bumpversion"
+}
+
+################################################################################
 # Setup Commands
 
 function dev:setup {
