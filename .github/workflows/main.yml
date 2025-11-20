@@ -122,7 +122,8 @@ jobs:
             gh release create "v${VERSION}" \
               --draft \
               --title "v${VERSION}" \
-              --notes-file release_notes.md
+              --notes-file release_notes.md \
+              *.deb
             echo "✅ Draft release created successfully"
           fi
         env:
