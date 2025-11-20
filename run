@@ -30,68 +30,17 @@ readonly SCRIPT="$PROJECT_ROOT/$(basename "$0")"
 ################################################################################
 # Development Commands
 
-function dev:version:bump {
-  #@ Bump version (patch/minor/major)
+function bumpversion {
+  #@ Bump version
   #@ Category: Development
-  local part="${1:-patch}"
 
-  if [[ ! "$part" =~ ^(patch|minor|major)$ ]]; then
-    echo "❌ Error: Version part must be 'patch', 'minor', or 'major'"
-    echo "Usage: ./run dev:version:bump [patch|minor|major]"
-    return 1
-  fi
-
-  echo "📦 Bumping $part version..."
-
-  # Check if bumpversion is available
-  if ! command -v bumpversion &> /dev/null; then
-    echo "❌ bumpversion not found. Please install it:"
-    echo "   Run: pip3 install --user bump2version"
-    echo "   Or: brew install bumpversion (on macOS)"
-    return 1
-  fi
-
-  # Read current version
-  CURRENT_VERSION=$(cat VERSION)
-
-  # Bump version with automatic commit (includes VERSION, pyproject.toml, and __init__.py)
-  bumpversion --current-version "$CURRENT_VERSION" \
-    --commit \
-    --message "chore: bump version to {new_version}" \
-    "$part"
-
-  # Read the new version that bumpversion created
-  NEW_VERSION=$(cat VERSION)
-
-  # Update debian/changelog and amend the commit
-  echo "📝 Updating debian/changelog to ${NEW_VERSION}-1..."
-  docker run --rm \
-    -v "$PWD:/workspace" \
-    -w /workspace \
-    -e DEBEMAIL="matti.airas@hatlabs.fi" \
-    -e DEBFULLNAME="Matti Airas" \
-    debian:trixie-slim \
-    bash -c "apt-get update -qq && apt-get install -y -qq devscripts >/dev/null 2>&1 && dch --newversion '${NEW_VERSION}-1' --distribution unstable 'Version bump to ${NEW_VERSION}'"
-
-  # Amend the commit to include debian/changelog
-  git add debian/changelog
-  git commit --amend --no-edit
-
-  echo "✅ Version bump complete: $NEW_VERSION"
-  echo ""
-  echo "Files updated and committed:"
-  echo "  - VERSION"
-  echo "  - pyproject.toml"
-  echo "  - src/generate_container_packages/__init__.py"
-  echo "  - debian/changelog"
-  echo ""
-  echo "Commit created by bumpversion"
+  command bumpversion "$@"
 }
 
 ################################################################################
 # Setup Commands
 
-function dev:setup {
+function setup {
   #@ Install development dependencies
   #@ Category: Development
   echo "📦 Installing dependencies..."
@@ -103,7 +52,7 @@ function dev:setup {
   echo "✅ Setup complete"
 }
 
-function dev:clean {
+function clean {
   #@ Clean build artifacts and cache
   #@ Category: Development
   echo "🧹 Cleaning..."
@@ -119,7 +68,7 @@ function dev:clean {
 ################################################################################
 # Docker Commands
 
-function docker:build {
+function build-docker {
   #@ Build development Docker image
   #@ Category: Docker
   echo "🐳 Building development Docker image..."
@@ -127,17 +76,22 @@ function docker:build {
   echo "✅ Docker image built successfully"
 }
 
-function docker:shell {
+function devtools {
+  #@ Run command in devtools container
+  docker compose -f docker/docker-compose.devtools.yml run --rm devtools "$@"
+}
+
+function docker-shell {
   #@ Open interactive shell in development container
   #@ Category: Docker
   echo "🐚 Opening shell in development container..."
   echo "   Working directory: /workspace"
   echo "   Exit with: exit or Ctrl+D"
   echo ""
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools bash
+  devtools bash
 }
 
-function docker:clean {
+function docker-clean {
   #@ Remove development Docker containers and images
   #@ Category: Docker
   echo "🧹 Cleaning Docker containers and images..."
@@ -152,31 +106,31 @@ function test {
   #@ Run all tests in Docker container
   #@ Category: Testing
   echo "🧪 Running all tests..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run pytest"
 }
 
-function test:unit {
+function unit-test {
   #@ Run unit tests only in Docker container
   #@ Category: Testing
   echo "🧪 Running unit tests..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run pytest tests/test_*.py -k 'not integration'"
 }
 
-function test:integration {
+function integration-test {
   #@ Run integration tests only in Docker container
   #@ Category: Testing
   echo "🧪 Running integration tests..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run pytest tests/test_integration*.py"
 }
 
-function test:coverage {
+function test-coverage {
   #@ Run tests with coverage report in Docker container
   #@ Category: Testing
   echo "🧪 Running tests with coverage..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run pytest --cov=src --cov-report=term-missing --cov-report=html"
   echo "✅ Coverage report generated in htmlcov/"
 }
@@ -188,16 +142,16 @@ function lint {
   #@ Run linter (ruff check) in Docker container
   #@ Category: Quality
   echo "🔍 Running linter..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run ruff check src/ tests/"
   echo "✅ Lint passed"
 }
 
-function lint:fix {
+function lint-fix {
   #@ Run linter with auto-fix in Docker container
   #@ Category: Quality
   echo "🔧 Running linter with auto-fix..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run ruff check --fix src/ tests/"
   echo "✅ Lint fixes applied"
 }
@@ -206,16 +160,16 @@ function format {
   #@ Format code (ruff format) in Docker container
   #@ Category: Quality
   echo "✨ Formatting code..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run ruff format src/ tests/"
   echo "✅ Code formatted"
 }
 
-function format:check {
+function check-format {
   #@ Check formatting without changes in Docker container
   #@ Category: Quality
   echo "🔍 Checking code formatting..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uv run ruff format --check src/ tests/"
   echo "✅ Format check passed"
 }
@@ -224,7 +178,7 @@ function typecheck {
   #@ Run type checker (ty) in Docker container
   #@ Category: Quality
   echo "🔍 Type checking..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && uvx ty check"
   echo "✅ Type check passed"
 }
@@ -234,7 +188,7 @@ function check {
   #@ Category: Quality
   echo "🔍 Running all quality checks..."
   lint
-  format:check
+  check-format
   typecheck
   echo "✅ All checks passed"
 }
@@ -246,7 +200,7 @@ function build {
   #@ Build Debian package in Docker container
   #@ Category: Build
   echo "🏗️  Building Debian package..."
-  docker compose -f docker/docker-compose.devtools.yml run --rm devtools \
+  devtools \
     bash -c "uv sync --dev && dpkg-buildpackage -us -uc -b"
   echo "✅ Build complete - package at ./container-packaging-tools_0.1.0_all.deb"
 }
@@ -254,7 +208,7 @@ function build {
 ################################################################################
 # Git Commands
 
-function git:status {
+function git-status {
   #@ Show git status
   #@ Category: Git
   git status
