@@ -138,22 +138,31 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
 
 def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
-    """Generate .env.template file from default configuration.
+    """Generate .env.template and .env.user-template files from default configuration.
 
     Args:
         app_def: Application definition
         source_dir: Destination directory
+
+    Generates two files:
+    - .env.template: Full defaults including system variables (-> env.defaults)
+    - .env.user-template: App defaults as comments for user reference (-> env)
     """
+    package_name = app_def.metadata["package_name"]
     default_config = app_def.metadata.get("default_config", {})
 
-    if not default_config:
-        # Create empty file if no defaults
-        env_template = source_dir / ".env.template"
-        env_template.write_text("# No default configuration\n", encoding="utf-8")
-        return
+    # Generate .env.template (full defaults for env.defaults)
+    lines = [
+        "# System-managed variables (do not modify)\n",
+        f'CONTAINER_DATA_ROOT="/var/lib/container-apps/{package_name}/data"\n',
+        "\n",
+    ]
 
-    # Generate environment variable file
-    lines = ["# Default environment variables\n"]
+    if default_config:
+        lines.append("# Application configuration\n")
+
+    # Build escaped config values (used by both templates)
+    escaped_config = {}
     for key, value in sorted(default_config.items()):
         # Escape special characters and quote the value for .env files
         value_str = (
@@ -165,10 +174,24 @@ def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
             .replace("$", "$$")
             .replace("`", "\\`")
         )
+        escaped_config[key] = value_str
         lines.append(f'{key}="{value_str}"\n')
 
     env_template = source_dir / ".env.template"
     env_template.write_text("".join(lines), encoding="utf-8")
+
+    # Generate .env.user-template (commented defaults for user env file)
+    user_lines = [
+        "# User environment overrides\n",
+        "# Uncomment and modify values to override defaults from env.defaults\n",
+        "\n",
+    ]
+
+    for key, value_str in escaped_config.items():
+        user_lines.append(f'#{key}="{value_str}"\n')
+
+    env_user_template = source_dir / ".env.user-template"
+    env_user_template.write_text("".join(user_lines), encoding="utf-8")
 
 
 def copy_rendered_files(rendered_dir: Path, source_dir: Path) -> None:

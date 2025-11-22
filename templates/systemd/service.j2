@@ -7,6 +7,7 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory={{ service.working_directory }}
+EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
 ExecStart=/bin/sh -c 'if command -v docker-compose >/dev/null 2>&1; then docker-compose up -d; else docker compose up -d; fi'
 ExecStop=/bin/sh -c 'if command -v docker-compose >/dev/null 2>&1; then docker-compose down; else docker compose down; fi'

@@ -56,8 +56,12 @@ class TestBuildContext:
             == "/var/lib/container-apps/test-app-container"
         )
         assert (
+            context["service"]["env_defaults_file"]
+            == "/etc/container-apps/test-app-container/env.defaults"
+        )
+        assert (
             context["service"]["env_file"]
-            == "/etc/container-apps/test-app-container/.env"
+            == "/etc/container-apps/test-app-container/env"
         )
 
         # Verify paths

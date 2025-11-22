@@ -141,7 +141,8 @@ class TestPackageInstallation:
         # Check configuration files
         config_dir = Path("/etc/container-apps/simple-test-app-container")
         assert config_dir.exists()
-        assert (config_dir / ".env").exists()
+        assert (config_dir / "env.defaults").exists()
+        assert (config_dir / "env").exists()
 
         # Check systemd service
         service_file = Path("/etc/systemd/system/simple-test-app-container.service")
