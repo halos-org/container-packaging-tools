@@ -10,5 +10,7 @@ jobs:
     with:
       package-name: container-packaging-tools
       package-description: 'Tools for generating Debian packages from container application definitions'
+      apt-distro: trixie
+      apt-component: main
     secrets:
       APT_REPO_PAT: ${{ secrets.APT_REPO_PAT }}
