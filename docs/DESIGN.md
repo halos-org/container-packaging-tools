@@ -320,10 +320,10 @@ override_dh_auto_install:
 	# Install application files
 	install -D -m 644 docker-compose.yml \
 		debian/<package>/var/lib/container-apps/<package>/docker-compose.yml
-	install -D -m 644 config.yml \
-		debian/<package>/etc/container-apps/<package>/config.yml
 	install -D -m 644 metadata.yaml \
 		debian/<package>/var/lib/container-apps/<package>/metadata.yaml
+	install -D -m 644 config.yml \
+		debian/<package>/var/lib/container-apps/<package>/config.yml
 	install -D -m 644 .env.template \
 		debian/<package>/var/lib/container-apps/<package>/.env.template
 
@@ -349,10 +349,13 @@ set -e
 
 case "$1" in
     configure)
-        # Generate .env from template and config
-        if [ ! -f /etc/container-apps/<package>/.env ]; then
-            cp /var/lib/container-apps/<package>/.env.template \
-               /etc/container-apps/<package>/.env
+        # Always update env.defaults from template (contains system defaults)
+        cp /var/lib/container-apps/<package>/.env.template \
+           /etc/container-apps/<package>/env.defaults
+
+        # Create empty env for user overrides if it doesn't exist
+        if [ ! -f /etc/container-apps/<package>/env ]; then
+            echo "# User environment overrides" > /etc/container-apps/<package>/env
         fi
 
         # Reload systemd
@@ -445,7 +448,7 @@ All generated files use Jinja2 templates for flexibility and maintainability.
         'name': f"{metadata['package_name']}.service",
         'description': f"{metadata['name']} Container",
         'working_directory': f"/var/lib/container-apps/{metadata['package_name']}",
-        'env_file': f"/etc/container-apps/{metadata['package_name']}/.env"
+        'env_file': f"/etc/container-apps/{metadata['package_name']}/env"
     },
     'paths': {
         'lib': f"/var/lib/container-apps/{metadata['package_name']}",
@@ -525,6 +528,7 @@ All generated packages follow these standard paths:
 **Contents**:
 - `docker-compose.yml` - Docker Compose configuration
 - `metadata.yaml` - Application metadata (for UI consumption)
+- `config.yml` - Configuration schema (field definitions for UI)
 - `.env.template` - Environment variable template
 
 ### Configuration Directory
@@ -533,8 +537,8 @@ All generated packages follow these standard paths:
 **Permissions**: `root:root`, `0644` (files), `0755` (directories)
 
 **Contents**:
-- `config.yml` - User configuration file
-- `.env` - Generated environment variables (from config.yml + defaults)
+- `env.defaults` - Default environment values (updated on every install/upgrade)
+- `env` - User overrides (created once on first install, never overwritten)
 
 ### systemd Service
 **Path**: `/etc/systemd/system/<package-name>.service`

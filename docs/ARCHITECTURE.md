@@ -277,13 +277,17 @@ Standard Docker Compose v3.8+ format containing:
 **Usage**:
 - Copied verbatim to package (not parsed or modified)
 - Used by systemd service for container lifecycle
-- Environment variables substituted at runtime from .env file
+- Environment variables substituted at runtime from env file
 
 **Integration Points**:
 - Environment variables referenced with ${VAR:-default} syntax
-- Volumes should use bind mounts for persistence (paths under /var/lib/container-apps/<package>/)
+- Use `${CONTAINER_DATA_ROOT}` for bind mount paths (auto-set to `/var/lib/container-apps/<package>/data`)
 - Container name should be meaningful for management
 - No restart policy (systemd manages lifecycle)
+
+**System-Managed Variables**:
+The following environment variables are automatically injected into the env file:
+- `CONTAINER_DATA_ROOT`: Base path for container data storage (`/var/lib/container-apps/<package>/data`). Use this for all bind mount paths to keep container data separate from package files.
 
 ### Configuration Schema Model
 
@@ -308,7 +312,7 @@ Hierarchical configuration definition:
 **Purpose**:
 - Defines user-configurable parameters
 - Used by Cockpit UI (Phase 2) for configuration forms
-- Drives environment variable generation in .env file
+- Drives environment variable generation in env file
 
 **Field Types**:
 - string: Text input
@@ -337,11 +341,12 @@ Package changes and checksums
 /var/lib/container-apps/<package>/
 ├── docker-compose.yml
 ├── metadata.yaml
+├── config.yml
 └── .env.template
 
 /etc/container-apps/<package>/
-├── config.yml
-└── .env (created by postinst)
+├── env.defaults (updated on every install/upgrade)
+└── env (user overrides, created once on first install)
 
 /etc/systemd/system/
 └── <package>.service

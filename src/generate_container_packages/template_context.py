@@ -87,7 +87,8 @@ def _build_service_context(
         "name": f"{package_name}.service",
         "description": f"{metadata['name']} Container",
         "working_directory": f"/var/lib/container-apps/{package_name}",
-        "env_file": f"/etc/container-apps/{package_name}/.env",
+        "env_defaults_file": f"/etc/container-apps/{package_name}/env.defaults",
+        "env_file": f"/etc/container-apps/{package_name}/env",
     }
 
 
