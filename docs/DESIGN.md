@@ -501,12 +501,14 @@ After=docker.service
 Requires=docker.service
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+Type=simple
 WorkingDirectory={{ service.working_directory }}
-EnvironmentFile={{ service.env_file }}
-ExecStart=/usr/bin/docker-compose up -d
-ExecStop=/usr/bin/docker-compose down
+EnvironmentFile=-{{ service.env_defaults_file }}
+EnvironmentFile=-{{ service.env_file }}
+ExecStart=/bin/sh -c 'docker compose up'
+ExecStop=/bin/sh -c 'docker compose down'
+Restart=on-failure
+RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
@@ -514,7 +516,7 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
-**Note**: Type=oneshot with RemainAfterExit=yes ensures systemd tracks the service state. The restart policy is handled by systemd (automatic restart on failure), not by Docker Compose.
+**Note**: Type=simple runs docker-compose in foreground mode, allowing systemd to properly manage the container lifecycle. Container logs are streamed to journal via stdout/stderr. Restart=on-failure provides automatic recovery.
 
 ## Path Conventions
 

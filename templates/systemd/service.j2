@@ -4,13 +4,14 @@ After=docker.service
 Requires=docker.service
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+Type=simple
 WorkingDirectory={{ service.working_directory }}
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
-ExecStart=/bin/sh -c 'if command -v docker-compose >/dev/null 2>&1; then docker-compose up -d; else docker compose up -d; fi'
+ExecStart=/bin/sh -c 'if command -v docker-compose >/dev/null 2>&1; then docker-compose up; else docker compose up; fi'
 ExecStop=/bin/sh -c 'if command -v docker-compose >/dev/null 2>&1; then docker-compose down; else docker compose down; fi'
+Restart=on-failure
+RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
