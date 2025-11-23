@@ -161,20 +161,18 @@ def validate_compose(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("docker-compose.yml must be a YAML object")
 
-    # Check for version field
+    # Check for version field (optional in Docker Compose v2+)
     version = data.get("version")
-    if not version:
-        raise ValueError("docker-compose.yml missing 'version' field")
-
-    # Parse version (may be string like "3.8" or float like 3.8)
-    try:
-        version_num = float(str(version))
-        if version_num < 3.8:
-            raise ValueError(
-                f"docker-compose.yml version {version} is too old, requires version 3.8 or newer"
-            )
-    except (ValueError, TypeError):
-        raise ValueError(f"Invalid docker-compose.yml version: {version}") from None
+    if version:
+        # Parse version (may be string like "3.8" or float like 3.8)
+        try:
+            version_num = float(str(version))
+            if version_num < 3.8:
+                raise ValueError(
+                    f"docker-compose.yml version {version} is too old, requires version 3.8 or newer"
+                )
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid docker-compose.yml version: {version}") from None
 
     # Check for services
     if "services" not in data:
