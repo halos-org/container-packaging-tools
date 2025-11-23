@@ -158,7 +158,7 @@ class TestPipelineBuildPreparation:
 
         # Verify source files copied
         assert (build_dir / "docker-compose.yml").exists()
-        assert (build_dir / ".env.template").exists()
+        assert (build_dir / "env.template").exists()
 
         # Verify debian/ directory copied
         debian_dir = build_dir / "debian"

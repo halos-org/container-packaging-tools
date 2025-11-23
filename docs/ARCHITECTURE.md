@@ -176,7 +176,7 @@ The Loader produces a unified data structure containing:
 - debian/package-name.service: Service unit file
 
 **Application Files**:
-- .env.template: Environment variable defaults
+- env.template: Environment variable defaults
 
 **Template Context Structure**:
 The context passed to templates includes:
@@ -342,7 +342,7 @@ Package changes and checksums
 ├── docker-compose.yml
 ├── metadata.yaml
 ├── config.yml
-└── .env.template
+└── env.template
 
 /etc/container-apps/<package>/
 ├── env.defaults (updated on every install/upgrade)

@@ -28,22 +28,22 @@ class TestGenerateEnvTemplate:
     """Tests for generate_env_template function."""
 
     def test_empty_config(self, tmp_path):
-        """Test generating .env.template with empty config."""
+        """Test generating env.template with empty config."""
         app_def = mock.Mock(spec=AppDefinition)
         app_def.metadata = {"package_name": "test-app-container"}
 
         generate_env_template(app_def, tmp_path)
 
-        # Check .env.template (for env.defaults)
-        env_file = tmp_path / ".env.template"
+        # Check env.template (for env.defaults)
+        env_file = tmp_path / "env.template"
         assert env_file.exists()
         content = env_file.read_text()
         # Should still have CONTAINER_DATA_ROOT even with no default_config
         assert 'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"' in content
         assert "System-managed variables" in content
 
-        # Check .env.user-template (for env)
-        user_file = tmp_path / ".env.user-template"
+        # Check env.user-template (for env)
+        user_file = tmp_path / "env.user-template"
         assert user_file.exists()
         user_content = user_file.read_text()
         assert "User environment overrides" in user_content
@@ -51,7 +51,7 @@ class TestGenerateEnvTemplate:
         assert "CONTAINER_DATA_ROOT" not in user_content
 
     def test_simple_config(self, tmp_path):
-        """Test generating .env.template with simple config."""
+        """Test generating env.template with simple config."""
         app_def = mock.Mock(spec=AppDefinition)
         app_def.metadata = {
             "package_name": "test-app-container",
@@ -63,8 +63,8 @@ class TestGenerateEnvTemplate:
 
         generate_env_template(app_def, tmp_path)
 
-        # Check .env.template (for env.defaults)
-        env_file = tmp_path / ".env.template"
+        # Check env.template (for env.defaults)
+        env_file = tmp_path / "env.template"
         assert env_file.exists()
         content = env_file.read_text()
         # Check system-managed variable
@@ -74,8 +74,8 @@ class TestGenerateEnvTemplate:
         assert 'KEY2="value2"' in content
         assert "Application configuration" in content
 
-        # Check .env.user-template (for env) - commented defaults
-        user_file = tmp_path / ".env.user-template"
+        # Check env.user-template (for env) - commented defaults
+        user_file = tmp_path / "env.user-template"
         assert user_file.exists()
         user_content = user_file.read_text()
         assert '#KEY1="value1"' in user_content
@@ -99,7 +99,7 @@ class TestGenerateEnvTemplate:
 
         generate_env_template(app_def, tmp_path)
 
-        env_file = tmp_path / ".env.template"
+        env_file = tmp_path / "env.template"
         content = env_file.read_text()
         # Check system-managed variable is present
         assert 'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"' in content
@@ -124,7 +124,7 @@ class TestCopySourceFiles:
         assert (dest_dir / "metadata.yaml").exists()
         assert (dest_dir / "docker-compose.yml").exists()
         assert (dest_dir / "config.yml").exists()
-        assert (dest_dir / ".env.template").exists()
+        assert (dest_dir / "env.template").exists()
 
     def test_copy_with_icon(self, tmp_path):
         """Test copying with icon file."""

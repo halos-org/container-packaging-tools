@@ -133,25 +133,25 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
             dst = source_dir / screenshot_path.name
             shutil.copy2(screenshot_path, dst)
 
-    # Generate .env.template from default_config
+    # Generate env.template from default_config
     generate_env_template(app_def, source_dir)
 
 
 def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
-    """Generate .env.template and .env.user-template files from default configuration.
+    """Generate env.template and env.user-template files from default configuration.
 
     Args:
         app_def: Application definition
         source_dir: Destination directory
 
     Generates two files:
-    - .env.template: Full defaults including system variables (-> env.defaults)
-    - .env.user-template: App defaults as comments for user reference (-> env)
+    - env.template: Full defaults including system variables (-> env.defaults)
+    - env.user-template: App defaults as comments for user reference (-> env)
     """
     package_name = app_def.metadata["package_name"]
     default_config = app_def.metadata.get("default_config", {})
 
-    # Generate .env.template (full defaults for env.defaults)
+    # Generate env.template (full defaults for env.defaults)
     lines = [
         "# System-managed variables (do not modify)\n",
         f'CONTAINER_DATA_ROOT="/var/lib/container-apps/{package_name}/data"\n',
@@ -177,10 +177,10 @@ def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
         escaped_config[key] = value_str
         lines.append(f'{key}="{value_str}"\n')
 
-    env_template = source_dir / ".env.template"
+    env_template = source_dir / "env.template"
     env_template.write_text("".join(lines), encoding="utf-8")
 
-    # Generate .env.user-template (commented defaults for user env file)
+    # Generate env.user-template (commented defaults for user env file)
     user_lines = [
         "# User environment overrides\n",
         "# Uncomment and modify values to override defaults from env.defaults\n",
@@ -190,7 +190,7 @@ def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
     for key, value_str in escaped_config.items():
         user_lines.append(f'#{key}="{value_str}"\n')
 
-    env_user_template = source_dir / ".env.user-template"
+    env_user_template = source_dir / "env.user-template"
     env_user_template.write_text("".join(user_lines), encoding="utf-8")
 
 

@@ -284,7 +284,7 @@ output-directory/
 │   ├── config.yml               # Copied from input
 │   ├── metadata.yaml            # Copied from input
 │   ├── icon.(svg|png)           # Copied from input (if present)
-│   └── .env.template            # Generated from default_config
+│   └── env.template            # Generated from default_config
 └── <package-name>_<version>_<arch>.deb  # Built package (after dpkg-buildpackage)
 ```
 
@@ -324,8 +324,8 @@ override_dh_auto_install:
 		debian/<package>/var/lib/container-apps/<package>/metadata.yaml
 	install -D -m 644 config.yml \
 		debian/<package>/var/lib/container-apps/<package>/config.yml
-	install -D -m 644 .env.template \
-		debian/<package>/var/lib/container-apps/<package>/.env.template
+	install -D -m 644 env.template \
+		debian/<package>/var/lib/container-apps/<package>/env.template
 
 	# Install icon if present (SVG or PNG)
 	if [ -f icon.svg ]; then \
@@ -350,7 +350,7 @@ set -e
 case "$1" in
     configure)
         # Always update env.defaults from template (contains system defaults)
-        cp /var/lib/container-apps/<package>/.env.template \
+        cp /var/lib/container-apps/<package>/env.template \
            /etc/container-apps/<package>/env.defaults
 
         # Create empty env for user overrides if it doesn't exist
@@ -529,7 +529,7 @@ All generated packages follow these standard paths:
 - `docker-compose.yml` - Docker Compose configuration
 - `metadata.yaml` - Application metadata (for UI consumption)
 - `config.yml` - Configuration schema (field definitions for UI)
-- `.env.template` - Environment variable template
+- `env.template` - Environment variable template
 
 ### Configuration Directory
 **Path**: `/etc/container-apps/<package-name>/`
