@@ -1,0 +1,31 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create configuration directory if it doesn't exist
+        mkdir -p "{{ paths.etc }}"
+
+        # Always update env.defaults from template (contains system defaults)
+        cp "{{ paths.lib }}/env.template" "{{ paths.etc }}/env.defaults"
+
+        # Create env for user overrides if it doesn't exist (with commented defaults)
+        if [ ! -f "{{ paths.etc }}/env" ]; then
+            cp "{{ paths.lib }}/env.user-template" "{{ paths.etc }}/env"
+        fi
+
+        # Only interact with systemd if it's running (not in containers or minimal envs)
+        if [ -d /run/systemd/system ]; then
+            # Reload systemd to recognize new service
+            systemctl daemon-reload
+
+            # Enable service (but don't start automatically - let user configure first)
+            # Users can start with: systemctl start {{ package.name }}.service
+            systemctl enable {{ package.name }}.service || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

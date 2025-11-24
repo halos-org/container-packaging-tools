@@ -1,0 +1,23 @@
+Source: {{ package.name }}
+Section: {{ package.section }}
+Priority: optional
+Maintainer: {{ package.maintainer }}
+Build-Depends: debhelper (>= 12)
+Standards-Version: 4.5.0
+{% if package.homepage %}
+Homepage: {{ package.homepage }}
+{% endif %}
+
+Package: {{ package.name }}
+Architecture: {{ package.architecture }}
+Depends: ${misc:Depends}, docker-compose | docker-compose-plugin{% if package.depends %}, {{ package.depends }}{% endif %}
+
+{% if package.recommends %}
+Recommends: {{ package.recommends }}
+{% endif %}
+{% if package.suggests %}
+Suggests: {{ package.suggests }}
+{% endif %}
+Description: {{ package.description }}
+{{ package.long_description }}
+Tag: {{ package.tags }}

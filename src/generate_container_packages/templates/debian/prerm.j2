@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove|deconfigure)
+        # Only interact with systemd if it's running (not in containers or minimal envs)
+        if [ -d /run/systemd/system ]; then
+            # Stop the service before removal
+            systemctl stop {{ package.name }}.service || true
+            systemctl disable {{ package.name }}.service || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

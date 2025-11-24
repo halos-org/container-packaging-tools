@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    purge)
+        # Remove configuration directory and all contents
+        rm -rf "{{ paths.etc }}"
+
+        # Only interact with systemd if it's running (not in containers or minimal envs)
+        if [ -d /run/systemd/system ]; then
+            # Reload systemd (service file removed automatically by dpkg)
+            systemctl daemon-reload || true
+        fi
+        ;;
+
+    remove)
+        # On remove (not purge), keep config but remove application files
+        # Application files in /var/lib/ are already removed by dpkg
+        # Service file is kept for potential reinstall
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

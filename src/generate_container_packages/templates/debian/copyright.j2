@@ -1,0 +1,14 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: {{ package.human_name }}
+{% if package.homepage %}
+Source: {{ package.homepage }}
+{% endif %}
+
+Files: *
+Copyright: {{ package.maintainer }}
+License: {{ package.license }}
+
+License: {{ package.license }}
+ This package is licensed under {{ package.license }}.
+ .
+ For full license text, please refer to the upstream source.

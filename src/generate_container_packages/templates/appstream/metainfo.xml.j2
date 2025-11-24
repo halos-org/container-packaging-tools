@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="webapp">
+  <id>{{ package.name }}</id>
+  <name>{{ package.human_name }}</name>
+  <summary>{{ package.description }}</summary>
+  <description>
+    {%- for paragraph in package.long_description.split('\n\n') %}
+    {%- if paragraph.strip() %}
+    <p>{{ paragraph.strip() | e }}</p>
+    {%- endif %}
+    {%- endfor %}
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>{{ package.license }}</project_license>
+  {% if package.homepage %}
+  <url type="homepage">{{ package.homepage }}</url>
+  {% endif %}
+  {% if web_ui.enabled %}
+  <url type="webapp">http://localhost:{{ web_ui.port }}{{ web_ui.path }}</url>
+  {% endif %}
+  <developer_name>{{ package.maintainer }}</developer_name>
+  {% if has_icon %}
+  <icon type="local">/usr/share/pixmaps/{{ package.name }}.{{ icon_extension }}</icon>
+  {% endif %}
+  <releases>
+    <release version="{{ package.version }}" date="{{ date_only }}">
+      <description>
+        <p>Initial release</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>

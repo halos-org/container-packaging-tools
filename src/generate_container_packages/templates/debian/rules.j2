@@ -1,0 +1,37 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Nothing to build - container app
+
+override_dh_auto_install:
+	# Install application files to /var/lib/container-apps/
+	install -D -m 644 docker-compose.yml \
+		debian/{{ package.name }}/{{ paths.lib }}/docker-compose.yml
+	install -D -m 644 metadata.yaml \
+		debian/{{ package.name }}/{{ paths.lib }}/metadata.yaml
+	install -D -m 644 config.yml \
+		debian/{{ package.name }}/{{ paths.lib }}/config.yml
+	install -D -m 644 env.template \
+		debian/{{ package.name }}/{{ paths.lib }}/env.template
+	install -D -m 644 env.user-template \
+		debian/{{ package.name }}/{{ paths.lib }}/env.user-template
+
+{% if has_icon %}
+	# Install icon
+	install -D -m 644 icon.{{ icon_extension }} \
+		debian/{{ package.name }}/{{ paths.pixmaps }}/{{ package.name }}.{{ icon_extension }}
+{% endif %}
+
+	# Install systemd service file
+	install -D -m 644 debian/{{ package.name }}.service \
+		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service
+
+	# Install AppStream metadata
+	install -D -m 644 debian/{{ package.name }}.metainfo.xml \
+		debian/{{ package.name }}/{{ paths.metainfo }}/{{ package.name }}.metainfo.xml
+
+override_dh_auto_test:
+	# Skip tests - validated by generate-container-packages

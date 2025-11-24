@@ -120,21 +120,27 @@ def _find_template_directory() -> Path:
         Path to templates directory
 
     Tries these locations in order:
-    1. Installed location: /usr/share/container-packaging-tools/templates/
-    2. Development location: ../templates/ relative to this file
+    1. Package bundled location: templates/ inside the package
+    2. Installed location: /usr/share/container-packaging-tools/templates/
+    3. Development location: ../templates/ relative to this file (backwards compat)
     """
-    # Try installed location first
+    # Try package bundled location first (for pip/uvx installations)
+    package_path = Path(__file__).parent / "templates"
+    if package_path.exists():
+        return package_path
+
+    # Try Debian package install location
     installed_path = Path("/usr/share/container-packaging-tools/templates")
     if installed_path.exists():
         return installed_path
 
-    # Fall back to development location (relative to this file)
+    # Fall back to old development location (backwards compat)
     dev_path = Path(__file__).parent.parent.parent / "templates"
     if dev_path.exists():
         return dev_path
 
     raise FileNotFoundError(
-        f"Cannot find templates directory. Checked:\n  - {installed_path}\n  - {dev_path}"
+        f"Cannot find templates directory. Checked:\n  - {package_path}\n  - {installed_path}\n  - {dev_path}"
     )
 
 
