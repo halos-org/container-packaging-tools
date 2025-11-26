@@ -18,6 +18,9 @@ from generate_container_packages.validator import (
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 VALID_FIXTURES = FIXTURES_DIR / "valid"
 INVALID_FIXTURES = FIXTURES_DIR / "invalid"
+STORE_FIXTURES = FIXTURES_DIR / "stores"
+VALID_STORE_FIXTURES = STORE_FIXTURES / "valid"
+INVALID_STORE_FIXTURES = STORE_FIXTURES / "invalid"
 
 
 class TestValidateInputDirectory:
@@ -320,7 +323,7 @@ class TestValidateStore:
 
     def test_valid_minimal_store(self):
         """Test validation of minimal store with only required fields."""
-        store_path = VALID_FIXTURES / "stores" / "minimal-store.yaml"
+        store_path = VALID_STORE_FIXTURES / "minimal-store.yaml"
         store = validate_store(store_path)
 
         assert store.id == "test-minimal"
@@ -331,7 +334,7 @@ class TestValidateStore:
 
     def test_valid_full_store(self):
         """Test validation of full-featured store."""
-        store_path = VALID_FIXTURES / "stores" / "full-store.yaml"
+        store_path = VALID_STORE_FIXTURES / "full-store.yaml"
         store = validate_store(store_path)
 
         assert store.id == "test-full"
@@ -348,7 +351,7 @@ class TestValidateStore:
         """Test that store without origins fails validation."""
         from pydantic import ValidationError
 
-        store_path = INVALID_FIXTURES / "stores" / "missing-origins.yaml"
+        store_path = INVALID_STORE_FIXTURES / "missing-origins.yaml"
 
         with pytest.raises(ValidationError) as exc_info:
             validate_store(store_path)
@@ -361,7 +364,7 @@ class TestValidateStore:
         """Test that store with empty origins list fails validation."""
         from pydantic import ValidationError
 
-        store_path = INVALID_FIXTURES / "stores" / "empty-origins.yaml"
+        store_path = INVALID_STORE_FIXTURES / "empty-origins.yaml"
 
         with pytest.raises(ValidationError) as exc_info:
             validate_store(store_path)
@@ -377,7 +380,7 @@ class TestValidateStore:
         """Test that store with invalid ID format fails validation."""
         from pydantic import ValidationError
 
-        store_path = INVALID_FIXTURES / "stores" / "bad-store-id.yaml"
+        store_path = INVALID_STORE_FIXTURES / "bad-store-id.yaml"
 
         with pytest.raises(ValidationError) as exc_info:
             validate_store(store_path)
