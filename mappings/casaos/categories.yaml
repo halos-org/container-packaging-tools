@@ -1,0 +1,99 @@
+# CasaOS to HaLOS Category Mappings
+#
+# This file maps CasaOS category names to HaLOS/Debian package categories.
+# CasaOS uses human-friendly category names while Debian uses standardized
+# section names. This mapping ensures converted apps are properly classified.
+#
+# Format:
+#   mappings:
+#     <CasaOS-Category>: <debian-section>
+#   default: <fallback-section>
+#
+# References:
+# - Debian Policy Manual sections: https://www.debian.org/doc/debian-policy/ch-archive.html
+# - CasaOS categories: https://github.com/IceWhaleTech/CasaOS-AppStore
+
+# Category mappings from CasaOS to Debian sections
+mappings:
+  # Media and entertainment
+  Entertainment: video
+  Media: video
+  "Media Server": video
+  Streaming: video
+  Music: sound
+  Video: video
+  Photos: graphics
+
+  # Productivity and office
+  Productivity: misc
+  Office: misc
+  Documents: text
+  Notes: text
+  Cloud: net
+  Storage: misc
+
+  # Development and tools
+  Developer: devel
+  Development: devel
+  Tools: utils
+  Utilities: utils
+
+  # Networking and communication
+  Network: net
+  Networking: net
+  Communication: comm
+  Chat: comm
+  Mail: mail
+  VPN: net
+
+  # System and administration
+  System: admin
+  Administration: admin
+  Monitoring: admin
+  Backup: admin
+  Security: admin
+
+  # Home automation and IoT
+  "Home Automation": misc
+  IoT: misc
+  "Smart Home": misc
+
+  # Gaming
+  Games: games
+  Gaming: games
+
+  # Education and learning
+  Education: education
+  Learning: education
+
+  # Database
+  Database: database
+  Databases: database
+
+  # Web services
+  Web: web
+  HTTP: httpd
+  Webserver: httpd
+
+  # Finance
+  Finance: misc
+  Financial: misc
+
+  # Social
+  Social: net
+  "Social Media": net
+
+  # Download managers
+  Download: net
+  Downloads: net
+  Torrent: net
+
+# Default category for unmapped CasaOS categories
+# Used when a CasaOS category doesn't have an explicit mapping
+default: misc
+
+# Notes:
+# - The "misc" section is used for applications that don't fit standard categories
+# - Some CasaOS categories map to the same Debian section (e.g., Entertainment and Media → video)
+# - Marine-specific apps should be manually reviewed and may need custom handling
+# - When adding new mappings, ensure the Debian section exists in schemas/metadata.py

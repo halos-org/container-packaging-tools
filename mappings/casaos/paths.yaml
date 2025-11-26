@@ -1,0 +1,111 @@
+# CasaOS to HaLOS Path Transformation Rules
+#
+# This file defines rules for transforming volume paths from CasaOS conventions
+# to HaLOS conventions. CasaOS uses specific path patterns that need to be
+# converted to HaLOS's path structure.
+#
+# Format:
+#   transforms:
+#     - from: <casaos-path-pattern>
+#       to: <halos-path-pattern>
+#       description: <explanation>
+#
+# Variables available in path patterns:
+#   {app} or {app_id} - Application identifier
+#   {service} - Service name within multi-service apps
+#   ${CONTAINER_DATA_ROOT} - HaLOS data root variable
+
+# Path transformation rules (evaluated in order)
+transforms:
+  # CasaOS AppData directory → HaLOS container data root
+  - from: "/DATA/AppData/{app}/"
+    to: "${CONTAINER_DATA_ROOT}/"
+    description: "CasaOS AppData directory to HaLOS data root"
+
+  - from: "/DATA/AppData/{app}"
+    to: "${CONTAINER_DATA_ROOT}"
+    description: "CasaOS AppData directory to HaLOS data root (no trailing slash)"
+
+  # Generic DATA prefix removal
+  - from: "/DATA/"
+    to: "/"
+    description: "Remove CasaOS /DATA prefix"
+
+  # Config directories
+  - from: "/config"
+    to: "${CONTAINER_DATA_ROOT}/config"
+    description: "Standard config directory"
+
+  - from: "/data"
+    to: "${CONTAINER_DATA_ROOT}/data"
+    description: "Standard data directory"
+
+  # Media directories (common in CasaOS)
+  # These typically point to user media and should be preserved or made configurable
+  - from: "/media"
+    to: "/media"
+    description: "Media directory - typically user-mounted storage"
+
+  - from: "/movies"
+    to: "/media/movies"
+    description: "Movies directory"
+
+  - from: "/tv"
+    to: "/media/tv"
+    description: "TV shows directory"
+
+  - from: "/music"
+    to: "/media/music"
+    description: "Music directory"
+
+  - from: "/photos"
+    to: "/media/photos"
+    description: "Photos directory"
+
+  - from: "/books"
+    to: "/media/books"
+    description: "Books directory"
+
+  # Downloads
+  - from: "/downloads"
+    to: "/downloads"
+    description: "Downloads directory - typically user-mounted storage"
+
+# Special handling instructions
+special_cases:
+  # Absolute paths that should remain unchanged
+  preserve:
+    - "/etc"
+    - "/var"
+    - "/usr"
+    - "/tmp"
+    - "/dev"
+    - "/sys"
+    - "/proc"
+
+  # Paths that require user configuration
+  # These should be extracted as configurable fields in config.yml
+  configurable:
+    - pattern: "^/media/"
+      field_name: "MEDIA_PATH"
+      description: "Path to media directory"
+    - pattern: "^/downloads"
+      field_name: "DOWNLOADS_PATH"
+      description: "Path to downloads directory"
+
+# Default behavior
+default:
+  # If no transform matches and path doesn't match special cases,
+  # prepend CONTAINER_DATA_ROOT
+  action: "prepend_data_root"
+  description: "Unmapped paths are placed under CONTAINER_DATA_ROOT"
+
+# Notes:
+# - Transforms are applied in order from top to bottom
+# - First matching transform wins
+# - {app} variable is replaced with the lowercase app identifier
+# - ${CONTAINER_DATA_ROOT} is a HaLOS environment variable
+# - Paths in preserve list are never transformed
+# - Configurable paths should be exposed as fields in config.yml
+# - The converter should generate appropriate defaults for configurable paths
+# - Volume modes (ro/rw) are preserved during transformation

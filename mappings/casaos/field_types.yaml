@@ -1,0 +1,128 @@
+# CasaOS Environment Variable to HaLOS Field Type Mappings
+#
+# This file defines rules for inferring HaLOS config.yml field types from
+# CasaOS environment variable definitions. The converter uses these patterns
+# to determine appropriate field types, validation rules, and grouping.
+#
+# Format:
+#   patterns:
+#     - pattern: <regex-pattern>
+#       type: <halos-field-type>
+#       validation: {optional validation rules}
+#       group: <optional-group-hint>
+#
+# Field types: string, integer, boolean, enum, path, password
+# (Must match ConfigField types in schemas/config.py)
+
+# Type inference patterns (evaluated in order)
+# Note: Patterns use [A-Z0-9_]* instead of .* to match only valid
+# environment variable characters and avoid overly greedy matches
+patterns:
+  # Port numbers - must come before general number patterns
+  - pattern: "^[A-Z0-9_]*_?PORT$"
+    type: integer
+    validation:
+      min: 1024
+      max: 65535
+    group: network
+
+  # Network and protocol settings
+  - pattern: "^[A-Z0-9_]*_?HOST(NAME)?$"
+    type: string
+    group: network
+
+  - pattern: "^[A-Z0-9_]*_?URL$"
+    type: string
+    group: network
+
+  - pattern: "^[A-Z0-9_]*_?DOMAIN$"
+    type: string
+    group: network
+
+  # Authentication and security
+  - pattern: "^[A-Z0-9_]*_?PASS(WD|WORD)$"
+    type: password
+    group: authentication
+
+  - pattern: "^[A-Z0-9_]*_?SECRET$"
+    type: password
+    group: authentication
+
+  - pattern: "^[A-Z0-9_]*_?TOKEN$"
+    type: password
+    group: authentication
+
+  - pattern: "^[A-Z0-9_]*_?KEY$"
+    type: password
+    group: authentication
+
+  - pattern: "^[A-Z0-9_]*_?USER(NAME)?$"
+    type: string
+    group: authentication
+
+  # Paths and directories
+  - pattern: "^[A-Z0-9_]*_(DIR|PATH)$"
+    type: path
+    group: storage
+
+  - pattern: "^[A-Z0-9_]*_(DIRECTORY|FOLDER)$"
+    type: path
+    group: storage
+
+  # User and group IDs
+  - pattern: "^P?(U|G)ID$"
+    type: integer
+    validation:
+      min: 0
+      max: 65535
+    group: system
+
+  # Timezone
+  - pattern: "^TZ$"
+    type: string
+    group: system
+
+  - pattern: "^[A-Z0-9_]*_?TIMEZONE$"
+    type: string
+    group: system
+
+  # Boolean flags (common enable/disable patterns)
+  - pattern: "^[A-Z0-9_]*_?(ENABLE|DISABLE)D?$"
+    type: boolean
+    group: configuration
+
+  - pattern: "^[A-Z0-9_]*_?DEBUG$"
+    type: boolean
+    group: configuration
+
+  # Generic numbers (after more specific patterns)
+  - pattern: "^[A-Z0-9_]*_?(COUNT|SIZE|LIMIT|TIMEOUT)$"
+    type: integer
+    group: configuration
+
+# Default fallback
+# If no pattern matches, use these defaults based on CasaOS type hint
+defaults:
+  number: integer
+  text: string
+  password: password
+  boolean: boolean
+  # If CasaOS type is not specified, default to string
+  fallback: string
+
+# Group hints for organizing fields in config.yml
+# The converter uses these to group related fields together
+groups:
+  network: "Network Settings"
+  authentication: "Authentication"
+  storage: "Storage Configuration"
+  system: "System Settings"
+  configuration: "General Configuration"
+
+# Notes:
+# - Patterns are evaluated in order from top to bottom
+# - First matching pattern wins
+# - Regex patterns use Python re module syntax
+# - Group hints help organize fields but converter may override based on context
+# - Password type fields are masked in UI
+# - Path type fields may trigger directory picker in UI
