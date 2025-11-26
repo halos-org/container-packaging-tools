@@ -8,6 +8,7 @@ from generate_container_packages.converters.casaos.models import (
     CasaOSVolume,
     ConversionContext,
 )
+from generate_container_packages.converters.casaos.parser import CasaOSParser
 
 __all__ = [
     "CasaOSApp",
@@ -16,4 +17,5 @@ __all__ = [
     "CasaOSService",
     "CasaOSVolume",
     "ConversionContext",
+    "CasaOSParser",
 ]

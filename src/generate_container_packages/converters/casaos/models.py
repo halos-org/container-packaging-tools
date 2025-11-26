@@ -40,7 +40,7 @@ class CasaOSPort(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     container: int = Field(ge=1, le=65535, description="Container port number")
-    host: int = Field(ge=1, le=65535, description="Host port number")
+    host: int | None = Field(None, ge=1, le=65535, description="Host port number (may be None for variable references)")
     protocol: Literal["tcp", "udp"] | None = Field(None, description="Protocol (tcp or udp)")
     description: str | None = Field(None, description="Port description")
 
