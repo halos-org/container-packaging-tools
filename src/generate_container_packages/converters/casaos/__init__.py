@@ -9,6 +9,9 @@ from generate_container_packages.converters.casaos.models import (
     ConversionContext,
 )
 from generate_container_packages.converters.casaos.parser import CasaOSParser
+from generate_container_packages.converters.casaos.transformer import (
+    MetadataTransformer,
+)
 
 __all__ = [
     "CasaOSApp",
@@ -18,4 +21,5 @@ __all__ = [
     "CasaOSVolume",
     "ConversionContext",
     "CasaOSParser",
+    "MetadataTransformer",
 ]
