@@ -25,7 +25,7 @@ def get_default_mappings_dir() -> Path:
         >>> mappings_dir = get_default_mappings_dir()
         >>> assert (mappings_dir / "categories.yaml").exists()
     """
-    # Navigate from this file's location to the mappings directory
-    # Structure: src/generate_container_packages/converters/casaos/constants.py
-    #         -> mappings/casaos/
-    return Path(__file__).parent.parent.parent.parent.parent / "mappings" / "casaos"
+    # Mappings are located in the same directory as this constants module
+    # Structure: .../generate_container_packages/converters/casaos/constants.py
+    #         -> .../generate_container_packages/converters/casaos/mappings/
+    return Path(__file__).parent / "mappings"

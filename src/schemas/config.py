@@ -68,4 +68,4 @@ class ConfigSchema(BaseModel):
     version: str = Field(
         pattern=r"^1\.0$", description="Schema version (currently 1.0)"
     )
-    groups: list[ConfigGroup] = Field(min_length=1, description="Configuration groups")
+    groups: list[ConfigGroup] = Field(description="Configuration groups (can be empty)")

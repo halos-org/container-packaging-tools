@@ -576,9 +576,10 @@ class TestConfigSchema:
         assert "version" in str(exc_info.value).lower()
 
     def test_empty_groups_array(self, valid_config_schema):
-        """Test schema with no groups raises ValidationError."""
+        """Test schema with no groups is now valid (for apps with no configurable params)."""
         valid_config_schema["groups"] = []
 
-        with pytest.raises(ValidationError) as exc_info:
-            ConfigSchema(**valid_config_schema)  # type: ignore[arg-type]
-        assert "groups" in str(exc_info.value).lower()
+        # Empty groups should now be valid (changed to support apps with no config)
+        schema = ConfigSchema(**valid_config_schema)  # type: ignore[arg-type]
+        assert schema.groups == []
+        assert schema.version == "1.0"

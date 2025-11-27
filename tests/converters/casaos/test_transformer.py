@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 
+from generate_container_packages.converters.casaos.constants import (
+    get_default_mappings_dir,
+)
 from generate_container_packages.converters.casaos.models import (
     CasaOSApp,
     CasaOSEnvVar,
@@ -25,7 +28,7 @@ from generate_container_packages.converters.casaos.transformer import (
 @pytest.fixture
 def mappings_dir() -> Path:
     """Return path to test mapping files."""
-    return Path(__file__).parent.parent.parent.parent / "mappings" / "casaos"
+    return get_default_mappings_dir()
 
 
 @pytest.fixture

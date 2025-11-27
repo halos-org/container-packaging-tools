@@ -8,7 +8,7 @@ while ensuring required data is present.
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CasaOSEnvVar(BaseModel):
@@ -113,15 +113,15 @@ class CasaOSApp(BaseModel):
     # Core identity
     id: str = Field(min_length=1, description="Unique app identifier")
     name: str = Field(min_length=1, description="Display name")
-    tagline: str = Field(min_length=1, description="Short tagline")
-    description: str = Field(min_length=1, description="Full description")
+    tagline: str = Field(default="", description="Short tagline")
+    description: str = Field(default="", description="Full description")
     category: str = Field(min_length=1, description="CasaOS category")
 
     # Optional metadata
     developer: str | None = Field(None, description="Developer/author name")
     homepage: str | None = Field(None, description="Project homepage URL")
     icon: str | None = Field(None, description="Icon URL")
-    screenshots: list[str] = Field(default_factory=list, description="Screenshot URLs")
+    screenshots: list[str] | None = Field(default_factory=list, description="Screenshot URLs")
     tags: list[str] = Field(default_factory=list, description="Tags for searching")
 
     # Service definitions (at least one required)
@@ -129,6 +129,37 @@ class CasaOSApp(BaseModel):
         min_length=1,
         description="Container services for this app",
     )
+
+    @field_validator("tagline")
+    @classmethod
+    def validate_tagline(cls, v: str, info) -> str:
+        """Generate default tagline if empty."""
+        if not v or not v.strip():
+            # Use app name from values if available
+            name = info.data.get("name", "Unknown")
+            return f"CasaOS Container App for {name}"
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, v: str, info) -> str:
+        """Generate default description if empty."""
+        if not v or not v.strip():
+            # Use tagline if available, otherwise use app name
+            tagline = info.data.get("tagline", "")
+            if tagline and tagline.strip():
+                return tagline
+            name = info.data.get("name", "Unknown")
+            return f"CasaOS Container App for {name}"
+        return v
+
+    @field_validator("screenshots")
+    @classmethod
+    def validate_screenshots(cls, v: list[str] | None) -> list[str]:
+        """Convert null screenshots to empty list."""
+        if v is None:
+            return []
+        return v
 
 
 class ConversionContext(BaseModel):

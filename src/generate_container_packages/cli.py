@@ -163,7 +163,11 @@ def convert_casaos_command(args: argparse.Namespace) -> int:
             mappings_dir = Path(args.mappings_dir).resolve()
         else:
             # Use default mappings from package
-            mappings_dir = Path(__file__).parent.parent.parent / "mappings" / "casaos"
+            from generate_container_packages.converters.casaos.constants import (
+                get_default_mappings_dir,
+            )
+
+            mappings_dir = get_default_mappings_dir()
 
         # Create output directory if needed
         output_dir.mkdir(parents=True, exist_ok=True)

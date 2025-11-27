@@ -1,15 +1,16 @@
 """Unit tests for CasaOS mapping configuration files."""
 
-from pathlib import Path
-
 import pytest
 import yaml
 
+from generate_container_packages.converters.casaos.constants import (
+    get_default_mappings_dir,
+)
 from schemas.config import ConfigField
 from schemas.metadata import PackageMetadata
 
 # Path to mapping files
-MAPPINGS_DIR = Path(__file__).parent.parent.parent.parent / "mappings" / "casaos"
+MAPPINGS_DIR = get_default_mappings_dir()
 
 
 class TestCategoriesMappings:
