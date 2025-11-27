@@ -65,7 +65,9 @@ The writer validates all output against Pydantic models before writing files. It
 
 The update detector compares the current state of converted apps with the upstream CasaOS repository to identify changes. It tracks which apps are new, which have been updated, and which have been removed.
 
-The detector uses conversion timestamps and upstream commit hashes to determine what needs re-conversion. It generates sync reports showing exactly what changed and what actions are recommended.
+The update detector uses content-based change detection via SHA256 hashing of source docker-compose.yml files. It does not perform conflict detection or preserve manual edits - all converted apps are immutable and regenerated from upstream on updates.
+
+The detector generates sync reports showing exactly what changed and what actions are recommended for automated or manual reconversion.
 
 ## Technology Stack
 
@@ -170,9 +172,11 @@ For re-running converter on updated upstream:
 
 **Change Detection**: Determine new apps to convert, determine updated apps to reconvert, determine removed apps to flag.
 
-**Conflict Handling**: Check for manual modifications to existing converted apps, warn about conflicts between local changes and upstream updates, provide options for resolution.
+**Update Detection**: Load source_metadata from existing apps, fetch latest content from upstream repository, compute SHA256 hashes, compare hashes to identify modified apps.
 
-**Selective Conversion**: Convert only changed apps unless full reconversion requested, preserve manually edited apps unless overridden, generate detailed sync report.
+**Immutable Regeneration**: All detected changes trigger complete reconversion. No merging or conflict resolution is performed. If a converted app has issues, they must be fixed either in the converter code or upstream.
+
+**Selective Conversion**: By default, only convert apps that are new or have changed hashes. Full reconversion of all apps can be forced if needed for converter updates.
 
 ## File Structure
 
@@ -400,6 +404,30 @@ This metadata enables auditing, troubleshooting, and future synchronization with
 A base converter interface is defined to enable future converters for other sources like Runtipi. The interface specifies required methods: parse, transform, generate.
 
 CasaOS converter implements this interface. Future converters can reuse common components like asset management and output generation.
+
+### Source Metadata Design
+
+The converter uses a flexible source metadata approach for extensibility:
+
+**Schema Structure**:
+```python
+class SourceMetadata(BaseModel):
+    type: str  # Discriminator: "casaos", "runtipi", etc.
+    app_id: str
+    source_url: str
+    upstream_hash: str
+    conversion_timestamp: str
+    # Source-specific fields allowed via extra="allow"
+```
+
+**Package Naming Convention**: Each source uses a distinct prefix:
+- CasaOS: `casaos-{app}-container`
+- Runtipi: `runtipi-{app}-container`
+- Manual: `{app}-container`
+
+This naming scheme prevents conflicts and enables multiple sources in a single repository.
+
+**No Shared Base Class**: Following YAGNI principle, source-specific detector implementations (e.g., CasaOSUpdateDetector) do not inherit from a shared base class. A base class will be extracted when the second source is implemented, once the common patterns are clear.
 
 ### Mapping Customization
 

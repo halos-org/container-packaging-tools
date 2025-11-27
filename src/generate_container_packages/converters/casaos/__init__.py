@@ -14,6 +14,10 @@ from generate_container_packages.converters.casaos.parser import CasaOSParser
 from generate_container_packages.converters.casaos.transformer import (
     MetadataTransformer,
 )
+from generate_container_packages.converters.casaos.updater import (
+    CasaOSUpdateDetector,
+    UpdateReport,
+)
 
 __all__ = [
     "AssetManager",
@@ -26,4 +30,6 @@ __all__ = [
     "OutputWriter",
     "CasaOSParser",
     "MetadataTransformer",
+    "CasaOSUpdateDetector",
+    "UpdateReport",
 ]

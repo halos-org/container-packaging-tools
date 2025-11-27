@@ -3,7 +3,7 @@
 import subprocess
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 
 class WebUI(BaseModel):
@@ -17,6 +17,31 @@ class WebUI(BaseModel):
     protocol: Literal["http", "https"] | None = Field(
         None, description="Protocol used by web UI"
     )
+
+
+class SourceMetadata(BaseModel):
+    """Metadata about the source of a converted app.
+
+    Tracks the origin and conversion details for auto-converted packages
+    (e.g., from CasaOS, Runtipi). Manual packages do not have source_metadata.
+    """
+
+    type: str = Field(
+        min_length=1,
+        description="Source type identifier (e.g., 'casaos', 'runtipi')",
+    )
+    app_id: str = Field(min_length=1, description="App identifier in source system")
+    source_url: str = Field(min_length=1, description="URL to source repository")
+    upstream_hash: str = Field(
+        min_length=1,
+        description="SHA256 hash of source file(s) for change detection",
+    )
+    conversion_timestamp: str = Field(
+        description="ISO 8601 timestamp of when conversion was performed"
+    )
+
+    # Allow source-specific extra fields
+    model_config = ConfigDict(extra="allow")
 
 
 class PackageMetadata(BaseModel):
@@ -149,6 +174,12 @@ class PackageMetadata(BaseModel):
     # Default configuration
     default_config: dict[str, str] | None = Field(
         None, description="Default environment variables"
+    )
+
+    # Source tracking for converted apps
+    source_metadata: SourceMetadata | None = Field(
+        None,
+        description="Metadata for auto-converted apps (None for manual apps)",
     )
 
     @field_validator("package_name")

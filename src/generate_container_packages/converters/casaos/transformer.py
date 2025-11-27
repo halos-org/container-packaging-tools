@@ -6,10 +6,13 @@ and package naming.
 """
 
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from generate_container_packages.utils import compute_file_hash
 
 from .models import CasaOSApp, CasaOSEnvVar, ConversionContext
 
@@ -96,7 +99,11 @@ class MetadataTransformer:
             )
 
     def transform(
-        self, casaos_app: CasaOSApp, context: ConversionContext
+        self,
+        casaos_app: CasaOSApp,
+        context: ConversionContext,
+        source_file_path: Path | None = None,
+        source_url: str | None = None,
     ) -> dict[str, Any]:
         """Transform CasaOS app to HaLOS format.
 
@@ -112,6 +119,8 @@ class MetadataTransformer:
         Args:
             casaos_app: Parsed CasaOS application
             context: Conversion context for tracking warnings/errors
+            source_file_path: Path to source docker-compose.yml (for hash computation)
+            source_url: URL to upstream repository (for source tracking)
 
         Returns:
             Dictionary with keys:
@@ -139,6 +148,17 @@ class MetadataTransformer:
         # Transform environment variables to config fields with grouping
         config_groups = self._create_config_groups(all_env_vars)
 
+        # Build source_metadata if source tracking parameters provided
+        source_metadata = None
+        if source_file_path and source_url:
+            source_metadata = {
+                "type": context.source_format,
+                "app_id": context.app_id,
+                "source_url": source_url,
+                "upstream_hash": compute_file_hash(source_file_path),
+                "conversion_timestamp": datetime.now(UTC).isoformat(),
+            }
+
         # Build metadata dictionary
         metadata = {
             "name": casaos_app.name,
@@ -149,6 +169,7 @@ class MetadataTransformer:
             "homepage": casaos_app.homepage,
             "icon": casaos_app.icon,
             "screenshots": casaos_app.screenshots if casaos_app.screenshots else None,
+            "source_metadata": source_metadata,
         }
 
         # Build config dictionary

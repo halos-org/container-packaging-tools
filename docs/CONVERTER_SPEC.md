@@ -72,10 +72,24 @@ Every converted app must include metadata tracking its origin from CasaOS. This 
 The converter must support re-running on an updated CasaOS repository to sync with upstream changes. When re-run, it should:
 - Detect which apps have been added, updated, or removed in the upstream CasaOS store
 - Re-convert updated apps with new metadata and container definitions
-- Preserve any manual customizations by warning when conflicts are detected
 - Generate a sync report showing what changed
 
-This enables keeping the HaLOS container store current with the latest CasaOS apps and updates.
+**Immutability Decision**: Auto-converted apps are never edited locally. All converted packages are immutable - any issues must be fixed either in the converter logic or upstream. This eliminates the need for conflict detection and manual merge workflows.
+
+**Source Metadata Tracking**: Every converted app includes structured metadata in metadata.yaml:
+
+```yaml
+source_metadata:
+  type: "casaos"                                          # Source identifier
+  app_id: "jellyfin"                                      # Original app ID
+  source_url: "https://github.com/IceWhaleTech/..."      # Upstream repo
+  upstream_hash: "sha256:abc123..."                       # Content hash
+  conversion_timestamp: "2025-11-27T12:00:00Z"           # When converted
+```
+
+The `upstream_hash` field enables change detection by comparing upstream docker-compose.yml content against previously converted versions using SHA256 hashing. This allows the update detector to identify which apps need reconversion without manual tracking.
+
+This approach enables keeping the HaLOS container store current with the latest CasaOS apps and updates through automated synchronization.
 
 ## Technical Requirements
 
