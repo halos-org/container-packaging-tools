@@ -19,7 +19,7 @@ from generate_container_packages.cli import (
     EXIT_TEMPLATE_ERROR,
     EXIT_VALIDATION_ERROR,
     check_dependencies,
-    create_argument_parser,
+    create_build_argument_parser,
     main,
     setup_logging,
 )
@@ -35,49 +35,49 @@ class TestCreateArgumentParser:
 
     def test_parser_creation(self):
         """Test that parser is created successfully."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         assert isinstance(parser, argparse.ArgumentParser)
         assert parser.prog == "generate-container-packages"
 
     def test_input_dir_argument(self):
         """Test that input_dir positional argument is parsed."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["/path/to/input"])
         assert args.input_dir == "/path/to/input"
 
     def test_output_option_default(self):
         """Test that --output has correct default value."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir"])
         assert args.output == "."
 
     def test_output_option_custom(self):
         """Test that --output accepts custom value."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "--output", "/custom/path"])
         assert args.output == "/custom/path"
 
     def test_output_option_short_form(self):
         """Test that -o short form works."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "-o", "/custom/path"])
         assert args.output == "/custom/path"
 
     def test_validate_flag(self):
         """Test that --validate flag is parsed."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "--validate"])
         assert args.validate is True
 
     def test_validate_flag_default(self):
         """Test that --validate defaults to False."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir"])
         assert args.validate is False
 
     def test_verbose_flag(self):
         """Test that --verbose flag is parsed."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "--verbose"])
         assert args.verbose is True
         assert args.debug is False
@@ -85,13 +85,13 @@ class TestCreateArgumentParser:
 
     def test_verbose_short_form(self):
         """Test that -v short form works."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "-v"])
         assert args.verbose is True
 
     def test_debug_flag(self):
         """Test that --debug flag is parsed."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "--debug"])
         assert args.debug is True
         assert args.verbose is False
@@ -99,7 +99,7 @@ class TestCreateArgumentParser:
 
     def test_quiet_flag(self):
         """Test that --quiet flag is parsed."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "--quiet"])
         assert args.quiet is True
         assert args.verbose is False
@@ -107,31 +107,31 @@ class TestCreateArgumentParser:
 
     def test_quiet_short_form(self):
         """Test that -q short form works."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "-q"])
         assert args.quiet is True
 
     def test_verbosity_mutually_exclusive(self):
         """Test that verbosity flags are mutually exclusive."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         with pytest.raises(SystemExit):
             parser.parse_args(["input_dir", "--verbose", "--debug"])
 
     def test_keep_temp_flag(self):
         """Test that --keep-temp flag is parsed."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir", "--keep-temp"])
         assert args.keep_temp is True
 
     def test_keep_temp_flag_default(self):
         """Test that --keep-temp defaults to False."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         args = parser.parse_args(["input_dir"])
         assert args.keep_temp is False
 
     def test_version_flag(self):
         """Test that --version flag displays version."""
-        parser = create_argument_parser()
+        parser = create_build_argument_parser()
         with pytest.raises(SystemExit) as exc_info:
             parser.parse_args(["--version"])
         assert exc_info.value.code == 0  # type: ignore[attr-defined]

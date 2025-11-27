@@ -29,7 +29,7 @@ services:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-      JELLYFIN_PublishedServerUrl: ""
+      JELLYFIN_PUBLISHED_SERVER_URL: ""
     x-casaos:
       envs:
         - container: PUID
@@ -41,7 +41,7 @@ services:
         - container: TZ
           description:
             en_us: Specify a timezone to use
-        - container: JELLYFIN_PublishedServerUrl
+        - container: JELLYFIN_PUBLISHED_SERVER_URL
           description:
             en_us: Server URL for autodiscovery
       ports:
