@@ -5,7 +5,9 @@ including category mapping, field type inference, path transformation,
 and package naming.
 """
 
+import hashlib
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -96,7 +98,11 @@ class MetadataTransformer:
             )
 
     def transform(
-        self, casaos_app: CasaOSApp, context: ConversionContext
+        self,
+        casaos_app: CasaOSApp,
+        context: ConversionContext,
+        source_file_path: Path | None = None,
+        source_url: str | None = None,
     ) -> dict[str, Any]:
         """Transform CasaOS app to HaLOS format.
 
@@ -112,6 +118,8 @@ class MetadataTransformer:
         Args:
             casaos_app: Parsed CasaOS application
             context: Conversion context for tracking warnings/errors
+            source_file_path: Path to source docker-compose.yml (for hash computation)
+            source_url: URL to upstream repository (for source tracking)
 
         Returns:
             Dictionary with keys:
@@ -139,6 +147,17 @@ class MetadataTransformer:
         # Transform environment variables to config fields with grouping
         config_groups = self._create_config_groups(all_env_vars)
 
+        # Build source_metadata if source tracking parameters provided
+        source_metadata = None
+        if source_file_path and source_url:
+            source_metadata = {
+                "type": context.source_format,
+                "app_id": context.app_id,
+                "source_url": source_url,
+                "upstream_hash": self._compute_hash(source_file_path),
+                "conversion_timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
         # Build metadata dictionary
         metadata = {
             "name": casaos_app.name,
@@ -149,6 +168,7 @@ class MetadataTransformer:
             "homepage": casaos_app.homepage,
             "icon": casaos_app.icon,
             "screenshots": casaos_app.screenshots if casaos_app.screenshots else None,
+            "source_metadata": source_metadata,
         }
 
         # Build config dictionary
@@ -465,3 +485,17 @@ class MetadataTransformer:
             compose["services"][service.name] = service_def
 
         return compose
+
+    def _compute_hash(self, file_path: Path) -> str:
+        """Compute SHA256 hash of file content.
+
+        Args:
+            file_path: Path to file to hash
+
+        Returns:
+            Hexadecimal SHA256 hash string
+        """
+        sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            sha256.update(f.read())
+        return sha256.hexdigest()
