@@ -706,8 +706,10 @@ class TestConvertCasaOSProgressReporting:
         assert result.returncode == 0
         # Should show progress for multiple apps
         output_text = result.stderr + result.stdout
-        # May include progress indicators, app counts, etc.
-        assert "app" in output_text.lower() or "convert" in output_text.lower()
+        # Check for batch conversion messages
+        assert "batch" in output_text.lower() and (
+            "conversion" in output_text.lower() or "converting" in output_text.lower()
+        )
 
     def test_convert_casaos_progress_quiet_mode(self, tmp_path: Path) -> None:
         """Test that quiet mode suppresses progress output."""
