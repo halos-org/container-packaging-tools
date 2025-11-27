@@ -1,5 +1,6 @@
 """CasaOS to HaLOS converter."""
 
+from generate_container_packages.converters.casaos.assets import AssetManager
 from generate_container_packages.converters.casaos.models import (
     CasaOSApp,
     CasaOSEnvVar,
@@ -14,6 +15,7 @@ from generate_container_packages.converters.casaos.transformer import (
 )
 
 __all__ = [
+    "AssetManager",
     "CasaOSApp",
     "CasaOSEnvVar",
     "CasaOSPort",

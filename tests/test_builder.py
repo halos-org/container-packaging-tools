@@ -39,7 +39,10 @@ class TestGenerateEnvTemplate:
         assert env_file.exists()
         content = env_file.read_text()
         # Should still have CONTAINER_DATA_ROOT even with no default_config
-        assert 'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"' in content
+        assert (
+            'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"'
+            in content
+        )
         assert "System-managed variables" in content
 
         # Check env.user-template (for env)
@@ -68,7 +71,10 @@ class TestGenerateEnvTemplate:
         assert env_file.exists()
         content = env_file.read_text()
         # Check system-managed variable
-        assert 'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"' in content
+        assert (
+            'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"'
+            in content
+        )
         # Check application config
         assert 'KEY1="value1"' in content
         assert 'KEY2="value2"' in content
@@ -102,7 +108,10 @@ class TestGenerateEnvTemplate:
         env_file = tmp_path / "env.template"
         content = env_file.read_text()
         # Check system-managed variable is present
-        assert 'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"' in content
+        assert (
+            'CONTAINER_DATA_ROOT="/var/lib/container-apps/test-app-container/data"'
+            in content
+        )
         # Check escaping
         assert 'PASSWORD="test\\"password"' in content
         assert "$$HOME" in content

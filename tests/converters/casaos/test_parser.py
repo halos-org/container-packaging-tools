@@ -53,7 +53,10 @@ class TestCasaOSParser:
         assert app.developer == "Jellyfin"
         assert app.tagline == "The Free Software Media System"
         assert app.description.startswith("Jellyfin is a Free Software")
-        assert app.icon == "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Jellyfin/icon.png"
+        assert (
+            app.icon
+            == "https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Jellyfin/icon.png"
+        )
         assert len(app.screenshots) == 3
         assert len(app.services) == 1
 

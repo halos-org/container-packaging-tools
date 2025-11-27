@@ -24,7 +24,9 @@ class CasaOSEnvVar(BaseModel):
     name: str = Field(min_length=1, description="Environment variable name")
     default: str = Field(description="Default value for the variable")
     label: str | None = Field(None, description="Human-readable label for UI")
-    description: str | None = Field(None, description="Help text explaining the variable")
+    description: str | None = Field(
+        None, description="Help text explaining the variable"
+    )
     type: str | None = Field(
         None,
         description="CasaOS type hint (e.g., 'number', 'text', 'password')",
@@ -40,8 +42,15 @@ class CasaOSPort(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     container: int = Field(ge=1, le=65535, description="Container port number")
-    host: int | None = Field(None, ge=1, le=65535, description="Host port number (may be None for variable references)")
-    protocol: Literal["tcp", "udp"] | None = Field(None, description="Protocol (tcp or udp)")
+    host: int | None = Field(
+        None,
+        ge=1,
+        le=65535,
+        description="Host port number (may be None for variable references)",
+    )
+    protocol: Literal["tcp", "udp"] | None = Field(
+        None, description="Protocol (tcp or udp)"
+    )
     description: str | None = Field(None, description="Port description")
 
 
@@ -132,7 +141,9 @@ class ConversionContext(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     # Source tracking
-    source_format: str = Field(min_length=1, description="Source format name (e.g., 'casaos')")
+    source_format: str = Field(
+        min_length=1, description="Source format name (e.g., 'casaos')"
+    )
     app_id: str = Field(min_length=1, description="ID of app being converted")
 
     # State tracking

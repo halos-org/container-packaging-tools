@@ -47,18 +47,20 @@ class TestCategoriesMappings:
     def test_categories_valid_debian_sections(self, categories_config):
         """Test that all mapped categories use valid Debian sections."""
         # Get valid Debian sections from PackageMetadata model
-        valid_sections = set(PackageMetadata.model_fields["debian_section"].annotation.__args__)
+        valid_sections = set(
+            PackageMetadata.model_fields["debian_section"].annotation.__args__
+        )
 
         # Check all mapped sections are valid
         for casaos_cat, debian_section in categories_config["mappings"].items():
-            assert (
-                debian_section in valid_sections
-            ), f"Invalid Debian section '{debian_section}' for category '{casaos_cat}'"
+            assert debian_section in valid_sections, (
+                f"Invalid Debian section '{debian_section}' for category '{casaos_cat}'"
+            )
 
         # Check default is valid
-        assert (
-            categories_config["default"] in valid_sections
-        ), f"Invalid default section '{categories_config['default']}'"
+        assert categories_config["default"] in valid_sections, (
+            f"Invalid default section '{categories_config['default']}'"
+        )
 
     def test_categories_common_mappings_exist(self, categories_config):
         """Test that common CasaOS categories are mapped."""
@@ -73,9 +75,9 @@ class TestCategoriesMappings:
         mappings = categories_config["mappings"]
 
         for category in common_categories:
-            assert (
-                category in mappings
-            ), f"Common category '{category}' should be mapped"
+            assert category in mappings, (
+                f"Common category '{category}' should be mapped"
+            )
 
 
 class TestFieldTypesMappings:
@@ -122,16 +124,16 @@ class TestFieldTypesMappings:
         # Check pattern types
         for pattern in field_types_config["patterns"]:
             assert "type" in pattern, f"Pattern must have 'type': {pattern}"
-            assert (
-                pattern["type"] in valid_types
-            ), f"Invalid type '{pattern['type']}' in pattern {pattern['pattern']}"
+            assert pattern["type"] in valid_types, (
+                f"Invalid type '{pattern['type']}' in pattern {pattern['pattern']}"
+            )
 
         # Check default types
         for casaos_type, field_type in field_types_config["defaults"].items():
             if casaos_type != "fallback":  # fallback can be any type
-                assert (
-                    field_type in valid_types
-                ), f"Invalid default type '{field_type}' for '{casaos_type}'"
+                assert field_type in valid_types, (
+                    f"Invalid default type '{field_type}' for '{casaos_type}'"
+                )
 
     def test_field_types_patterns_have_required_fields(self, field_types_config):
         """Test that all patterns have required fields."""
@@ -146,18 +148,18 @@ class TestFieldTypesMappings:
         patterns = [p["pattern"] for p in field_types_config["patterns"]]
 
         # Check for common patterns
-        assert any(
-            "PORT" in p for p in patterns
-        ), "Should have pattern for PORT variables"
-        assert any(
-            "PASS" in p for p in patterns
-        ), "Should have pattern for PASSWORD variables"
-        assert any(
-            "PATH" in p or "DIR" in p for p in patterns
-        ), "Should have pattern for path variables"
-        assert any(
-            "USER" in p for p in patterns
-        ), "Should have pattern for USER variables"
+        assert any("PORT" in p for p in patterns), (
+            "Should have pattern for PORT variables"
+        )
+        assert any("PASS" in p for p in patterns), (
+            "Should have pattern for PASSWORD variables"
+        )
+        assert any("PATH" in p or "DIR" in p for p in patterns), (
+            "Should have pattern for path variables"
+        )
+        assert any("USER" in p for p in patterns), (
+            "Should have pattern for USER variables"
+        )
 
     def test_field_types_integer_validation_ranges(self, field_types_config):
         """Test that integer types have sensible validation ranges."""
@@ -165,9 +167,9 @@ class TestFieldTypesMappings:
             if pattern["type"] == "integer" and "validation" in pattern:
                 validation = pattern["validation"]
                 if "min" in validation and "max" in validation:
-                    assert (
-                        validation["min"] < validation["max"]
-                    ), f"Min must be less than max in pattern {pattern['pattern']}"
+                    assert validation["min"] < validation["max"], (
+                        f"Min must be less than max in pattern {pattern['pattern']}"
+                    )
 
 
 class TestPathsMappings:
@@ -211,7 +213,9 @@ class TestPathsMappings:
         for transform in paths_config["transforms"]:
             assert "from" in transform, "Transform must have 'from' field"
             assert "to" in transform, f"Transform must have 'to' field: {transform}"
-            assert "description" in transform, f"Transform must have 'description': {transform}"
+            assert "description" in transform, (
+                f"Transform must have 'description': {transform}"
+            )
 
     def test_paths_casaos_appdata_transform(self, paths_config):
         """Test that CasaOS /DATA/AppData pattern is transformed."""
@@ -223,9 +227,9 @@ class TestPathsMappings:
 
         # Check it maps to CONTAINER_DATA_ROOT
         for t in appdata_transforms:
-            assert (
-                "CONTAINER_DATA_ROOT" in t["to"]
-            ), "AppData should map to CONTAINER_DATA_ROOT"
+            assert "CONTAINER_DATA_ROOT" in t["to"], (
+                "AppData should map to CONTAINER_DATA_ROOT"
+            )
 
     def test_paths_system_paths_preserved(self, paths_config):
         """Test that system paths are in preserve list."""
@@ -243,15 +247,13 @@ class TestPathsMappings:
         special_cases = paths_config["special_cases"]
         if "configurable" in special_cases:
             for config in special_cases["configurable"]:
-                assert (
-                    "pattern" in config
-                ), "Configurable must have 'pattern' field"
-                assert (
-                    "field_name" in config
-                ), f"Configurable must have 'field_name': {config}"
-                assert (
-                    "description" in config
-                ), f"Configurable must have 'description': {config}"
+                assert "pattern" in config, "Configurable must have 'pattern' field"
+                assert "field_name" in config, (
+                    f"Configurable must have 'field_name': {config}"
+                )
+                assert "description" in config, (
+                    f"Configurable must have 'description': {config}"
+                )
 
                 # Field name should be valid environment variable name
                 assert config["field_name"].isupper(), (
@@ -283,7 +285,9 @@ class TestPathsMappings:
                     continue
 
                 # Check if one is a prefix of the other
-                if transform_from.startswith(preserve + "/") or preserve.startswith(transform_from + "/"):
+                if transform_from.startswith(preserve + "/") or preserve.startswith(
+                    transform_from + "/"
+                ):
                     raise AssertionError(
                         f"Preserved path '{preserve}' overlaps with transform '{transform_from}'"
                     )

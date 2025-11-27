@@ -138,10 +138,14 @@ class CasaOSParser:
         try:
             data = yaml.safe_load(yaml_content)
         except yaml.YAMLError as e:
-            raise ConverterValidationError(self._error_context(f"Invalid YAML syntax: {e}")) from e
+            raise ConverterValidationError(
+                self._error_context(f"Invalid YAML syntax: {e}")
+            ) from e
 
         if not isinstance(data, dict):
-            raise ConverterValidationError(self._error_context("Docker compose file must be a YAML dictionary"))
+            raise ConverterValidationError(
+                self._error_context("Docker compose file must be a YAML dictionary")
+            )
 
         return self._parse_compose_data(data)
 
@@ -160,17 +164,23 @@ class CasaOSParser:
         # Extract app name from 'name' field
         app_name = data.get("name")
         if not app_name:
-            raise ConverterValidationError(self._error_context("Missing required 'name' field"))
+            raise ConverterValidationError(
+                self._error_context("Missing required 'name' field")
+            )
 
         # Extract x-casaos metadata
         x_casaos = data.get("x-casaos")
         if not x_casaos:
-            raise ConverterValidationError(self._error_context("Missing required 'x-casaos' metadata"))
+            raise ConverterValidationError(
+                self._error_context("Missing required 'x-casaos' metadata")
+            )
 
         # Extract services
         services_data = data.get("services", {})
         if not services_data:
-            raise ConverterValidationError(self._error_context("Missing or empty 'services'"))
+            raise ConverterValidationError(
+                self._error_context("Missing or empty 'services'")
+            )
 
         # Parse services
         services = []
@@ -197,7 +207,9 @@ class CasaOSParser:
         except ValidationError as e:
             raise ConverterValidationError(f"Invalid CasaOS app data: {e}") from e
 
-    def _parse_service(self, service_name: str, service_config: dict[str, Any]) -> CasaOSService:
+    def _parse_service(
+        self, service_name: str, service_config: dict[str, Any]
+    ) -> CasaOSService:
         """Parse a single service configuration.
 
         Args:
@@ -215,8 +227,7 @@ class CasaOSParser:
 
         # Parse environment variables
         env_vars = self._parse_env_vars(
-            service_config.get("environment", {}),
-            service_x_casaos.get("envs", [])
+            service_config.get("environment", {}), service_x_casaos.get("envs", [])
         )
 
         # Build set of defined environment variables for validation
@@ -226,25 +237,23 @@ class CasaOSParser:
         ports = self._parse_ports(
             service_config.get("ports", []),
             service_x_casaos.get("ports", []),
-            env_var_names
+            env_var_names,
         )
 
         # Parse volumes
         volumes = self._parse_volumes(
             service_config.get("volumes", []),
             service_x_casaos.get("volumes", []),
-            env_var_names
+            env_var_names,
         )
 
         # Parse command and entrypoint with validation
         command = self._validate_string_list(
-            service_config.get("command"),
-            f"command in service '{service_name}'"
+            service_config.get("command"), f"command in service '{service_name}'"
         )
 
         entrypoint = self._validate_string_list(
-            service_config.get("entrypoint"),
-            f"entrypoint in service '{service_name}'"
+            service_config.get("entrypoint"), f"entrypoint in service '{service_name}'"
         )
 
         return CasaOSService(
@@ -258,9 +267,7 @@ class CasaOSParser:
         )
 
     def _parse_env_vars(
-        self,
-        env_config: dict[str, Any] | list[str],
-        env_metadata: list[dict[str, Any]]
+        self, env_config: dict[str, Any] | list[str], env_metadata: list[dict[str, Any]]
     ) -> list[CasaOSEnvVar]:
         """Parse environment variables with their metadata.
 
@@ -310,7 +317,7 @@ class CasaOSParser:
         self,
         ports_config: list[Any],
         ports_metadata: list[dict[str, Any]],
-        env_var_names: set[str]
+        env_var_names: set[str],
     ) -> list[CasaOSPort]:
         """Parse port mappings with their metadata.
 
@@ -354,29 +361,43 @@ class CasaOSParser:
                         container_str, protocol = container_str.split("/")
                     try:
                         # Handle variable references
-                        if host_str and host_str.startswith("${") and host_str.endswith("}"):
+                        if (
+                            host_str
+                            and host_str.startswith("${")
+                            and host_str.endswith("}")
+                        ):
                             var_name = host_str[2:-1]
                             if var_name not in env_var_names:
-                                self._add_warning(f"Port references undefined variable: {var_name}")
+                                self._add_warning(
+                                    f"Port references undefined variable: {var_name}"
+                                )
                             host_port = None
                         elif host_str:
                             host_port = int(host_str)
 
-                        if container_str.startswith("${") and container_str.endswith("}"):
+                        if container_str.startswith("${") and container_str.endswith(
+                            "}"
+                        ):
                             var_name = container_str[2:-1]
                             if var_name not in env_var_names:
-                                self._add_warning(f"Port references undefined variable: {var_name}")
+                                self._add_warning(
+                                    f"Port references undefined variable: {var_name}"
+                                )
                             container_port = None
                         else:
                             container_port = int(container_str)
                     except ValueError as e:
-                        self._add_warning(f"Failed to parse port mapping '{port_config}': {e}")
+                        self._add_warning(
+                            f"Failed to parse port mapping '{port_config}': {e}"
+                        )
             elif isinstance(port_config, dict):
                 # Dict format: {target: X, published: Y, protocol: Z}
                 try:
                     container_port = int(port_config.get("target", 0))
                 except (ValueError, TypeError) as e:
-                    self._add_warning(f"Failed to parse port target: {port_config.get('target')} - {e}")
+                    self._add_warning(
+                        f"Failed to parse port target: {port_config.get('target')} - {e}"
+                    )
 
                 published = port_config.get("published")
                 if published:
@@ -384,13 +405,17 @@ class CasaOSParser:
                     if pub_str.startswith("${") and pub_str.endswith("}"):
                         var_name = pub_str[2:-1]
                         if var_name not in env_var_names:
-                            self._add_warning(f"Port references undefined variable: {var_name}")
+                            self._add_warning(
+                                f"Port references undefined variable: {var_name}"
+                            )
                         host_port = None
                     else:
                         try:
                             host_port = int(published)
                         except (ValueError, TypeError) as e:
-                            self._add_warning(f"Failed to parse published port: {published} - {e}")
+                            self._add_warning(
+                                f"Failed to parse published port: {published} - {e}"
+                            )
 
                 protocol = port_config.get("protocol")
 
@@ -409,7 +434,9 @@ class CasaOSParser:
                 ports.append(port)
             else:
                 # Port config was skipped
-                self._add_warning(f"Skipping unparseable port configuration: {port_config}")
+                self._add_warning(
+                    f"Skipping unparseable port configuration: {port_config}"
+                )
 
         return ports
 
@@ -417,7 +444,7 @@ class CasaOSParser:
         self,
         volumes_config: list[Any],
         volumes_metadata: list[dict[str, Any]],
-        env_var_names: set[str]
+        env_var_names: set[str],
     ) -> list[CasaOSVolume]:
         """Parse volume mounts with their metadata.
 
@@ -471,7 +498,9 @@ class CasaOSParser:
                 volumes.append(volume)
             else:
                 # Volume config was skipped
-                self._add_warning(f"Skipping incomplete volume configuration: {volume_config}")
+                self._add_warning(
+                    f"Skipping incomplete volume configuration: {volume_config}"
+                )
 
         return volumes
 

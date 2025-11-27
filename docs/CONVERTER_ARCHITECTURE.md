@@ -45,9 +45,9 @@ The transformer makes intelligent decisions about field organization, generates 
 
 #### Asset Manager
 
-The asset manager downloads icons and screenshots from URLs specified in CasaOS metadata. It implements caching, retry logic, validation, and parallel downloads for efficiency.
+The asset manager downloads icons and screenshots from URLs specified in CasaOS metadata. It implements retry logic, validation, and parallel downloads for efficiency.
 
-The manager validates downloaded assets for format, size, and integrity. It handles network failures gracefully and maintains a cache to avoid repeated downloads during development and testing.
+The manager validates downloaded assets for format, size, and integrity. It handles network failures gracefully with exponential backoff retry logic. Assets are downloaded directly to the output directory structure, avoiding cache management complexity for this linear conversion workflow.
 
 #### Configuration Generator
 
@@ -144,7 +144,7 @@ These models ensure converter output is immediately compatible with the packagin
 
 **Stage 4 - Transformation**: Map category to HaLOS taxonomy, infer field types for environment variables, organize fields into logical groups, apply path transformations, generate package name with casaos- prefix.
 
-**Stage 5 - Asset Download**: Download icon from URL, download screenshots, validate formats and sizes, cache downloaded assets.
+**Stage 5 - Asset Download**: Download icon from URL, download screenshots, validate formats and sizes, save to output directory.
 
 **Stage 6 - Output Generation**: Create metadata.yaml with package metadata, create config.yml with field groups, create docker-compose.yml without x-casaos extensions, validate all outputs against schemas.
 
@@ -333,13 +333,11 @@ Asset downloads are parallelized using thread pools. Multiple downloads occur si
 
 Batch app conversion can process multiple apps in parallel using process pools for CPU-bound transformation work. Parallelization respects system resource limits.
 
-### Caching Strategy
+### Asset Download Strategy
 
-Downloaded assets are cached by URL hash in a local cache directory. The cache persists across converter runs, eliminating redundant downloads.
+Assets (icons and screenshots) are downloaded directly to the output directory structure during conversion. No caching layer is implemented to keep the architecture simple for this linear conversion workflow.
 
-HTTP cache headers are respected when available. The cache implements LRU eviction when size limits are reached.
-
-Parsed CasaOS apps can be cached to accelerate re-runs during development. The cache invalidates on file modification time changes.
+Downloads use retry logic with exponential backoff to handle transient network failures. Parallel downloads with thread pools minimize total conversion time when processing multiple screenshots per app.
 
 ### Resource Limits
 

@@ -372,7 +372,8 @@ class TestValidateStore:
         errors = exc_info.value.errors()
         # Should have error about min_length constraint
         assert any(
-            "include_origins" in str(e.get("loc")) and "at least 1 item" in str(e.get("msg"))
+            "include_origins" in str(e.get("loc"))
+            and "at least 1 item" in str(e.get("msg"))
             for e in errors
         )
 
