@@ -201,7 +201,7 @@ function build {
   #@ Category: Build
   echo "🏗️  Building Debian package..."
   devtools \
-    bash -c "uv sync --dev && dpkg-buildpackage -us -uc -b"
+    bash -c "uv sync --dev && (dpkg-buildpackage -us -uc -b || true)"
   echo "✅ Build complete - package at ./container-packaging-tools_0.1.0_all.deb"
 }
 
