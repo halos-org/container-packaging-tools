@@ -116,7 +116,10 @@ class TestConvertCasaOSBasicCommand:
         )
 
         assert result.returncode != 0
-        assert "does not exist" in result.stderr.lower() or "not found" in result.stderr.lower()
+        assert (
+            "does not exist" in result.stderr.lower()
+            or "not found" in result.stderr.lower()
+        )
 
     def test_convert_casaos_invalid_yaml(self, tmp_path: Path) -> None:
         """Test error for invalid YAML file."""
@@ -153,6 +156,7 @@ class TestConvertCasaOSBatchMode:
 
         # Copy fixtures to batch directory
         import shutil
+
         shutil.copytree(FIXTURES_DIR / "simple-app", batch_dir / "app1")
         shutil.copytree(FIXTURES_DIR / "complex-app", batch_dir / "app2")
 
@@ -245,6 +249,7 @@ class TestConvertCasaOSBatchMode:
 
         # Valid app
         import shutil
+
         shutil.copytree(FIXTURES_DIR / "simple-app", batch_dir / "valid-app")
 
         # Invalid app
@@ -291,6 +296,7 @@ class TestConvertCasaOSSyncMode:
 
         # Copy apps to upstream
         import shutil
+
         shutil.copytree(FIXTURES_DIR / "simple-app", upstream_dir / "app1")
 
         # First conversion - converts all apps
@@ -371,6 +377,7 @@ class TestConvertCasaOSSyncMode:
 
         # Copy app to upstream
         import shutil
+
         shutil.copytree(FIXTURES_DIR / "simple-app", upstream_dir / "app1")
 
         result = subprocess.run(
@@ -402,8 +409,12 @@ class TestConvertCasaOSSyncMode:
 class TestConvertCasaOSAssetDownload:
     """Tests for asset download functionality."""
 
-    @patch("generate_container_packages.converters.casaos.assets.AssetManager.download_all_assets")
-    def test_convert_casaos_download_assets(self, mock_download: MagicMock, tmp_path: Path) -> None:
+    @patch(
+        "generate_container_packages.converters.casaos.assets.AssetManager.download_all_assets"
+    )
+    def test_convert_casaos_download_assets(
+        self, mock_download: MagicMock, tmp_path: Path
+    ) -> None:
         """Test downloading icons/screenshots with --download-assets flag."""
         source = FIXTURES_DIR / "complex-app"
         output = tmp_path / "output"
@@ -455,8 +466,12 @@ class TestConvertCasaOSAssetDownload:
             # Should not have downloaded icon/screenshots
             assert not (app_dir / "icon.png").exists() or True  # May not exist yet
 
-    @patch("generate_container_packages.converters.casaos.assets.AssetManager.download_all_assets")
-    def test_convert_casaos_asset_download_failures(self, mock_download: MagicMock, tmp_path: Path) -> None:
+    @patch(
+        "generate_container_packages.converters.casaos.assets.AssetManager.download_all_assets"
+    )
+    def test_convert_casaos_asset_download_failures(
+        self, mock_download: MagicMock, tmp_path: Path
+    ) -> None:
         """Test that asset download failures produce warnings but don't fail conversion."""
         source = FIXTURES_DIR / "complex-app"
         output = tmp_path / "output"
@@ -496,7 +511,9 @@ class TestConvertCasaOSOptions:
         mappings.mkdir()
 
         # Create minimal mappings
-        (mappings / "categories.yaml").write_text("mappings:\n  Utilities: utilities\ndefault: misc\n")
+        (mappings / "categories.yaml").write_text(
+            "mappings:\n  Utilities: utilities\ndefault: misc\n"
+        )
 
         result = subprocess.run(
             [
@@ -542,6 +559,7 @@ class TestConvertCasaOSOptions:
 
         # Check that URL is included in metadata
         import yaml
+
         metadata_file = output / "nginx-test" / "metadata.yaml"
         if metadata_file.exists():
             metadata = yaml.safe_load(metadata_file.read_text())
@@ -656,6 +674,7 @@ class TestConvertCasaOSProgressReporting:
         batch_dir.mkdir()
 
         import shutil
+
         shutil.copytree(FIXTURES_DIR / "simple-app", batch_dir / "app1")
         shutil.copytree(FIXTURES_DIR / "complex-app", batch_dir / "app2")
 
@@ -740,6 +759,7 @@ class TestConvertCasaOSIntegration:
 
         # Verify output files are valid YAML
         import yaml
+
         metadata = yaml.safe_load((app_dir / "metadata.yaml").read_text())
         config = yaml.safe_load((app_dir / "config.yml").read_text())
         compose = yaml.safe_load((app_dir / "docker-compose.yml").read_text())
@@ -778,7 +798,9 @@ class TestConvertCasaOSIntegration:
             from generate_container_packages.validator import validate_input_directory
 
             validation_result = validate_input_directory(app_dir)
-            assert validation_result.success, f"Validation failed: {validation_result.errors}"
+            assert validation_result.success, (
+                f"Validation failed: {validation_result.errors}"
+            )
 
     def test_convert_casaos_backward_compatibility(self, tmp_path: Path) -> None:
         """Test that original build command still works (backward compatibility)."""
