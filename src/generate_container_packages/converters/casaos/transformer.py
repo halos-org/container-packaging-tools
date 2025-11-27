@@ -249,6 +249,29 @@ class MetadataTransformer:
         # Last resort: hard truncate
         return text[:max_length - 3] + "..."
 
+    def _normalize_env_var_name(self, name: str) -> str:
+        """Normalize environment variable name to valid shell format.
+
+        Converts variable names to UPPER_SNAKE_CASE by:
+        - Converting to uppercase
+        - Replacing dots with underscores
+        - Ensuring first character is uppercase letter
+
+        Args:
+            name: Original environment variable name
+
+        Returns:
+            Normalized variable name in UPPER_SNAKE_CASE format
+        """
+        # Replace dots and other invalid characters with underscores
+        normalized = name.replace(".", "_").replace("-", "_")
+        # Convert to uppercase
+        normalized = normalized.upper()
+        # Ensure it starts with a letter (prepend ENV_ if it starts with number)
+        if normalized and not normalized[0].isalpha():
+            normalized = "ENV_" + normalized
+        return normalized
+
     def _infer_field_type(
         self, env_var: CasaOSEnvVar
     ) -> tuple[str, dict[str, Any], str]:
@@ -303,9 +326,12 @@ class MetadataTransformer:
         for env_var in env_vars:
             field_type, validation, group_hint = self._infer_field_type(env_var)
 
+            # Normalize variable name to valid shell format
+            normalized_name = self._normalize_env_var_name(env_var.name)
+
             # Build field dictionary
             field = {
-                "id": env_var.name,
+                "id": normalized_name,
                 "label": env_var.label or env_var.name,
                 "type": field_type,
                 "default": env_var.default,
@@ -491,8 +517,9 @@ class MetadataTransformer:
             if service.environment:
                 env_dict = {}
                 for env_var in service.environment:
-                    # Use variable reference format: ${VAR_NAME}
-                    env_dict[env_var.name] = f"${{{env_var.name}}}"
+                    # Normalize variable name and use reference format: ${NORMALIZED_NAME}
+                    normalized_name = self._normalize_env_var_name(env_var.name)
+                    env_dict[normalized_name] = f"${{{normalized_name}}}"
                 service_def["environment"] = env_dict
 
             # Add ports
