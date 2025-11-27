@@ -28,6 +28,7 @@ from generate_container_packages.validator import validate_input_directory
 # these imports for type checking, at the cost of reduced IDE support.
 try:
     from generate_container_packages.converters.casaos.assets import AssetManager
+    from generate_container_packages.converters.casaos.batch import BatchConverter
     from generate_container_packages.converters.casaos.models import ConversionContext
     from generate_container_packages.converters.casaos.output import OutputWriter
     from generate_container_packages.converters.casaos.parser import CasaOSParser
@@ -353,62 +354,61 @@ def _convert_batch(
     if args.sync:
         return _convert_sync(source_path, output_dir, parser, transformer, args)
 
-    # Find all apps (directories containing docker-compose.yml)
-    app_dirs = [
-        d
-        for d in source_path.iterdir()
-        if d.is_dir() and (d / "docker-compose.yml").exists()
-    ]
+    # Use BatchConverter for parallel processing
+    max_workers = args.workers if hasattr(args, "workers") and args.workers else None
 
-    if not app_dirs:
-        logger.warning(f"No apps found in {source_path}")
-        print(f"No apps found in {source_path}")
-        return EXIT_SUCCESS
+    try:
+        batch_converter = BatchConverter(max_workers=max_workers)
+    except ValueError as e:
+        logger.error(f"Invalid workers configuration: {e}")
+        print(f"ERROR: {e}", file=sys.stderr)
+        return EXIT_VALIDATION_ERROR
 
-    logger.info(f"Found {len(app_dirs)} apps to convert")
-    print(f"Converting {len(app_dirs)} apps...")
+    # Determine mappings directory
+    if hasattr(args, "mappings_dir") and args.mappings_dir:
+        mappings_dir = Path(args.mappings_dir)
+    else:
+        mappings_dir = None  # BatchConverter will use defaults
 
-    # Convert each app
-    # TODO: Consider using a progress reporting abstraction (e.g., tqdm or custom
-    # Progress class) for better terminal output control, easier testing, and more
-    # flexible output formats. Current simple print-based approach works but could
-    # be enhanced with:
-    # - Progress bars for visual feedback
-    # - Better handling of terminal width and wrapping
-    # - Structured output for machine parsing
-    # - Pluggable progress reporters for different output formats
-    success_count = 0
-    failure_count = 0
-
-    for i, app_dir in enumerate(app_dirs, 1):
-        logger.info(f"[{i}/{len(app_dirs)}] Converting {app_dir.name}...")
+    # Define progress callback for non-quiet mode
+    def progress_callback(job) -> None:
         if not args.quiet:
-            print(f"[{i}/{len(app_dirs)}] {app_dir.name}...", end=" ")
+            status_symbol = "✓" if job.status == "success" else "✗"
+            if job.status in ["success", "failed"]:
+                print(f"[{job.index}/{job.total}] {job.app_id}... {status_symbol}")
 
-        try:
-            # Use _convert_single for each app
-            result = _convert_single(app_dir, output_dir, parser, transformer, args)
-            if result == EXIT_SUCCESS:
-                success_count += 1
-                if not args.quiet:
-                    print("✓")
-            else:
-                failure_count += 1
-                if not args.quiet:
-                    print("✗")
-        except Exception as e:
-            failure_count += 1
-            logger.error(f"Failed to convert {app_dir.name}: {e}")
-            if not args.quiet:
-                print(f"✗ ({e})")
+    # Convert apps in parallel
+    logger.info(f"Starting batch conversion with {batch_converter.max_workers} workers")
+
+    result = batch_converter.convert_batch(
+        source_dir=source_path,
+        output_dir=output_dir,
+        download_assets=args.download_assets
+        if hasattr(args, "download_assets")
+        else False,
+        mappings_dir=mappings_dir,
+        upstream_url=args.upstream_url if hasattr(args, "upstream_url") else None,
+        progress_callback=progress_callback if not args.quiet else None,
+    )
 
     # Print summary
-    print("\nBatch conversion complete:")
-    print(f"  Success: {success_count}")
-    print(f"  Failed: {failure_count}")
-    print(f"  Total: {len(app_dirs)}")
+    if result.total == 0:
+        print("No apps found in source directory")
+    else:
+        print(f"\nBatch conversion complete ({result.elapsed_seconds:.1f}s):")
+        print(f"  Success: {result.success_count}")
+        print(f"  Failed: {result.failure_count}")
+        print(f"  Total: {result.total}")
 
-    return EXIT_SUCCESS if failure_count == 0 else EXIT_BUILD_ERROR
+    # Show errors if any
+    if result.errors and not args.quiet:
+        print("\nErrors:")
+        for app_id, error in result.errors[:10]:  # Show first 10
+            print(f"  {app_id}: {error}")
+        if len(result.errors) > 10:
+            print(f"  ... and {len(result.errors) - 10} more errors")
+
+    return EXIT_SUCCESS if result.failure_count == 0 else EXIT_BUILD_ERROR
 
 
 def _convert_sync(
@@ -764,6 +764,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--sync",
         action="store_true",
         help="Sync mode - detect and convert only new/updated apps (requires --batch)",
+    )
+
+    parser.add_argument(
+        "--workers",
+        type=int,
+        metavar="N",
+        help="Number of parallel workers for batch conversion (default: CPU count)",
     )
 
     # Verbosity options
