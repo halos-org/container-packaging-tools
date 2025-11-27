@@ -9,7 +9,9 @@ Build-Depends: debhelper-compat (= 13),
  pybuild-plugin-pyproject,
  python3-pydantic (>= 2.0),
  python3-jinja2,
- python3-yaml
+ python3-yaml,
+ python3-requests,
+ python3-pil
 Standards-Version: 4.6.2
 Homepage: https://github.com/hatlabs/container-packaging-tools
 Vcs-Git: https://github.com/hatlabs/container-packaging-tools.git
@@ -22,6 +24,8 @@ Depends: ${misc:Depends},
  python3-pydantic (>= 2.0),
  python3-jinja2,
  python3-yaml,
+ python3-requests,
+ python3-pil,
  dpkg-dev
 Description: Generate Debian packages from container application definitions
  container-packaging-tools is a command-line tool that converts simple
