@@ -200,9 +200,19 @@ function build {
   #@ Build Debian package in Docker container
   #@ Category: Build
   echo "🏗️  Building Debian package..."
+  # Note: dpkg-genbuildinfo error is expected and harmless
+  # (.deb is built in current dir, but buildinfo expects it in parent dir)
   devtools \
     bash -c "uv sync --dev && (dpkg-buildpackage -us -uc -b || true)"
-  echo "✅ Build complete - package at ./container-packaging-tools_0.1.0_all.deb"
+
+  # Get the actual package name from the built .deb
+  PKG=$(ls -t container-packaging-tools_*.deb 2>/dev/null | head -1)
+  if [ -n "$PKG" ]; then
+    echo "✅ Build complete - package at ./$PKG"
+  else
+    echo "❌ Build failed - no .deb package found"
+    exit 1
+  fi
 }
 
 ################################################################################
