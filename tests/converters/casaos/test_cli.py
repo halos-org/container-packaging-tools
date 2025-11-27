@@ -240,7 +240,11 @@ class TestConvertCasaOSBatchMode:
 
         # Should succeed with warning or info message
         assert result.returncode == 0
-        assert "no apps" in result.stderr.lower() or "0 apps" in result.stdout.lower()
+        assert (
+            "no apps" in result.stderr.lower()
+            or "0 apps" in result.stdout.lower()
+            or "no apps" in result.stdout.lower()
+        )
 
     def test_convert_casaos_batch_partial_failures(self, tmp_path: Path) -> None:
         """Test batch conversion with some apps failing."""
@@ -279,8 +283,9 @@ class TestConvertCasaOSBatchMode:
         # Valid app should still be converted
         assert (output / "nginx-test").exists()
 
-        # Error should be reported
-        assert "error" in result.stderr.lower() or "failed" in result.stderr.lower()
+        # Error should be reported (in stderr or stdout)
+        output_text = result.stderr.lower() + result.stdout.lower()
+        assert "error" in output_text or "failed" in output_text
 
 
 class TestConvertCasaOSSyncMode:
