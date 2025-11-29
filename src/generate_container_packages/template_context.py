@@ -23,7 +23,7 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
 
     context = {
         "package": _build_package_context(metadata),
-        "service": _build_service_context(package_name, metadata),
+        "service": _build_service_context(package_name, metadata, app_def.compose),
         "paths": _build_paths(package_name),
         "web_ui": metadata.get("web_ui", {}),
         "default_config": metadata.get("default_config", {}),
@@ -72,13 +72,14 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
 
 
 def _build_service_context(
-    package_name: str, metadata: dict[str, Any]
+    package_name: str, metadata: dict[str, Any], compose: dict[str, Any]
 ) -> dict[str, Any]:
     """Build systemd service context.
 
     Args:
         package_name: Debian package name
         metadata: Parsed metadata.yaml contents
+        compose: Parsed docker-compose.yml contents
 
     Returns:
         Dictionary with systemd service configuration
@@ -89,7 +90,126 @@ def _build_service_context(
         "working_directory": f"/var/lib/container-apps/{package_name}",
         "env_defaults_file": f"/etc/container-apps/{package_name}/env.defaults",
         "env_file": f"/etc/container-apps/{package_name}/env",
+        "volume_directories": _extract_volume_directories(compose),
     }
+
+
+def _extract_volume_directories(compose: dict[str, Any]) -> list[str]:
+    """Extract volume source directories from docker-compose.yml.
+
+    Parse the docker-compose services and extract bind mount source paths that
+    should be created before starting the container. Only extracts paths that:
+    1. Are bind mounts (not named volumes)
+    2. Are absolute paths or contain allowed environment variables
+    3. Don't reference system paths (like /dev, /sys, etc.)
+    4. Don't contain path traversal attempts (..)
+
+    Args:
+        compose: Parsed docker-compose.yml contents
+
+    Returns:
+        Deduplicated list of volume source paths (may contain env var references)
+        Empty list if no volumes or all are named volumes
+    """
+    directories = []
+
+    # Get all services from compose file
+    services = compose.get("services", {})
+
+    for _service_name, service_config in services.items():
+        volumes = service_config.get("volumes", [])
+
+        for volume in volumes:
+            # Handle different volume formats
+            if isinstance(volume, dict):
+                # Long format: {source: ..., target: ..., type: bind}
+                if volume.get("type") == "bind":
+                    source = volume.get("source", "")
+                    if source and _is_bindable_path(source):
+                        directories.append(source)
+            elif isinstance(volume, str):
+                # Short format: "source:target" or "source:target:ro"
+                parts = volume.split(":")
+                if len(parts) >= 2:
+                    source = parts[0]
+                    if source and _is_bindable_path(source):
+                        directories.append(source)
+
+    # Deduplicate while preserving order
+    seen = set()
+    deduplicated = []
+    for directory in directories:
+        if directory not in seen:
+            seen.add(directory)
+            deduplicated.append(directory)
+
+    return deduplicated
+
+
+def _is_bindable_path(path: str) -> bool:
+    """Check if a path should have its directory auto-created.
+
+    Validates that the path is safe to create as a bind mount directory:
+    1. Must be an absolute path or contain allowed environment variables
+    2. Must not be a named volume (no slashes = named volume)
+    3. Must not reference system paths (/dev, /sys, /proc, /run, /tmp)
+    4. Must not contain path traversal attempts (..)
+    5. Environment variables must be from an allowed list for security
+
+    Args:
+        path: Volume source path (may contain env vars like ${CONTAINER_DATA_ROOT})
+
+    Returns:
+        True if path should be created, False otherwise
+
+    Examples:
+        >>> _is_bindable_path("${CONTAINER_DATA_ROOT}/config")
+        True
+        >>> _is_bindable_path("/opt/myapp/data")
+        True
+        >>> _is_bindable_path("my-volume")
+        False
+        >>> _is_bindable_path("/dev/sda")
+        False
+        >>> _is_bindable_path("../etc/passwd")
+        False
+    """
+    # Skip named volumes (no slashes means it's a named volume)
+    if "/" not in path:
+        return False
+
+    # Prevent path traversal attacks
+    if ".." in path:
+        return False
+
+    # Skip system paths that should never be created
+    system_prefixes = ("/dev", "/sys", "/proc", "/run", "/tmp")
+    for prefix in system_prefixes:
+        if path.startswith(prefix):
+            return False
+
+    # If path contains environment variables, validate they're allowed
+    if "$" in path:
+        # Only allow specific safe environment variables
+        allowed_env_vars = (
+            "${CONTAINER_DATA_ROOT}",
+            "${HOME}",
+            "${USER}",
+            "$CONTAINER_DATA_ROOT",
+            "$HOME",
+            "$USER",
+        )
+        # Check if path starts with or contains any allowed env var
+        has_allowed_var = any(
+            allowed_var in path for allowed_var in allowed_env_vars
+        )
+        if not has_allowed_var:
+            # Reject paths with unknown/potentially dangerous env vars
+            return False
+        return True
+
+    # Allow all other absolute paths (like /opt/myapp, /home/user/media, etc)
+    return path.startswith("/")
 
 
 def _build_paths(package_name: str) -> dict[str, str]:

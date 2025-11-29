@@ -4,6 +4,8 @@ from pathlib import Path
 
 from generate_container_packages.loader import AppDefinition
 from generate_container_packages.template_context import (
+    _extract_volume_directories,
+    _is_bindable_path,
     build_context,
     format_dependencies,
     format_long_description,
@@ -228,3 +230,243 @@ class TestFormatDependencies:
         """Test formatting multiple dependencies."""
         result = format_dependencies(["docker-ce", "python3", "nginx"])
         assert result == "docker-ce, python3, nginx"
+
+
+class TestIsBindablePath:
+    """Tests for _is_bindable_path function."""
+
+    def test_allows_env_var_container_data_root(self):
+        """Test that paths with CONTAINER_DATA_ROOT are allowed."""
+        assert _is_bindable_path("${CONTAINER_DATA_ROOT}/config")
+        assert _is_bindable_path("${CONTAINER_DATA_ROOT}/data")
+        assert _is_bindable_path("$CONTAINER_DATA_ROOT/media")
+
+    def test_allows_env_var_home(self):
+        """Test that paths with HOME are allowed."""
+        assert _is_bindable_path("${HOME}/.config")
+        assert _is_bindable_path("$HOME/data")
+
+    def test_allows_env_var_user(self):
+        """Test that paths with USER are allowed."""
+        assert _is_bindable_path("${USER}/config")
+        assert _is_bindable_path("$USER/data")
+
+    def test_allows_absolute_paths(self):
+        """Test that absolute paths are allowed."""
+        assert _is_bindable_path("/opt/myapp/data")
+        assert _is_bindable_path("/home/user/media")
+        assert _is_bindable_path("/var/lib/container-apps/test/data")
+
+    def test_rejects_named_volumes(self):
+        """Test that named volumes (no slashes) are rejected."""
+        assert not _is_bindable_path("my-volume")
+        assert not _is_bindable_path("data_volume")
+        assert not _is_bindable_path("nginx-config")
+
+    def test_rejects_system_paths(self):
+        """Test that system paths are rejected."""
+        assert not _is_bindable_path("/dev/sda")
+        assert not _is_bindable_path("/sys/class/gpio")
+        assert not _is_bindable_path("/proc/cpuinfo")
+        assert not _is_bindable_path("/run/docker.sock")
+        assert not _is_bindable_path("/tmp/cache")
+
+    def test_rejects_path_traversal(self):
+        """Test that path traversal attempts are rejected."""
+        assert not _is_bindable_path("../etc/passwd")
+        assert not _is_bindable_path("/opt/../../../etc/shadow")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/../../../tmp/evil")
+
+    def test_rejects_unknown_env_vars(self):
+        """Test that unknown environment variables are rejected."""
+        assert not _is_bindable_path("${EVIL_PATH}/data")
+        assert not _is_bindable_path("$RANDOM_VAR/config")
+        assert not _is_bindable_path("${MALICIOUS}/files")
+
+    def test_rejects_relative_paths(self):
+        """Test that relative paths are rejected."""
+        assert not _is_bindable_path("./data")
+        assert not _is_bindable_path("config/files")
+
+
+class TestExtractVolumeDirectories:
+    """Tests for _extract_volume_directories function."""
+
+    def test_short_format_volumes(self):
+        """Test parsing short volume format (source:target)."""
+        compose = {
+            "services": {
+                "app": {
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/config:/app/config",
+                        "${CONTAINER_DATA_ROOT}/data:/app/data:ro",
+                    ]
+                }
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/config" in dirs
+        assert "${CONTAINER_DATA_ROOT}/data" in dirs
+        assert len(dirs) == 2
+
+    def test_long_format_volumes(self):
+        """Test parsing long volume format (dict with type: bind)."""
+        compose = {
+            "services": {
+                "app": {
+                    "volumes": [
+                        {
+                            "type": "bind",
+                            "source": "${CONTAINER_DATA_ROOT}/config",
+                            "target": "/app/config",
+                        },
+                        {
+                            "type": "bind",
+                            "source": "/opt/myapp/data",
+                            "target": "/app/data",
+                        },
+                    ]
+                }
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/config" in dirs
+        assert "/opt/myapp/data" in dirs
+        assert len(dirs) == 2
+
+    def test_mixed_format_volumes(self):
+        """Test parsing mix of short and long format volumes."""
+        compose = {
+            "services": {
+                "app": {
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/config:/app/config",
+                        {
+                            "type": "bind",
+                            "source": "/opt/data",
+                            "target": "/app/data",
+                        },
+                    ]
+                }
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/config" in dirs
+        assert "/opt/data" in dirs
+        assert len(dirs) == 2
+
+    def test_filters_named_volumes(self):
+        """Test that named volumes are filtered out."""
+        compose = {
+            "services": {
+                "app": {
+                    "volumes": [
+                        "my-volume:/app/data",
+                        "${CONTAINER_DATA_ROOT}/config:/app/config",
+                    ]
+                }
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/config" in dirs
+        assert len(dirs) == 1
+
+    def test_filters_system_paths(self):
+        """Test that system paths are filtered out."""
+        compose = {
+            "services": {
+                "app": {
+                    "volumes": [
+                        "/dev/sda:/dev/sda",
+                        "/sys/class/gpio:/sys/class/gpio",
+                        "${CONTAINER_DATA_ROOT}/config:/app/config",
+                    ]
+                }
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/config" in dirs
+        assert len(dirs) == 1
+
+    def test_deduplicates_directories(self):
+        """Test that duplicate directories are removed."""
+        compose = {
+            "services": {
+                "app1": {
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/config:/app/config",
+                    ]
+                },
+                "app2": {
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/config:/other/config",
+                    ]
+                },
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/config" in dirs
+        assert len(dirs) == 1
+
+    def test_multiple_services(self):
+        """Test extraction from multiple services."""
+        compose = {
+            "services": {
+                "web": {
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/web:/app/web",
+                    ]
+                },
+                "db": {
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/db:/var/lib/db",
+                    ]
+                },
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/web" in dirs
+        assert "${CONTAINER_DATA_ROOT}/db" in dirs
+        assert len(dirs) == 2
+
+    def test_empty_compose(self):
+        """Test with empty compose file."""
+        compose = {}
+        dirs = _extract_volume_directories(compose)
+        assert dirs == []
+
+    def test_no_volumes(self):
+        """Test with service that has no volumes."""
+        compose = {
+            "services": {
+                "app": {
+                    "image": "nginx",
+                }
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert dirs == []
+
+    def test_long_format_non_bind_volumes(self):
+        """Test that non-bind volume types are filtered."""
+        compose = {
+            "services": {
+                "app": {
+                    "volumes": [
+                        {
+                            "type": "volume",
+                            "source": "my-volume",
+                            "target": "/app/data",
+                        },
+                        {
+                            "type": "bind",
+                            "source": "${CONTAINER_DATA_ROOT}/config",
+                            "target": "/app/config",
+                        },
+                    ]
+                }
+            }
+        }
+        dirs = _extract_volume_directories(compose)
+        assert "${CONTAINER_DATA_ROOT}/config" in dirs
+        assert len(dirs) == 1
