@@ -7,6 +7,7 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from jinja2 import TemplateError
 from pydantic import ValidationError
@@ -16,6 +17,9 @@ from generate_container_packages.builder import BuildError, build_package
 from generate_container_packages.loader import load_input_files
 from generate_container_packages.renderer import render_all_templates
 from generate_container_packages.validator import validate_input_directory
+
+if TYPE_CHECKING:
+    from generate_container_packages.converters.casaos.models import CasaOSApp
 
 # Converter imports (lazy import to avoid dependency issues)
 # Note: These imports are wrapped in try/except to gracefully handle cases where
@@ -285,7 +289,12 @@ def _convert_single(
             try:
                 logger.info("Downloading assets...")
                 asset_manager = AssetManager(app_output_dir)
-                asset_manager.download_all_assets(casaos_app, context)
+                asset_manager.download_all_assets(
+                    casaos_app.icon,
+                    casaos_app.screenshots or [],
+                    casaos_app.id,
+                    context,
+                )
             except Exception as e:
                 logger.warning(f"Asset download failed: {e}")
                 context.warnings.append(f"Asset download failed: {e}")

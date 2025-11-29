@@ -26,6 +26,15 @@ transforms:
     to: "${CONTAINER_DATA_ROOT}"
     description: "CasaOS AppData directory to HaLOS data root (no trailing slash)"
 
+  # Alternative AppData patterns (without /DATA/ prefix)
+  - from: "/AppData/{app}/"
+    to: "${CONTAINER_DATA_ROOT}/"
+    description: "AppData directory to HaLOS data root (no /DATA/ prefix)"
+
+  - from: "/AppData/{app}"
+    to: "${CONTAINER_DATA_ROOT}"
+    description: "AppData directory to HaLOS data root (no /DATA/ prefix, no trailing slash)"
+
   # Generic DATA prefix removal
   - from: "/DATA/"
     to: "/"

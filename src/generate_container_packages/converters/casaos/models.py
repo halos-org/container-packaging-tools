@@ -121,7 +121,7 @@ class CasaOSApp(BaseModel):
     developer: str | None = Field(None, description="Developer/author name")
     homepage: str | None = Field(None, description="Project homepage URL")
     icon: str | None = Field(None, description="Icon URL")
-    screenshots: list[str] | None = Field(default_factory=list, description="Screenshot URLs")
+    screenshots: list[str] = Field(default_factory=list, description="Screenshot URLs")
     tags: list[str] = Field(default_factory=list, description="Tags for searching")
 
     # Service definitions (at least one required)

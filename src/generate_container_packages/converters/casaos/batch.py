@@ -319,7 +319,12 @@ class BatchConverter:
             if download_assets:
                 try:
                     asset_manager = AssetManager(app_output_dir)
-                    asset_manager.download_all_assets(casaos_app, context)
+                    asset_manager.download_all_assets(
+                        casaos_app.icon,
+                        casaos_app.screenshots or [],
+                        casaos_app.id,
+                        context,
+                    )
                 except Exception as e:
                     context.warnings.append(f"Asset download failed: {e}")
 

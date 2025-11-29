@@ -230,7 +230,7 @@ class MetadataTransformer:
 
         # Try to find first sentence (ending with . ! ?)
         for delimiter in [". ", "! ", "? "]:
-            if delimiter in text[:max_length + 20]:
+            if delimiter in text[: max_length + 20]:
                 first_sentence = text.split(delimiter)[0] + delimiter.rstrip()
                 if len(first_sentence) <= max_length:
                     return first_sentence
@@ -242,12 +242,12 @@ class MetadataTransformer:
                 return text[:pos]
 
         # Fall back to breaking at last complete word
-        truncate_pos = text[:max_length - 3].rfind(" ")
+        truncate_pos = text[: max_length - 3].rfind(" ")
         if truncate_pos > 0:
             return text[:truncate_pos] + "..."
 
         # Last resort: hard truncate
-        return text[:max_length - 3] + "..."
+        return text[: max_length - 3] + "..."
 
     def _normalize_env_var_name(self, name: str) -> str:
         """Normalize environment variable name to valid shell format.
@@ -402,10 +402,11 @@ class MetadataTransformer:
             >>> _transform_path("/custom/path", "myapp")
             "${CONTAINER_DATA_ROOT}/custom/path"  # Default
         """
-        # First, replace {app} or {app_id} variables in the incoming path
-        # This allows patterns like "/DATA/AppData/{app}/" to match actual paths
+        # First, replace {app}, {app_id}, or $AppID variables in the incoming path
+        # This allows patterns like "/DATA/AppData/{app}/" or "/DATA/AppData/$AppID" to match actual paths
         path = path.replace("{app}", app_id)
         path = path.replace("{app_id}", app_id)
+        path = path.replace("$AppID", app_id)
 
         # Check if path should be preserved (system paths like /etc, /var, etc.)
         preserved_paths = self._path_data.get("special_cases", {}).get("preserve", [])
@@ -421,8 +422,10 @@ class MetadataTransformer:
             to_pattern = transform["to"]
 
             # Also replace variables in pattern for matching
-            from_pattern_with_app = from_pattern.replace("{app}", app_id).replace(
-                "{app_id}", app_id
+            from_pattern_with_app = (
+                from_pattern.replace("{app}", app_id)
+                .replace("{app_id}", app_id)
+                .replace("$AppID", app_id)
             )
 
             # Handle exact matches and prefix matches
@@ -511,6 +514,7 @@ class MetadataTransformer:
         for service in casaos_app.services:
             service_def: dict[str, Any] = {
                 "image": service.image,
+                "restart": "no",
             }
 
             # Add environment variables (as dict)

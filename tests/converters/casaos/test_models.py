@@ -1,5 +1,7 @@
 """Unit tests for CasaOS converter Pydantic models."""
 
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
@@ -18,7 +20,7 @@ class TestCasaOSEnvVar:
 
     def test_valid_env_var_minimal(self):
         """Test minimal valid environment variable."""
-        data = {
+        data: dict[str, Any] = {
             "name": "API_KEY",
             "default": "changeme",
         }
@@ -31,7 +33,7 @@ class TestCasaOSEnvVar:
 
     def test_valid_env_var_full(self):
         """Test fully populated environment variable."""
-        data = {
+        data: dict[str, Any] = {
             "name": "SERVER_PORT",
             "default": "8080",
             "label": "Server Port",
@@ -47,7 +49,7 @@ class TestCasaOSEnvVar:
 
     def test_invalid_empty_name(self):
         """Test that empty name is rejected."""
-        data = {"name": "", "default": "value"}
+        data: dict[str, Any] = {"name": "", "default": "value"}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSEnvVar(**data)
         assert "name" in str(exc_info.value).lower()
@@ -58,7 +60,7 @@ class TestCasaOSPort:
 
     def test_valid_port_minimal(self):
         """Test minimal valid port configuration."""
-        data = {
+        data: dict[str, Any] = {
             "container": 80,
             "host": 8080,
         }
@@ -70,7 +72,7 @@ class TestCasaOSPort:
 
     def test_valid_port_with_protocol(self):
         """Test port with protocol specification."""
-        data = {
+        data: dict[str, Any] = {
             "container": 443,
             "host": 8443,
             "protocol": "tcp",
@@ -84,21 +86,21 @@ class TestCasaOSPort:
 
     def test_invalid_port_range_container(self):
         """Test that invalid container port is rejected."""
-        data = {"container": 0, "host": 8080}
+        data: dict[str, Any] = {"container": 0, "host": 8080}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSPort(**data)
         assert "container" in str(exc_info.value).lower()
 
     def test_invalid_port_range_host(self):
         """Test that invalid host port is rejected."""
-        data = {"container": 80, "host": 70000}
+        data: dict[str, Any] = {"container": 80, "host": 70000}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSPort(**data)
         assert "host" in str(exc_info.value).lower()
 
     def test_invalid_protocol(self):
         """Test that invalid protocol is rejected."""
-        data = {"container": 80, "host": 8080, "protocol": "invalid"}
+        data: dict[str, Any] = {"container": 80, "host": 8080, "protocol": "invalid"}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSPort(**data)
         assert "protocol" in str(exc_info.value).lower()
@@ -109,7 +111,7 @@ class TestCasaOSVolume:
 
     def test_valid_volume_minimal(self):
         """Test minimal valid volume configuration."""
-        data = {
+        data: dict[str, Any] = {
             "container": "/data",
             "host": "/mnt/data",
         }
@@ -121,7 +123,7 @@ class TestCasaOSVolume:
 
     def test_valid_volume_with_mode(self):
         """Test volume with read-only mode."""
-        data = {
+        data: dict[str, Any] = {
             "container": "/config",
             "host": "/app/config",
             "mode": "ro",
@@ -135,14 +137,14 @@ class TestCasaOSVolume:
 
     def test_invalid_empty_container_path(self):
         """Test that empty container path is rejected."""
-        data = {"container": "", "host": "/mnt/data"}
+        data: dict[str, Any] = {"container": "", "host": "/mnt/data"}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSVolume(**data)
         assert "container" in str(exc_info.value).lower()
 
     def test_invalid_empty_host_path(self):
         """Test that empty host path is rejected."""
-        data = {"container": "/data", "host": ""}
+        data: dict[str, Any] = {"container": "/data", "host": ""}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSVolume(**data)
         assert "host" in str(exc_info.value).lower()
@@ -153,7 +155,7 @@ class TestCasaOSService:
 
     def test_valid_service_minimal(self):
         """Test minimal valid service configuration."""
-        data = {
+        data: dict[str, Any] = {
             "name": "web",
             "image": "nginx:latest",
         }
@@ -166,7 +168,7 @@ class TestCasaOSService:
 
     def test_valid_service_with_config(self):
         """Test service with full configuration."""
-        data = {
+        data: dict[str, Any] = {
             "name": "app",
             "image": "myapp:1.0",
             "environment": [
@@ -195,14 +197,14 @@ class TestCasaOSService:
 
     def test_invalid_empty_service_name(self):
         """Test that empty service name is rejected."""
-        data = {"name": "", "image": "nginx:latest"}
+        data: dict[str, Any] = {"name": "", "image": "nginx:latest"}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSService(**data)
         assert "name" in str(exc_info.value).lower()
 
     def test_invalid_empty_image(self):
         """Test that empty image is rejected."""
-        data = {"name": "web", "image": ""}
+        data: dict[str, Any] = {"name": "web", "image": ""}
         with pytest.raises(ValidationError) as exc_info:
             CasaOSService(**data)
         assert "image" in str(exc_info.value).lower()
@@ -213,7 +215,7 @@ class TestCasaOSApp:
 
     def test_valid_app_minimal(self):
         """Test minimal valid app definition."""
-        data = {
+        data: dict[str, Any] = {
             "id": "my-app",
             "name": "My App",
             "tagline": "A simple app",
@@ -237,7 +239,7 @@ class TestCasaOSApp:
 
     def test_valid_app_full(self):
         """Test fully populated app definition."""
-        data = {
+        data: dict[str, Any] = {
             "id": "jellyfin",
             "name": "Jellyfin",
             "tagline": "Media server",
@@ -285,7 +287,7 @@ class TestCasaOSApp:
 
     def test_invalid_empty_app_id(self):
         """Test that empty app ID is rejected."""
-        data = {
+        data: dict[str, Any] = {
             "id": "",
             "name": "App",
             "tagline": "Tag",
@@ -299,7 +301,7 @@ class TestCasaOSApp:
 
     def test_invalid_empty_services(self):
         """Test that app requires at least one service."""
-        data = {
+        data: dict[str, Any] = {
             "id": "app",
             "name": "App",
             "tagline": "Tag",
@@ -313,7 +315,7 @@ class TestCasaOSApp:
 
     def test_multiple_services(self):
         """Test app with multiple services."""
-        data = {
+        data: dict[str, Any] = {
             "id": "multi-app",
             "name": "Multi Service App",
             "tagline": "Multiple services",
@@ -335,7 +337,7 @@ class TestConversionContext:
 
     def test_valid_context_minimal(self):
         """Test minimal conversion context."""
-        data = {
+        data: dict[str, Any] = {
             "source_format": "casaos",
             "app_id": "my-app",
         }
@@ -348,7 +350,7 @@ class TestConversionContext:
 
     def test_valid_context_with_warnings(self):
         """Test conversion context with warnings."""
-        data = {
+        data: dict[str, Any] = {
             "source_format": "casaos",
             "app_id": "test-app",
             "warnings": ["Missing icon URL", "Unknown category"],
@@ -359,7 +361,7 @@ class TestConversionContext:
 
     def test_valid_context_with_errors(self):
         """Test conversion context with errors."""
-        data = {
+        data: dict[str, Any] = {
             "source_format": "casaos",
             "app_id": "test-app",
             "errors": ["Invalid port configuration"],
@@ -370,7 +372,7 @@ class TestConversionContext:
 
     def test_valid_context_with_assets(self):
         """Test conversion context tracking downloaded assets."""
-        data = {
+        data: dict[str, Any] = {
             "source_format": "casaos",
             "app_id": "test-app",
             "downloaded_assets": [
@@ -384,14 +386,14 @@ class TestConversionContext:
 
     def test_invalid_empty_source_format(self):
         """Test that empty source format is rejected."""
-        data = {"source_format": "", "app_id": "app"}
+        data: dict[str, Any] = {"source_format": "", "app_id": "app"}
         with pytest.raises(ValidationError) as exc_info:
             ConversionContext(**data)
         assert "source_format" in str(exc_info.value).lower()
 
     def test_invalid_empty_app_id(self):
         """Test that empty app ID is rejected."""
-        data = {"source_format": "casaos", "app_id": ""}
+        data: dict[str, Any] = {"source_format": "casaos", "app_id": ""}
         with pytest.raises(ValidationError) as exc_info:
             ConversionContext(**data)
         assert "app_id" in str(exc_info.value).lower()

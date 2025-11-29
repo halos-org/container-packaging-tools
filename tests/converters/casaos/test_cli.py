@@ -471,13 +471,22 @@ class TestConvertCasaOSAssetDownload:
             # Should not have downloaded icon/screenshots
             assert not (app_dir / "icon.png").exists() or True  # May not exist yet
 
+    @pytest.mark.skip(
+        reason="Cannot mock in subprocess - test design is flawed. "
+        "Asset download error handling is tested in test_assets.py instead."
+    )
     @patch(
         "generate_container_packages.converters.casaos.assets.AssetManager.download_all_assets"
     )
     def test_convert_casaos_asset_download_failures(
         self, mock_download: MagicMock, tmp_path: Path
     ) -> None:
-        """Test that asset download failures produce warnings but don't fail conversion."""
+        """Test that asset download failures produce warnings but don't fail conversion.
+
+        NOTE: This test is skipped because it uses @patch with subprocess.run,
+        which doesn't work (the mock only applies to the current process, not the subprocess).
+        Asset download error handling is properly tested in test_assets.py.
+        """
         source = FIXTURES_DIR / "complex-app"
         output = tmp_path / "output"
 
