@@ -8,6 +8,7 @@ Type=simple
 WorkingDirectory={{ service.working_directory }}
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
+ExecStartPre=/bin/mkdir -p ${CONTAINER_DATA_ROOT}
 ExecStart=docker compose up
 ExecStop=docker compose down
 Restart=on-failure

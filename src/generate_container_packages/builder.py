@@ -155,6 +155,9 @@ def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
     lines = [
         "# System-managed variables (do not modify)\n",
         f'CONTAINER_DATA_ROOT="/var/lib/container-apps/{package_name}/data"\n',
+        "PUID=1000\n",
+        "PGID=1000\n",
+        'TZ="UTC"\n',
         "\n",
     ]
 
@@ -185,7 +188,15 @@ def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
         "# User environment overrides\n",
         "# Uncomment and modify values to override defaults from env.defaults\n",
         "\n",
+        "# System variables (can be overridden if needed)\n",
+        "#PUID=1000\n",
+        "#PGID=1000\n",
+        '#TZ="UTC"\n',
+        "\n",
     ]
+
+    if escaped_config:
+        user_lines.append("# Application configuration\n")
 
     for key, value_str in escaped_config.items():
         user_lines.append(f'#{key}="{value_str}"\n')

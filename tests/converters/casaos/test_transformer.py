@@ -467,9 +467,9 @@ class TestPathTransformation:
     def test_generic_data_prefix_removal(
         self, transformer: MetadataTransformer
     ) -> None:
-        """Test /DATA/ prefix is removed."""
+        """Test /DATA/ prefix is removed and media goes under CONTAINER_DATA_ROOT."""
         result = transformer._transform_path("/DATA/media", "app")
-        assert result == "/media"
+        assert result == "${CONTAINER_DATA_ROOT}/media"
 
     def test_config_directory(self, transformer: MetadataTransformer) -> None:
         """Test /config transforms to ${CONTAINER_DATA_ROOT}/config."""
@@ -482,41 +482,41 @@ class TestPathTransformation:
         assert result == "${CONTAINER_DATA_ROOT}/data"
 
     def test_media_directory_preserved(self, transformer: MetadataTransformer) -> None:
-        """Test /media is preserved."""
+        """Test /media transforms to ${CONTAINER_DATA_ROOT}/media."""
         result = transformer._transform_path("/media", "app")
-        assert result == "/media"
+        assert result == "${CONTAINER_DATA_ROOT}/media"
 
     def test_movies_directory(self, transformer: MetadataTransformer) -> None:
-        """Test /movies transforms to /media/movies."""
+        """Test /movies transforms to ${CONTAINER_DATA_ROOT}/movies."""
         result = transformer._transform_path("/movies", "app")
-        assert result == "/media/movies"
+        assert result == "${CONTAINER_DATA_ROOT}/movies"
 
     def test_tv_directory(self, transformer: MetadataTransformer) -> None:
-        """Test /tv transforms to /media/tv."""
+        """Test /tv transforms to ${CONTAINER_DATA_ROOT}/tv."""
         result = transformer._transform_path("/tv", "app")
-        assert result == "/media/tv"
+        assert result == "${CONTAINER_DATA_ROOT}/tv"
 
     def test_music_directory(self, transformer: MetadataTransformer) -> None:
-        """Test /music transforms to /media/music."""
+        """Test /music transforms to ${CONTAINER_DATA_ROOT}/music."""
         result = transformer._transform_path("/music", "app")
-        assert result == "/media/music"
+        assert result == "${CONTAINER_DATA_ROOT}/music"
 
     def test_photos_directory(self, transformer: MetadataTransformer) -> None:
-        """Test /photos transforms to /media/photos."""
+        """Test /photos transforms to ${CONTAINER_DATA_ROOT}/photos."""
         result = transformer._transform_path("/photos", "app")
-        assert result == "/media/photos"
+        assert result == "${CONTAINER_DATA_ROOT}/photos"
 
     def test_books_directory(self, transformer: MetadataTransformer) -> None:
-        """Test /books transforms to /media/books."""
+        """Test /books transforms to ${CONTAINER_DATA_ROOT}/books."""
         result = transformer._transform_path("/books", "app")
-        assert result == "/media/books"
+        assert result == "${CONTAINER_DATA_ROOT}/books"
 
     def test_downloads_directory_preserved(
         self, transformer: MetadataTransformer
     ) -> None:
-        """Test /downloads is preserved."""
+        """Test /downloads transforms to ${CONTAINER_DATA_ROOT}/downloads."""
         result = transformer._transform_path("/downloads", "app")
-        assert result == "/downloads"
+        assert result == "${CONTAINER_DATA_ROOT}/downloads"
 
     def test_etc_preserved(self, transformer: MetadataTransformer) -> None:
         """Test /etc is preserved (system path)."""
@@ -577,8 +577,8 @@ class TestPathTransformation:
     ) -> None:
         """Test app name replacement is case-sensitive."""
         result = transformer._transform_path("/DATA/AppData/MyApp/config", "myapp")
-        # Should not match because case doesn't match
-        assert result == "/AppData/MyApp/config"
+        # Should not match because case doesn't match, but /DATA/ is still removed
+        assert result == "${CONTAINER_DATA_ROOT}/AppData/MyApp/config"
 
 
 class TestPackageNaming:

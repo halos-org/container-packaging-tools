@@ -35,10 +35,10 @@ transforms:
     to: "${CONTAINER_DATA_ROOT}"
     description: "AppData directory to HaLOS data root (no /DATA/ prefix, no trailing slash)"
 
-  # Generic DATA prefix removal
+  # Generic DATA prefix - MUST go under CONTAINER_DATA_ROOT
   - from: "/DATA/"
-    to: "/"
-    description: "Remove CasaOS /DATA prefix"
+    to: "${CONTAINER_DATA_ROOT}/"
+    description: "CasaOS DATA prefix to container data root"
 
   # Config directories
   - from: "/config"
@@ -49,36 +49,35 @@ transforms:
     to: "${CONTAINER_DATA_ROOT}/data"
     description: "Standard data directory"
 
-  # Media directories (common in CasaOS)
-  # These typically point to user media and should be preserved or made configurable
+  # Media directories - must be under CONTAINER_DATA_ROOT for isolation
   - from: "/media"
-    to: "/media"
-    description: "Media directory - typically user-mounted storage"
+    to: "${CONTAINER_DATA_ROOT}/media"
+    description: "Media directory under container data root"
 
   - from: "/movies"
-    to: "/media/movies"
-    description: "Movies directory"
+    to: "${CONTAINER_DATA_ROOT}/movies"
+    description: "Movies directory under container data root"
 
   - from: "/tv"
-    to: "/media/tv"
-    description: "TV shows directory"
+    to: "${CONTAINER_DATA_ROOT}/tv"
+    description: "TV shows directory under container data root"
 
   - from: "/music"
-    to: "/media/music"
-    description: "Music directory"
+    to: "${CONTAINER_DATA_ROOT}/music"
+    description: "Music directory under container data root"
 
   - from: "/photos"
-    to: "/media/photos"
-    description: "Photos directory"
+    to: "${CONTAINER_DATA_ROOT}/photos"
+    description: "Photos directory under container data root"
 
   - from: "/books"
-    to: "/media/books"
-    description: "Books directory"
+    to: "${CONTAINER_DATA_ROOT}/books"
+    description: "Books directory under container data root"
 
   # Downloads
   - from: "/downloads"
-    to: "/downloads"
-    description: "Downloads directory - typically user-mounted storage"
+    to: "${CONTAINER_DATA_ROOT}/downloads"
+    description: "Downloads directory under container data root"
 
 # Special handling instructions
 special_cases:
@@ -92,15 +91,6 @@ special_cases:
     - "/sys"
     - "/proc"
 
-  # Paths that require user configuration
-  # These should be extracted as configurable fields in config.yml
-  configurable:
-    - pattern: "^/media/"
-      field_name: "MEDIA_PATH"
-      description: "Path to media directory"
-    - pattern: "^/downloads"
-      field_name: "DOWNLOADS_PATH"
-      description: "Path to downloads directory"
 
 # Default behavior
 default:
