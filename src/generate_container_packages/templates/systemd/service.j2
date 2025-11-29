@@ -9,6 +9,9 @@ WorkingDirectory={{ service.working_directory }}
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
 ExecStartPre=/bin/mkdir -p ${CONTAINER_DATA_ROOT}
+{% for directory in service.volume_directories %}
+ExecStartPre=/bin/mkdir -p {{ directory }}
+{% endfor %}
 ExecStart=docker compose up
 ExecStop=docker compose down
 Restart=on-failure

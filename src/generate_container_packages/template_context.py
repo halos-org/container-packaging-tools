@@ -23,7 +23,7 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
 
     context = {
         "package": _build_package_context(metadata),
-        "service": _build_service_context(package_name, metadata),
+        "service": _build_service_context(package_name, metadata, app_def.compose),
         "paths": _build_paths(package_name),
         "web_ui": metadata.get("web_ui", {}),
         "default_config": metadata.get("default_config", {}),
@@ -72,13 +72,14 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
 
 
 def _build_service_context(
-    package_name: str, metadata: dict[str, Any]
+    package_name: str, metadata: dict[str, Any], compose: dict[str, Any]
 ) -> dict[str, Any]:
     """Build systemd service context.
 
     Args:
         package_name: Debian package name
         metadata: Parsed metadata.yaml contents
+        compose: Parsed docker-compose.yml contents
 
     Returns:
         Dictionary with systemd service configuration
@@ -89,7 +90,77 @@ def _build_service_context(
         "working_directory": f"/var/lib/container-apps/{package_name}",
         "env_defaults_file": f"/etc/container-apps/{package_name}/env.defaults",
         "env_file": f"/etc/container-apps/{package_name}/env",
+        "volume_directories": _extract_volume_directories(compose),
     }
+
+
+def _extract_volume_directories(compose: dict[str, Any]) -> list[str]:
+    """Extract volume source directories from docker-compose.yml.
+
+    Parse the docker-compose services and extract bind mount source paths that
+    should be created before starting the container. Only extracts paths that:
+    1. Are bind mounts (not named volumes)
+    2. Use environment variable references (like ${CONTAINER_DATA_ROOT}/...)
+    3. Don't reference system paths (like /dev, /sys, etc.)
+
+    Args:
+        compose: Parsed docker-compose.yml contents
+
+    Returns:
+        List of volume source paths (may contain env var references)
+        Empty list if no volumes or all are named volumes
+    """
+    directories = []
+
+    # Get all services from compose file
+    services = compose.get("services", {})
+
+    for service_name, service_config in services.items():
+        volumes = service_config.get("volumes", [])
+
+        for volume in volumes:
+            # Handle different volume formats
+            if isinstance(volume, dict):
+                # Long format: {source: ..., target: ..., type: bind}
+                if volume.get("type") == "bind":
+                    source = volume.get("source", "")
+                    if source and _is_bindable_path(source):
+                        directories.append(source)
+            elif isinstance(volume, str):
+                # Short format: "source:target" or "source:target:ro"
+                parts = volume.split(":")
+                if len(parts) >= 2:
+                    source = parts[0]
+                    if source and _is_bindable_path(source):
+                        directories.append(source)
+
+    return directories
+
+
+def _is_bindable_path(path: str) -> bool:
+    """Check if a path should have its directory auto-created.
+
+    Args:
+        path: Volume source path (may contain env vars)
+
+    Returns:
+        True if path should be created, False otherwise
+    """
+    # Skip named volumes (no slashes)
+    if "/" not in path:
+        return False
+
+    # Skip system paths that should not be created
+    system_prefixes = ("/dev", "/sys", "/proc", "/run", "/tmp")
+    for prefix in system_prefixes:
+        if path.startswith(prefix):
+            return False
+
+    # Include paths with environment variables (will be expanded at runtime)
+    if "$" in path or path.startswith("/var/lib/container-apps"):
+        return True
+
+    return False
 
 
 def _build_paths(package_name: str) -> dict[str, str]:
