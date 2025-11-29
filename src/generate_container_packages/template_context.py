@@ -115,7 +115,7 @@ def _extract_volume_directories(compose: dict[str, Any]) -> list[str]:
     # Get all services from compose file
     services = compose.get("services", {})
 
-    for service_name, service_config in services.items():
+    for _service_name, service_config in services.items():
         volumes = service_config.get("volumes", [])
 
         for volume in volumes:
