@@ -905,6 +905,33 @@ class TestVersionExtraction:
         assert transformer._extract_version_from_image("app:10.20.30") == "10.20.30"
         assert transformer._extract_version_from_image("app:v100.200.300") == "100.200.300"
 
+    def test_extract_prerelease_rc_versions(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test RC versions are converted to Debian format with tilde."""
+        assert transformer._extract_version_from_image("app:1.2.3-rc1") == "1.2.3~rc1"
+        assert transformer._extract_version_from_image("app:1.2.3-RC2") == "1.2.3~RC2"
+        assert transformer._extract_version_from_image("app:v2.0.0-rc.1") == "2.0.0~rc.1"
+        assert transformer._extract_version_from_image("app:1.0.0-rc") == "1.0.0~rc"
+
+    def test_extract_prerelease_beta_alpha_versions(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test beta/alpha versions are converted to Debian format with tilde."""
+        assert transformer._extract_version_from_image("app:1.2.3-beta1") == "1.2.3~beta1"
+        assert transformer._extract_version_from_image("app:1.2.3-beta.2") == "1.2.3~beta.2"
+        assert transformer._extract_version_from_image("app:1.2.3-alpha1") == "1.2.3~alpha1"
+        assert transformer._extract_version_from_image("app:2.0.0-pre1") == "2.0.0~pre1"
+        assert transformer._extract_version_from_image("app:1.5.0-dev") == "1.5.0~dev"
+
+    def test_extract_version_numeric_suffix_preserved(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test numeric suffixes are preserved (not treated as pre-release)."""
+        # Date-based versions with numeric suffixes
+        assert transformer._extract_version_from_image("app:2024.10-1") == "2024.10-1"
+        assert transformer._extract_version_from_image("app:2024.11-2") == "2024.11-2"
+
     def test_transform_with_extracted_version(
         self,
         transformer: MetadataTransformer,

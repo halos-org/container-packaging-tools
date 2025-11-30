@@ -25,6 +25,7 @@ from .models import ConversionContext
 from .output import OutputWriter
 from .parser import CasaOSParser
 from .transformer import MetadataTransformer
+from ..exceptions import ConversionError
 
 logger = logging.getLogger(__name__)
 
@@ -356,14 +357,21 @@ class BatchConverter:
             casaos_app: Parsed CasaOS application data
 
         Note:
-            Version handling: Only sets DEFAULT_VERSION if version wasn't
-            auto-extracted from Docker image tags. This preserves versions
-            extracted by transformer._extract_version_from_image().
+            Version handling: Raises ConversionError if version wasn't
+            auto-extracted from Docker image tags. Apps without extractable
+            versions (e.g., :latest, main, master) must be skipped entirely.
+
+        Raises:
+            ConversionError: If no version was extracted from Docker image
         """
 
-        # Only set default version if no version was extracted from Docker image
+        # Require version to be extracted - don't accept apps without versions
         if "version" not in metadata or not metadata["version"]:
-            metadata["version"] = DEFAULT_VERSION
+            raise ConversionError(
+                f"Cannot extract version from Docker image tag for app '{casaos_app.id}'. "
+                "Apps using :latest, :main, :master, or other non-versioned tags "
+                "cannot be packaged with meaningful version numbers."
+            )
 
         if "maintainer" not in metadata or not metadata["maintainer"]:
             dev_name = casaos_app.developer if casaos_app.developer else "Unknown"

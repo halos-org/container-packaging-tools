@@ -382,9 +382,14 @@ class MetadataTransformer:
         Handles various version patterns found in Docker images:
         - Standard versions: image:1.2.3 → 1.2.3
         - v-prefix: image:v1.2.3 → 1.2.3
-        - Suffixes: image:1.2.3-alpine → 1.2.3
+        - Pre-release: image:1.2.3-rc1 → 1.2.3~rc1 (Debian format)
+        - Build suffixes: image:1.2.3-alpine → 1.2.3
         - Date versions: image:250228 → 250228
         - Digest refs: image:1.2.3@sha256:... → 1.2.3
+
+        Pre-release versions (rc, beta, alpha, pre, dev) are converted to
+        Debian format using tilde for proper version ordering:
+        1.2.3~rc1 < 1.2.3~rc2 < 1.2.3
 
         Skips non-versioned tags:
         - :latest tags
@@ -403,6 +408,8 @@ class MetadataTransformer:
             "4.0.15"
             >>> _extract_version_from_image("tailscale:v1.90.8")
             "1.90.8"
+            >>> _extract_version_from_image("app:1.2.3-rc1")
+            "1.2.3~rc1"
             >>> _extract_version_from_image("homebridge:latest")
             None
         """
@@ -426,25 +433,38 @@ class MetadataTransformer:
         if tag.startswith("v") and len(tag) > 1 and tag[1].isdigit():
             tag = tag[1:]
 
-        # Remove suffix (everything after first hyphen in version)
-        # But keep hyphens in date-based versions like "2024.10-1"
-        # Strategy: If there's a hyphen followed by non-numeric (like -alpine),
-        # remove it. But keep hyphens followed by numbers (like -1)
+        # Handle hyphens: pre-release versions vs build suffixes
+        # - Pre-release (rc, beta, alpha, pre): convert to tilde (1.2.3-rc1 → 1.2.3~rc1)
+        # - Numeric suffixes: keep as-is (2024.10-1 → 2024.10-1)
+        # - Build suffixes: strip (1.2.3-alpine → 1.2.3)
         if "-" in tag:
-            parts = tag.split("-")
-            # Keep the first part and any numeric parts immediately following
-            version_parts = [parts[0]]
-            for part in parts[1:]:
-                # If part starts with digit, it's likely part of version (e.g., "2024.10-1")
-                if part and part[0].isdigit():
-                    version_parts.append(part)
-                else:
-                    # Stop at first non-numeric suffix (e.g., "alpine")
-                    break
-            tag = "-".join(version_parts)
+            parts = tag.split("-", 1)  # Split at first hyphen only
+            base_version = parts[0]
+            suffix = parts[1] if len(parts) > 1 else ""
+
+            # Pre-release keywords (case-insensitive)
+            prerelease_keywords = {"rc", "beta", "alpha", "pre", "dev"}
+
+            # Check if suffix starts with a pre-release keyword
+            suffix_lower = suffix.lower()
+            is_prerelease = any(
+                suffix_lower.startswith(keyword)
+                for keyword in prerelease_keywords
+            )
+
+            if is_prerelease:
+                # Convert hyphen to tilde for Debian pre-release ordering
+                tag = f"{base_version}~{suffix}"
+            elif suffix and suffix[0].isdigit():
+                # Numeric suffix - keep as-is (e.g., "2024.10-1")
+                tag = f"{base_version}-{suffix}"
+            else:
+                # Non-numeric, non-prerelease suffix - strip it (e.g., "1.2.3-alpine" → "1.2.3")
+                tag = base_version
 
         # Validate that we have something that looks like a version
-        # Must start with a digit and contain only digits, dots, and hyphens
+        # Must start with a digit and contain only allowed characters
+        # (digits, dots, hyphens, tildes for Debian pre-release versions)
         if not tag or not tag[0].isdigit():
             return None
 
