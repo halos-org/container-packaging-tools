@@ -354,8 +354,14 @@ class BatchConverter:
         Args:
             metadata: Metadata dictionary to enrich (modified in-place)
             casaos_app: Parsed CasaOS application data
+
+        Note:
+            Version handling: Only sets DEFAULT_VERSION if version wasn't
+            auto-extracted from Docker image tags. This preserves versions
+            extracted by transformer._extract_version_from_image().
         """
 
+        # Only set default version if no version was extracted from Docker image
         if "version" not in metadata or not metadata["version"]:
             metadata["version"] = DEFAULT_VERSION
 

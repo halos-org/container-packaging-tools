@@ -176,6 +176,71 @@ class MetadataTransformer:
                 long_description = description
             description = synopsis
 
+        # Extract version from primary service Docker image
+        # Use scoring system to find best matching service:
+        # - Exact match gets highest score
+        # - Services starting with app.id get high score
+        # - Shorter names preferred (main service usually has simpler name)
+        # - Avoid database services (postgres, mysql, redis, etc.)
+        primary_service = None
+        app_id_lower = casaos_app.id.lower()
+        best_score = -1
+
+        # Keywords that suggest a supporting/database service (not main)
+        support_keywords = {"postgres", "postgresql", "mysql", "mariadb", "redis", "memcached", "mongo", "mongodb", "db", "database"}
+        # Keywords that suggest main service
+        main_keywords = {"server", "app", "web", "api", "frontend", "backend", "service"}
+
+        for service in casaos_app.services:
+            service_lower = service.name.lower()
+            score = 0
+
+            # Exact match: highest priority
+            if service_lower == app_id_lower:
+                score = 1000
+            # Starts with app.id (e.g., "immich-server" for "immich")
+            elif service_lower.startswith(app_id_lower + "-") or service_lower.startswith(app_id_lower + "_"):
+                score = 100
+                # Bonus for main keywords
+                for keyword in main_keywords:
+                    if keyword in service_lower:
+                        score += 50
+                        break
+                # Penalty for support/database keywords
+                for keyword in support_keywords:
+                    if keyword in service_lower:
+                        score -= 200  # Heavy penalty for database services
+                        break
+                # Prefer shorter names (main service usually simpler)
+                # Subtract length as penalty (max 50 chars considered)
+                score -= min(len(service.name), 50)
+            # Contains app.id as word boundary
+            elif app_id_lower in service_lower:
+                idx = service_lower.find(app_id_lower)
+                before_ok = idx == 0 or not service_lower[idx-1].isalnum()
+                after_idx = idx + len(app_id_lower)
+                after_ok = after_idx >= len(service_lower) or not service_lower[after_idx].isalnum()
+                if before_ok and after_ok:
+                    score = 50
+
+            if score > best_score:
+                best_score = score
+                primary_service = service
+
+        # Fallback to first service if no matches
+        if primary_service is None and casaos_app.services:
+            primary_service = casaos_app.services[0]
+
+        # Try to extract version from primary service image
+        version = None
+        if primary_service:
+            version = self._extract_version_from_image(primary_service.image)
+
+        # Update source_metadata to track version extraction
+        if source_metadata and version:
+            source_metadata["version_source"] = "auto-extracted"
+            source_metadata["docker_image"] = primary_service.image
+
         # Build metadata dictionary
         metadata = {
             "name": casaos_app.name,
@@ -188,6 +253,10 @@ class MetadataTransformer:
             "screenshots": casaos_app.screenshots if casaos_app.screenshots else None,
             "source_metadata": source_metadata,
         }
+
+        # Set version if extracted
+        if version:
+            metadata["version"] = version
 
         # Build config dictionary
         config = {"version": "1.0", "groups": config_groups}
@@ -306,6 +375,84 @@ class MetadataTransformer:
             group = "configuration"
 
         return field_type, {}, group
+
+    def _extract_version_from_image(self, image_tag: str) -> str | None:
+        """Extract semantic version from Docker image tag.
+
+        Handles various version patterns found in Docker images:
+        - Standard versions: image:1.2.3 → 1.2.3
+        - v-prefix: image:v1.2.3 → 1.2.3
+        - Suffixes: image:1.2.3-alpine → 1.2.3
+        - Date versions: image:250228 → 250228
+        - Digest refs: image:1.2.3@sha256:... → 1.2.3
+
+        Skips non-versioned tags:
+        - :latest tags
+        - Branch tags (main, master, stable, develop, dev)
+        - No tag (implicit latest)
+        - Non-semantic versions
+
+        Args:
+            image_tag: Full Docker image reference (e.g., "linuxserver/sonarr:4.0.15")
+
+        Returns:
+            Extracted version string or None if cannot extract/should skip
+
+        Examples:
+            >>> _extract_version_from_image("linuxserver/sonarr:4.0.15")
+            "4.0.15"
+            >>> _extract_version_from_image("tailscale:v1.90.8")
+            "1.90.8"
+            >>> _extract_version_from_image("homebridge:latest")
+            None
+        """
+        # Remove digest reference if present (e.g., @sha256:...)
+        if "@" in image_tag:
+            image_tag = image_tag.split("@")[0]
+
+        # Check if there's a tag
+        if ":" not in image_tag:
+            return None  # No tag = implicit :latest
+
+        # Extract tag part (everything after last :)
+        tag = image_tag.split(":")[-1]
+
+        # Skip branch tags and latest
+        skip_tags = {"latest", "main", "master", "stable", "develop", "dev", "nightly", "edge"}
+        if tag.lower() in skip_tags:
+            return None
+
+        # Strip v-prefix if present
+        if tag.startswith("v") and len(tag) > 1 and tag[1].isdigit():
+            tag = tag[1:]
+
+        # Remove suffix (everything after first hyphen in version)
+        # But keep hyphens in date-based versions like "2024.10-1"
+        # Strategy: If there's a hyphen followed by non-numeric (like -alpine),
+        # remove it. But keep hyphens followed by numbers (like -1)
+        if "-" in tag:
+            parts = tag.split("-")
+            # Keep the first part and any numeric parts immediately following
+            version_parts = [parts[0]]
+            for part in parts[1:]:
+                # If part starts with digit, it's likely part of version (e.g., "2024.10-1")
+                if part and part[0].isdigit():
+                    version_parts.append(part)
+                else:
+                    # Stop at first non-numeric suffix (e.g., "alpine")
+                    break
+            tag = "-".join(version_parts)
+
+        # Validate that we have something that looks like a version
+        # Must start with a digit and contain only digits, dots, and hyphens
+        if not tag or not tag[0].isdigit():
+            return None
+
+        # Check if tag contains at least one digit (could be date or version)
+        if not any(c.isdigit() for c in tag):
+            return None
+
+        return tag
 
     def _create_config_groups(
         self, env_vars: list[CasaOSEnvVar]

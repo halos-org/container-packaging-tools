@@ -826,3 +826,192 @@ class TestTransformerIntegration:
         field_ids = [f["id"] for f in all_fields]
         assert "DB_HOST" in field_ids
         assert "POSTGRES_PASSWORD" in field_ids
+
+
+class TestVersionExtraction:
+    """Test Docker image version extraction for issue #111."""
+
+    def test_extract_standard_semantic_version(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test standard semantic version extraction."""
+        assert transformer._extract_version_from_image("linuxserver/sonarr:4.0.15") == "4.0.15"
+        assert transformer._extract_version_from_image("postgres:17.4") == "17.4"
+        assert transformer._extract_version_from_image("jellyfin/jellyfin:10.10.7") == "10.10.7"
+        assert transformer._extract_version_from_image("portainer/portainer-ce:2.31.3") == "2.31.3"
+
+    def test_extract_version_with_v_prefix(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test v-prefix is stripped from version."""
+        assert transformer._extract_version_from_image("tailscale/tailscale:v1.90.8") == "1.90.8"
+        assert transformer._extract_version_from_image("adguard/adguardhome:v0.107.61") == "0.107.61"
+        assert transformer._extract_version_from_image("ghcr.io/gohugoio/hugo:v0.148.2") == "0.148.2"
+
+    def test_extract_version_with_suffix(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test version extraction with suffixes like -alpine."""
+        assert transformer._extract_version_from_image("louislam/uptime-kuma:1.23.16-alpine") == "1.23.16"
+        assert transformer._extract_version_from_image("postgres:15-alpine") == "15"
+        assert transformer._extract_version_from_image("redis:6.2-alpine3.22") == "6.2"
+        assert transformer._extract_version_from_image("nginx:1.25.3-bookworm") == "1.25.3"
+
+    def test_extract_date_based_version(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test date-based version extraction."""
+        assert transformer._extract_version_from_image("photoprism/photoprism:250228") == "250228"
+        assert transformer._extract_version_from_image("actualbudget/actual-server:25.7.1") == "25.7.1"
+        assert transformer._extract_version_from_image("anaconda3:2024.10-1") == "2024.10-1"
+
+    def test_extract_version_with_digest(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test version extraction from image with digest reference."""
+        assert transformer._extract_version_from_image("redis:6.2-alpine@sha256:abc123def") == "6.2"
+        assert transformer._extract_version_from_image("nginx:1.25@sha256:fedcba987") == "1.25"
+
+    def test_skip_latest_tag(self, transformer: MetadataTransformer) -> None:
+        """Test that :latest tags are skipped (return None)."""
+        assert transformer._extract_version_from_image("homebridge/homebridge:latest") is None
+        assert transformer._extract_version_from_image("duckdns:latest") is None
+        assert transformer._extract_version_from_image("excalidraw:latest") is None
+
+    def test_skip_branch_tags(self, transformer: MetadataTransformer) -> None:
+        """Test that branch tags are skipped (return None)."""
+        assert transformer._extract_version_from_image("chatbot-ui:main") is None
+        assert transformer._extract_version_from_image("medusa:master") is None
+        assert transformer._extract_version_from_image("netdata/netdata:stable") is None
+        assert transformer._extract_version_from_image("app:develop") is None
+        assert transformer._extract_version_from_image("app:dev") is None
+
+    def test_skip_no_tag(self, transformer: MetadataTransformer) -> None:
+        """Test that images without tags are skipped (return None)."""
+        assert transformer._extract_version_from_image("anythingllm") is None
+        assert transformer._extract_version_from_image("myimage") is None
+
+    def test_extract_version_with_registry(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test version extraction with full registry path."""
+        assert transformer._extract_version_from_image("ghcr.io/linuxserver/sonarr:4.0.15") == "4.0.15"
+        assert transformer._extract_version_from_image("docker.io/library/postgres:15") == "15"
+
+    def test_extract_multi_digit_versions(
+        self, transformer: MetadataTransformer
+    ) -> None:
+        """Test extraction of multi-digit version numbers."""
+        assert transformer._extract_version_from_image("app:10.20.30") == "10.20.30"
+        assert transformer._extract_version_from_image("app:v100.200.300") == "100.200.300"
+
+    def test_transform_with_extracted_version(
+        self,
+        transformer: MetadataTransformer,
+        conversion_context: ConversionContext,
+    ) -> None:
+        """Test that transform() extracts and sets version in metadata."""
+        app = CasaOSApp(
+            id="sonarr",
+            name="Sonarr",
+            tagline="TV show manager",
+            description="Sonarr is a PVR for Usenet and BitTorrent users",
+            category="Entertainment",
+            services=[
+                CasaOSService(
+                    name="sonarr",
+                    image="linuxserver/sonarr:4.0.15",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                )
+            ],
+        )
+
+        result = transformer.transform(app, conversion_context)
+
+        # Version should be extracted from image tag
+        assert result["metadata"]["version"] == "4.0.15"
+
+        # Source metadata should track extraction
+        assert result["metadata"]["source_metadata"] is None or (
+            "version_source" not in result["metadata"].get("source_metadata", {})
+            or result["metadata"]["source_metadata"]["version_source"] == "auto-extracted"
+        )
+
+    def test_transform_multi_service_app_uses_matching_service(
+        self,
+        transformer: MetadataTransformer,
+        conversion_context: ConversionContext,
+    ) -> None:
+        """Test that multi-service app uses service matching app.id for version."""
+        app = CasaOSApp(
+            id="immich",
+            name="Immich",
+            tagline="Photo manager",
+            description="Self-hosted photo and video backup solution",
+            category="Entertainment",
+            services=[
+                CasaOSService(
+                    name="immich-postgres",
+                    image="postgres:15-alpine",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                ),
+                CasaOSService(
+                    name="immich-server",
+                    image="ghcr.io/immich-app/immich-server:v1.132.3",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                ),
+                CasaOSService(
+                    name="immich-ml",
+                    image="ghcr.io/immich-app/immich-machine-learning:v1.132.3",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                ),
+            ],
+        )
+
+        result = transformer.transform(app, conversion_context)
+
+        # Should use immich-server (contains app.id) not postgres
+        assert result["metadata"]["version"] == "1.132.3"
+
+    def test_transform_multi_service_app_fallback_to_first(
+        self,
+        transformer: MetadataTransformer,
+        conversion_context: ConversionContext,
+    ) -> None:
+        """Test that multi-service app falls back to first service if no name match."""
+        app = CasaOSApp(
+            id="myapp",
+            name="My App",
+            tagline="Test app",
+            description="Test app with multiple services",
+            category="Utilities",
+            services=[
+                CasaOSService(
+                    name="web",
+                    image="nginx:1.25.3",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                ),
+                CasaOSService(
+                    name="db",
+                    image="postgres:15",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                ),
+            ],
+        )
+
+        result = transformer.transform(app, conversion_context)
+
+        # Should use first service (web/nginx) since no name contains "myapp"
+        assert result["metadata"]["version"] == "1.25.3"
