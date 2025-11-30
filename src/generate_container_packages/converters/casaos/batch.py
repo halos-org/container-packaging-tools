@@ -12,12 +12,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..exceptions import ConversionError
 from .assets import AssetManager
 from .constants import (
     DEFAULT_ARCHITECTURE,
     DEFAULT_LICENSE,
     DEFAULT_MAINTAINER_DOMAIN,
-    DEFAULT_VERSION,
     REQUIRED_ROLE_TAG,
     get_default_mappings_dir,
 )
@@ -25,7 +25,6 @@ from .models import ConversionContext
 from .output import OutputWriter
 from .parser import CasaOSParser
 from .transformer import MetadataTransformer
-from ..exceptions import ConversionError
 
 logger = logging.getLogger(__name__)
 
