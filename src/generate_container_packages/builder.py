@@ -134,6 +134,8 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
     # Inject Homarr labels into docker-compose.yml
     compose_with_labels = inject_homarr_labels(app_def.compose, app_def.metadata)
+    # Fix boolean restart values that PyYAML parsed from "no"/"yes"
+    compose_with_labels = _fix_restart_policy(compose_with_labels)
     compose_dst = source_dir / "docker-compose.yml"
     with open(compose_dst, "w", encoding="utf-8") as f:
         yaml.dump(compose_with_labels, f, default_flow_style=False, sort_keys=False)
@@ -388,6 +390,31 @@ def inject_homarr_labels(
         # Update service config
         service_config["labels"] = existing_labels
 
+    return compose
+
+
+def _fix_restart_policy(compose: dict[str, Any]) -> dict[str, Any]:
+    """Fix boolean restart values that PyYAML parsed from YAML 1.1 'no'/'yes'.
+
+    PyYAML interprets unquoted 'no', 'yes', 'on', 'off' as booleans per YAML 1.1.
+    Docker Compose requires restart to be a string like "no", "always", etc.
+
+    Args:
+        compose: Docker compose dictionary
+
+    Returns:
+        Modified compose with restart booleans converted to strings
+    """
+    services = compose.get("services", {})
+    for service_config in services.values():
+        if not isinstance(service_config, dict):
+            continue
+        if "restart" in service_config:
+            restart_val = service_config["restart"]
+            if restart_val is False:
+                service_config["restart"] = "no"
+            elif restart_val is True:
+                service_config["restart"] = "always"
     return compose
 
 
