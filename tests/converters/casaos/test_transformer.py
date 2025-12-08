@@ -835,46 +835,87 @@ class TestVersionExtraction:
         self, transformer: MetadataTransformer
     ) -> None:
         """Test standard semantic version extraction."""
-        assert transformer._extract_version_from_image("linuxserver/sonarr:4.0.15") == "4.0.15"
+        assert (
+            transformer._extract_version_from_image("linuxserver/sonarr:4.0.15")
+            == "4.0.15"
+        )
         assert transformer._extract_version_from_image("postgres:17.4") == "17.4"
-        assert transformer._extract_version_from_image("jellyfin/jellyfin:10.10.7") == "10.10.7"
-        assert transformer._extract_version_from_image("portainer/portainer-ce:2.31.3") == "2.31.3"
+        assert (
+            transformer._extract_version_from_image("jellyfin/jellyfin:10.10.7")
+            == "10.10.7"
+        )
+        assert (
+            transformer._extract_version_from_image("portainer/portainer-ce:2.31.3")
+            == "2.31.3"
+        )
 
     def test_extract_version_with_v_prefix(
         self, transformer: MetadataTransformer
     ) -> None:
         """Test v-prefix is stripped from version."""
-        assert transformer._extract_version_from_image("tailscale/tailscale:v1.90.8") == "1.90.8"
-        assert transformer._extract_version_from_image("adguard/adguardhome:v0.107.61") == "0.107.61"
-        assert transformer._extract_version_from_image("ghcr.io/gohugoio/hugo:v0.148.2") == "0.148.2"
+        assert (
+            transformer._extract_version_from_image("tailscale/tailscale:v1.90.8")
+            == "1.90.8"
+        )
+        assert (
+            transformer._extract_version_from_image("adguard/adguardhome:v0.107.61")
+            == "0.107.61"
+        )
+        assert (
+            transformer._extract_version_from_image("ghcr.io/gohugoio/hugo:v0.148.2")
+            == "0.148.2"
+        )
 
     def test_extract_version_with_suffix(
         self, transformer: MetadataTransformer
     ) -> None:
         """Test version extraction with suffixes like -alpine."""
-        assert transformer._extract_version_from_image("louislam/uptime-kuma:1.23.16-alpine") == "1.23.16"
+        assert (
+            transformer._extract_version_from_image(
+                "louislam/uptime-kuma:1.23.16-alpine"
+            )
+            == "1.23.16"
+        )
         assert transformer._extract_version_from_image("postgres:15-alpine") == "15"
         assert transformer._extract_version_from_image("redis:6.2-alpine3.22") == "6.2"
-        assert transformer._extract_version_from_image("nginx:1.25.3-bookworm") == "1.25.3"
+        assert (
+            transformer._extract_version_from_image("nginx:1.25.3-bookworm") == "1.25.3"
+        )
 
-    def test_extract_date_based_version(
-        self, transformer: MetadataTransformer
-    ) -> None:
+    def test_extract_date_based_version(self, transformer: MetadataTransformer) -> None:
         """Test date-based version extraction."""
-        assert transformer._extract_version_from_image("photoprism/photoprism:250228") == "250228"
-        assert transformer._extract_version_from_image("actualbudget/actual-server:25.7.1") == "25.7.1"
-        assert transformer._extract_version_from_image("anaconda3:2024.10-1") == "2024.10-1"
+        assert (
+            transformer._extract_version_from_image("photoprism/photoprism:250228")
+            == "250228"
+        )
+        assert (
+            transformer._extract_version_from_image("actualbudget/actual-server:25.7.1")
+            == "25.7.1"
+        )
+        assert (
+            transformer._extract_version_from_image("anaconda3:2024.10-1")
+            == "2024.10-1"
+        )
 
     def test_extract_version_with_digest(
         self, transformer: MetadataTransformer
     ) -> None:
         """Test version extraction from image with digest reference."""
-        assert transformer._extract_version_from_image("redis:6.2-alpine@sha256:abc123def") == "6.2"
-        assert transformer._extract_version_from_image("nginx:1.25@sha256:fedcba987") == "1.25"
+        assert (
+            transformer._extract_version_from_image("redis:6.2-alpine@sha256:abc123def")
+            == "6.2"
+        )
+        assert (
+            transformer._extract_version_from_image("nginx:1.25@sha256:fedcba987")
+            == "1.25"
+        )
 
     def test_skip_latest_tag(self, transformer: MetadataTransformer) -> None:
         """Test that :latest tags are skipped (return None)."""
-        assert transformer._extract_version_from_image("homebridge/homebridge:latest") is None
+        assert (
+            transformer._extract_version_from_image("homebridge/homebridge:latest")
+            is None
+        )
         assert transformer._extract_version_from_image("duckdns:latest") is None
         assert transformer._extract_version_from_image("excalidraw:latest") is None
 
@@ -895,15 +936,23 @@ class TestVersionExtraction:
         self, transformer: MetadataTransformer
     ) -> None:
         """Test version extraction with full registry path."""
-        assert transformer._extract_version_from_image("ghcr.io/linuxserver/sonarr:4.0.15") == "4.0.15"
-        assert transformer._extract_version_from_image("docker.io/library/postgres:15") == "15"
+        assert (
+            transformer._extract_version_from_image("ghcr.io/linuxserver/sonarr:4.0.15")
+            == "4.0.15"
+        )
+        assert (
+            transformer._extract_version_from_image("docker.io/library/postgres:15")
+            == "15"
+        )
 
     def test_extract_multi_digit_versions(
         self, transformer: MetadataTransformer
     ) -> None:
         """Test extraction of multi-digit version numbers."""
         assert transformer._extract_version_from_image("app:10.20.30") == "10.20.30"
-        assert transformer._extract_version_from_image("app:v100.200.300") == "100.200.300"
+        assert (
+            transformer._extract_version_from_image("app:v100.200.300") == "100.200.300"
+        )
 
     def test_extract_prerelease_rc_versions(
         self, transformer: MetadataTransformer
@@ -911,16 +960,26 @@ class TestVersionExtraction:
         """Test RC versions are converted to Debian format with tilde."""
         assert transformer._extract_version_from_image("app:1.2.3-rc1") == "1.2.3~rc1"
         assert transformer._extract_version_from_image("app:1.2.3-RC2") == "1.2.3~RC2"
-        assert transformer._extract_version_from_image("app:v2.0.0-rc.1") == "2.0.0~rc.1"
+        assert (
+            transformer._extract_version_from_image("app:v2.0.0-rc.1") == "2.0.0~rc.1"
+        )
         assert transformer._extract_version_from_image("app:1.0.0-rc") == "1.0.0~rc"
 
     def test_extract_prerelease_beta_alpha_versions(
         self, transformer: MetadataTransformer
     ) -> None:
         """Test beta/alpha versions are converted to Debian format with tilde."""
-        assert transformer._extract_version_from_image("app:1.2.3-beta1") == "1.2.3~beta1"
-        assert transformer._extract_version_from_image("app:1.2.3-beta.2") == "1.2.3~beta.2"
-        assert transformer._extract_version_from_image("app:1.2.3-alpha1") == "1.2.3~alpha1"
+        assert (
+            transformer._extract_version_from_image("app:1.2.3-beta1") == "1.2.3~beta1"
+        )
+        assert (
+            transformer._extract_version_from_image("app:1.2.3-beta.2")
+            == "1.2.3~beta.2"
+        )
+        assert (
+            transformer._extract_version_from_image("app:1.2.3-alpha1")
+            == "1.2.3~alpha1"
+        )
         assert transformer._extract_version_from_image("app:2.0.0-pre1") == "2.0.0~pre1"
         assert transformer._extract_version_from_image("app:1.5.0-dev") == "1.5.0~dev"
 
@@ -963,7 +1022,8 @@ class TestVersionExtraction:
         # Source metadata should track extraction
         assert result["metadata"]["source_metadata"] is None or (
             "version_source" not in result["metadata"].get("source_metadata", {})
-            or result["metadata"]["source_metadata"]["version_source"] == "auto-extracted"
+            or result["metadata"]["source_metadata"]["version_source"]
+            == "auto-extracted"
         )
 
     def test_transform_multi_service_app_uses_matching_service(

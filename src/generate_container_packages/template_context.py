@@ -153,7 +153,7 @@ def _is_bindable_path(path: str) -> bool:
     Validates that the path is safe to create as a bind mount directory:
     1. Must be an absolute path or contain allowed environment variables
     2. Must not be a named volume (no slashes = named volume)
-    3. Must not reference system paths (/dev, /sys, /proc, /run, /tmp)
+    3. Must not reference system paths (/dev, /sys, /proc, /run, /var/run, /tmp)
     4. Must not contain path traversal attempts (..)
     5. Environment variables must be from an allowed list for security
 
@@ -184,7 +184,8 @@ def _is_bindable_path(path: str) -> bool:
         return False
 
     # Skip system paths that should never be created
-    system_prefixes = ("/dev", "/sys", "/proc", "/run", "/tmp")
+    # Note: /var/run is a symlink to /run on systemd systems
+    system_prefixes = ("/dev", "/sys", "/proc", "/run", "/var/run", "/tmp")
     for prefix in system_prefixes:
         if path.startswith(prefix):
             return False
@@ -201,9 +202,7 @@ def _is_bindable_path(path: str) -> bool:
             "$USER",
         )
         # Check if path starts with or contains any allowed env var
-        has_allowed_var = any(
-            allowed_var in path for allowed_var in allowed_env_vars
-        )
+        has_allowed_var = any(allowed_var in path for allowed_var in allowed_env_vars)
         if not has_allowed_var:
             # Reject paths with unknown/potentially dangerous env vars
             return False

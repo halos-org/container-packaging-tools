@@ -187,9 +187,28 @@ class MetadataTransformer:
         best_score = -1
 
         # Keywords that suggest a supporting/database service (not main)
-        support_keywords = {"postgres", "postgresql", "mysql", "mariadb", "redis", "memcached", "mongo", "mongodb", "db", "database"}
+        support_keywords = {
+            "postgres",
+            "postgresql",
+            "mysql",
+            "mariadb",
+            "redis",
+            "memcached",
+            "mongo",
+            "mongodb",
+            "db",
+            "database",
+        }
         # Keywords that suggest main service
-        main_keywords = {"server", "app", "web", "api", "frontend", "backend", "service"}
+        main_keywords = {
+            "server",
+            "app",
+            "web",
+            "api",
+            "frontend",
+            "backend",
+            "service",
+        }
 
         for service in casaos_app.services:
             service_lower = service.name.lower()
@@ -199,7 +218,9 @@ class MetadataTransformer:
             if service_lower == app_id_lower:
                 score = 1000
             # Starts with app.id (e.g., "immich-server" for "immich")
-            elif service_lower.startswith(app_id_lower + "-") or service_lower.startswith(app_id_lower + "_"):
+            elif service_lower.startswith(
+                app_id_lower + "-"
+            ) or service_lower.startswith(app_id_lower + "_"):
                 score = 100
                 # Bonus for main keywords
                 for keyword in main_keywords:
@@ -217,9 +238,12 @@ class MetadataTransformer:
             # Contains app.id as word boundary
             elif app_id_lower in service_lower:
                 idx = service_lower.find(app_id_lower)
-                before_ok = idx == 0 or not service_lower[idx-1].isalnum()
+                before_ok = idx == 0 or not service_lower[idx - 1].isalnum()
                 after_idx = idx + len(app_id_lower)
-                after_ok = after_idx >= len(service_lower) or not service_lower[after_idx].isalnum()
+                after_ok = (
+                    after_idx >= len(service_lower)
+                    or not service_lower[after_idx].isalnum()
+                )
                 if before_ok and after_ok:
                     score = 50
 
@@ -425,7 +449,16 @@ class MetadataTransformer:
         tag = image_tag.split(":")[-1]
 
         # Skip branch tags and latest
-        skip_tags = {"latest", "main", "master", "stable", "develop", "dev", "nightly", "edge"}
+        skip_tags = {
+            "latest",
+            "main",
+            "master",
+            "stable",
+            "develop",
+            "dev",
+            "nightly",
+            "edge",
+        }
         if tag.lower() in skip_tags:
             return None
 
@@ -448,8 +481,7 @@ class MetadataTransformer:
             # Check if suffix starts with a pre-release keyword
             suffix_lower = suffix.lower()
             is_prerelease = any(
-                suffix_lower.startswith(keyword)
-                for keyword in prerelease_keywords
+                suffix_lower.startswith(keyword) for keyword in prerelease_keywords
             )
 
             if is_prerelease:
