@@ -485,11 +485,7 @@ class TestInjectHomarrLabels:
         """Test that no labels are added when web_ui is disabled."""
         from generate_container_packages.builder import inject_homarr_labels
 
-        compose = {
-            "services": {
-                "app": {"image": "myapp:latest"}
-            }
-        }
+        compose = {"services": {"app": {"image": "myapp:latest"}}}
         metadata = {
             "name": "My App",
             "package_name": "myapp-container",

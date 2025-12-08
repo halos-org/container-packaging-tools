@@ -269,6 +269,7 @@ class TestIsBindablePath:
         assert not _is_bindable_path("/sys/class/gpio")
         assert not _is_bindable_path("/proc/cpuinfo")
         assert not _is_bindable_path("/run/docker.sock")
+        assert not _is_bindable_path("/var/run/dbus/system_bus_socket")
         assert not _is_bindable_path("/tmp/cache")
 
     def test_rejects_path_traversal(self):
