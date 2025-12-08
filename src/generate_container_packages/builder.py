@@ -419,14 +419,26 @@ def _fix_restart_policy(compose: dict[str, Any]) -> dict[str, Any]:
 
 
 def generate_prestart_file(app_def: AppDefinition, source_dir: Path) -> None:
-    """Generate prestart.sh script file.
+    """Generate or copy prestart.sh script file.
+
+    If a custom prestart.sh exists in the app's input directory, it will be
+    copied instead of generating the default script. This allows apps to
+    implement custom initialization logic (e.g., generating secrets).
 
     Args:
         app_def: Application definition
         source_dir: Destination directory
     """
-    script_content = generate_prestart_script(app_def)
     prestart_file = source_dir / "prestart.sh"
-    prestart_file.write_text(script_content, encoding="utf-8")
+    custom_prestart = app_def.input_dir / "prestart.sh"
+
+    if custom_prestart.exists():
+        # Use custom prestart script from app directory
+        shutil.copy2(custom_prestart, prestart_file)
+    else:
+        # Generate default prestart script
+        script_content = generate_prestart_script(app_def)
+        prestart_file.write_text(script_content, encoding="utf-8")
+
     # Make executable
     prestart_file.chmod(0o755)

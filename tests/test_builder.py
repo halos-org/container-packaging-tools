@@ -560,35 +560,53 @@ class TestGeneratePrestartFile:
         """Test that prestart.sh file is created."""
         from generate_container_packages.builder import generate_prestart_file
 
+        # Create input directory (without custom prestart.sh)
+        input_dir = tmp_path / "input"
+        input_dir.mkdir()
+
         app_def = mock.Mock(spec=AppDefinition)
         app_def.metadata = {
             "package_name": "test-app-container",
             "name": "Test App",
         }
+        app_def.input_dir = input_dir
 
-        generate_prestart_file(app_def, tmp_path)
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        generate_prestart_file(app_def, output_dir)
 
-        prestart_file = tmp_path / "prestart.sh"
+        prestart_file = output_dir / "prestart.sh"
         assert prestart_file.exists()
 
     def test_prestart_file_is_executable(self, tmp_path):
         """Test that prestart.sh is created with executable permissions."""
         from generate_container_packages.builder import generate_prestart_file
 
+        # Create input directory (without custom prestart.sh)
+        input_dir = tmp_path / "input"
+        input_dir.mkdir()
+
         app_def = mock.Mock(spec=AppDefinition)
         app_def.metadata = {
             "package_name": "test-app-container",
             "name": "Test App",
         }
+        app_def.input_dir = input_dir
 
-        generate_prestart_file(app_def, tmp_path)
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        generate_prestart_file(app_def, output_dir)
 
-        prestart_file = tmp_path / "prestart.sh"
+        prestart_file = output_dir / "prestart.sh"
         assert prestart_file.stat().st_mode & 0o755
 
     def test_prestart_file_content(self, tmp_path):
         """Test prestart.sh content contains expected elements."""
         from generate_container_packages.builder import generate_prestart_file
+
+        # Create input directory (without custom prestart.sh)
+        input_dir = tmp_path / "input"
+        input_dir.mkdir()
 
         app_def = mock.Mock(spec=AppDefinition)
         app_def.metadata = {
@@ -596,11 +614,41 @@ class TestGeneratePrestartFile:
             "name": "Test App",
             "web_ui": {"enabled": True, "port": 8080, "protocol": "http"},
         }
+        app_def.input_dir = input_dir
 
-        generate_prestart_file(app_def, tmp_path)
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        generate_prestart_file(app_def, output_dir)
 
-        prestart_file = tmp_path / "prestart.sh"
+        prestart_file = output_dir / "prestart.sh"
         content = prestart_file.read_text()
         assert "#!/bin/bash" in content
         assert "HOSTNAME=" in content
         assert "HOMARR_URL=" in content
+
+    def test_uses_custom_prestart_if_present(self, tmp_path):
+        """Test that custom prestart.sh is used when present in input directory."""
+        from generate_container_packages.builder import generate_prestart_file
+
+        # Create input directory with custom prestart.sh
+        input_dir = tmp_path / "input"
+        input_dir.mkdir()
+        custom_prestart = input_dir / "prestart.sh"
+        custom_content = "#!/bin/bash\n# Custom prestart script\necho 'Custom'\n"
+        custom_prestart.write_text(custom_content)
+
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+        }
+        app_def.input_dir = input_dir
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        generate_prestart_file(app_def, output_dir)
+
+        prestart_file = output_dir / "prestart.sh"
+        content = prestart_file.read_text()
+        assert content == custom_content
+        assert prestart_file.stat().st_mode & 0o755
