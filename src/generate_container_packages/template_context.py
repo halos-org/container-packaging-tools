@@ -90,6 +90,7 @@ def _build_service_context(
         "working_directory": f"/var/lib/container-apps/{package_name}",
         "env_defaults_file": f"/etc/container-apps/{package_name}/env.defaults",
         "env_file": f"/etc/container-apps/{package_name}/env",
+        "runtime_env_file": f"/run/container-apps/{package_name}/runtime.env",
         "volume_directories": _extract_volume_directories(compose),
     }
 

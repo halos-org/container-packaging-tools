@@ -6,8 +6,10 @@ Requires=docker.service
 [Service]
 Type=simple
 WorkingDirectory={{ service.working_directory }}
+ExecStartPre={{ service.working_directory }}/prestart.sh
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
+EnvironmentFile=-{{ service.runtime_env_file }}
 ExecStartPre=/bin/mkdir -p ${CONTAINER_DATA_ROOT}
 {# Auto-create bind mount directories to prevent "bind source path does not exist" errors #}
 {% for directory in service.volume_directories %}

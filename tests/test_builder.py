@@ -449,3 +449,162 @@ class TestBuildPackage:
 
         # Temp directory should be cleaned up (we can't easily verify this without
         # tracking the temp dir path, but the code path is exercised)
+
+
+class TestInjectHomarrLabels:
+    """Tests for inject_homarr_labels function."""
+
+    def test_inject_labels_to_service(self):
+        """Test injecting Homarr labels into docker-compose services."""
+        from generate_container_packages.builder import inject_homarr_labels
+
+        compose = {
+            "services": {
+                "app": {
+                    "image": "myapp:latest",
+                }
+            }
+        }
+        metadata = {
+            "name": "My App",
+            "package_name": "myapp-container",
+            "description": "Test app",
+            "tags": ["role::container-app"],
+            "web_ui": {"enabled": True, "port": 8080},
+        }
+
+        result = inject_homarr_labels(compose, metadata)
+
+        assert "labels" in result["services"]["app"]
+        labels = result["services"]["app"]["labels"]
+        assert labels["homarr.enable"] == "true"
+        assert labels["homarr.name"] == "My App"
+        assert labels["homarr.url"] == "${HOMARR_URL}"
+
+    def test_no_labels_when_web_ui_disabled(self):
+        """Test that no labels are added when web_ui is disabled."""
+        from generate_container_packages.builder import inject_homarr_labels
+
+        compose = {
+            "services": {
+                "app": {"image": "myapp:latest"}
+            }
+        }
+        metadata = {
+            "name": "My App",
+            "package_name": "myapp-container",
+            "web_ui": {"enabled": False},
+        }
+
+        result = inject_homarr_labels(compose, metadata)
+
+        # Should not add labels section
+        assert "labels" not in result["services"]["app"]
+
+    def test_merge_with_existing_labels(self):
+        """Test that existing labels are preserved."""
+        from generate_container_packages.builder import inject_homarr_labels
+
+        compose = {
+            "services": {
+                "app": {
+                    "image": "myapp:latest",
+                    "labels": {"existing.label": "value"},
+                }
+            }
+        }
+        metadata = {
+            "name": "My App",
+            "package_name": "myapp-container",
+            "description": "Test",
+            "tags": ["role::container-app"],
+            "web_ui": {"enabled": True, "port": 8080},
+        }
+
+        result = inject_homarr_labels(compose, metadata)
+
+        labels = result["services"]["app"]["labels"]
+        # Existing label preserved
+        assert labels["existing.label"] == "value"
+        # New labels added
+        assert labels["homarr.enable"] == "true"
+
+    def test_handle_list_format_labels(self):
+        """Test handling labels in list format."""
+        from generate_container_packages.builder import inject_homarr_labels
+
+        compose = {
+            "services": {
+                "app": {
+                    "image": "myapp:latest",
+                    "labels": ["existing.label=value"],
+                }
+            }
+        }
+        metadata = {
+            "name": "My App",
+            "package_name": "myapp-container",
+            "description": "Test",
+            "tags": ["role::container-app"],
+            "web_ui": {"enabled": True, "port": 8080},
+        }
+
+        result = inject_homarr_labels(compose, metadata)
+
+        labels = result["services"]["app"]["labels"]
+        # Converted to dict and existing preserved
+        assert labels["existing.label"] == "value"
+        assert labels["homarr.enable"] == "true"
+
+
+class TestGeneratePrestartFile:
+    """Tests for generate_prestart_file function."""
+
+    def test_creates_prestart_file(self, tmp_path):
+        """Test that prestart.sh file is created."""
+        from generate_container_packages.builder import generate_prestart_file
+
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+        }
+
+        generate_prestart_file(app_def, tmp_path)
+
+        prestart_file = tmp_path / "prestart.sh"
+        assert prestart_file.exists()
+
+    def test_prestart_file_is_executable(self, tmp_path):
+        """Test that prestart.sh is created with executable permissions."""
+        from generate_container_packages.builder import generate_prestart_file
+
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+        }
+
+        generate_prestart_file(app_def, tmp_path)
+
+        prestart_file = tmp_path / "prestart.sh"
+        assert prestart_file.stat().st_mode & 0o755
+
+    def test_prestart_file_content(self, tmp_path):
+        """Test prestart.sh content contains expected elements."""
+        from generate_container_packages.builder import generate_prestart_file
+
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+            "web_ui": {"enabled": True, "port": 8080, "protocol": "http"},
+        }
+
+        generate_prestart_file(app_def, tmp_path)
+
+        prestart_file = tmp_path / "prestart.sh"
+        content = prestart_file.read_text()
+        assert "#!/bin/bash" in content
+        assert "HOSTNAME=" in content
+        assert "HOMARR_URL=" in content

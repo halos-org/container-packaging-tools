@@ -4,8 +4,13 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Any
 
+import yaml
+
+from generate_container_packages.labels import generate_homarr_labels
 from generate_container_packages.loader import AppDefinition
+from generate_container_packages.prestart import generate_prestart_script
 
 
 class BuildError(Exception):
@@ -113,14 +118,27 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
     # Get input directory from AppDefinition
     input_dir = app_def.input_dir
 
-    # Copy required files
-    required_files = ["metadata.yaml", "docker-compose.yml", "config.yml"]
+    # Copy required files (except docker-compose which needs label injection)
+    required_files = ["metadata.yaml", "config.yml"]
     for filename in required_files:
         src = input_dir / filename
         if not src.exists():
             raise BuildError(f"Required file missing: {filename}")
         dst = source_dir / filename
         shutil.copy2(src, dst)
+
+    # Check docker-compose.yml exists
+    compose_src = input_dir / "docker-compose.yml"
+    if not compose_src.exists():
+        raise BuildError("Required file missing: docker-compose.yml")
+
+    # Inject Homarr labels into docker-compose.yml
+    compose_with_labels = inject_homarr_labels(app_def.compose, app_def.metadata)
+    # Fix boolean restart values that PyYAML parsed from "no"/"yes"
+    compose_with_labels = _fix_restart_policy(compose_with_labels)
+    compose_dst = source_dir / "docker-compose.yml"
+    with open(compose_dst, "w", encoding="utf-8") as f:
+        yaml.dump(compose_with_labels, f, default_flow_style=False, sort_keys=False)
 
     # Copy optional icon
     if app_def.icon_path and app_def.icon_path.exists():
@@ -135,6 +153,9 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
     # Generate env.template from default_config
     generate_env_template(app_def, source_dir)
+
+    # Generate prestart.sh script
+    generate_prestart_file(app_def, source_dir)
 
 
 def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
@@ -313,3 +334,99 @@ def collect_artifacts(
             artifacts.append(dest)
 
     return artifacts
+
+
+def inject_homarr_labels(
+    compose: dict[str, Any], metadata: dict[str, Any]
+) -> dict[str, Any]:
+    """Inject Homarr labels into docker-compose services.
+
+    Args:
+        compose: Original docker-compose dictionary
+        metadata: Package metadata
+
+    Returns:
+        Modified docker-compose dictionary with Homarr labels added to services
+    """
+    # Generate labels from metadata
+    homarr_labels = generate_homarr_labels(metadata)
+
+    # If no labels to add, return original compose
+    if not homarr_labels:
+        return compose
+
+    # Deep copy to avoid modifying original
+    import copy
+
+    compose = copy.deepcopy(compose)
+
+    # Get services section
+    services = compose.get("services", {})
+
+    # Add labels to each service
+    for _service_name, service_config in services.items():
+        if not isinstance(service_config, dict):
+            continue
+
+        # Get or create labels section
+        existing_labels = service_config.get("labels", {})
+
+        # Convert list format to dict if needed
+        if isinstance(existing_labels, list):
+            label_dict = {}
+            for label in existing_labels:
+                if "=" in label:
+                    key, value = label.split("=", 1)
+                    label_dict[key] = value
+                else:
+                    label_dict[label] = ""
+            existing_labels = label_dict
+
+        # Merge Homarr labels (don't overwrite existing)
+        for key, value in homarr_labels.items():
+            if key not in existing_labels:
+                existing_labels[key] = value
+
+        # Update service config
+        service_config["labels"] = existing_labels
+
+    return compose
+
+
+def _fix_restart_policy(compose: dict[str, Any]) -> dict[str, Any]:
+    """Fix boolean restart values that PyYAML parsed from YAML 1.1 'no'/'yes'.
+
+    PyYAML interprets unquoted 'no', 'yes', 'on', 'off' as booleans per YAML 1.1.
+    Docker Compose requires restart to be a string like "no", "always", etc.
+
+    Args:
+        compose: Docker compose dictionary
+
+    Returns:
+        Modified compose with restart booleans converted to strings
+    """
+    services = compose.get("services", {})
+    for service_config in services.values():
+        if not isinstance(service_config, dict):
+            continue
+        if "restart" in service_config:
+            restart_val = service_config["restart"]
+            if restart_val is False:
+                service_config["restart"] = "no"
+            elif restart_val is True:
+                service_config["restart"] = "always"
+    return compose
+
+
+def generate_prestart_file(app_def: AppDefinition, source_dir: Path) -> None:
+    """Generate prestart.sh script file.
+
+    Args:
+        app_def: Application definition
+        source_dir: Destination directory
+    """
+    script_content = generate_prestart_script(app_def)
+    prestart_file = source_dir / "prestart.sh"
+    prestart_file.write_text(script_content, encoding="utf-8")
+    # Make executable
+    prestart_file.chmod(0o755)
