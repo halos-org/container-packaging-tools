@@ -526,7 +526,7 @@ class TestConvertCasaOSOptions:
 
         # Create minimal mappings (all three required files)
         (mappings / "categories.yaml").write_text(
-            "mappings:\n  Utilities: utils\ndefault: misc\n"
+            "mappings:\n  Utilities:\n    section: utils\n    tag: utilities\ndefault: misc\n"
         )
         (mappings / "field_types.yaml").write_text("patterns: []\n")
         (mappings / "paths.yaml").write_text("preserved: []\ntransforms: []\n")
