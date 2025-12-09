@@ -584,8 +584,7 @@ def main() -> int:
 
         # Step 2: Load input files
         logger.info("Loading input files...")
-        prefix = args.prefix if hasattr(args, "prefix") else None
-        app_def = load_input_files(input_dir, prefix=prefix)
+        app_def = load_input_files(input_dir, prefix=args.prefix)
         logger.info("✓ Files loaded")
 
         # Step 3: Render templates

@@ -18,10 +18,15 @@ def compute_package_name(
 ) -> str:
     """Compute full package name from components.
 
+    The resulting name follows the pattern: {prefix}-{app_id}-{suffix}
+    Empty or None values for prefix/suffix are omitted from the result.
+
     Args:
         app_id: Base application identifier (e.g., "signalk-server")
-        prefix: Optional source prefix (e.g., "marine", "halos", "casaos")
-        suffix: Package suffix (default: "container")
+        prefix: Optional source prefix (e.g., "marine", "halos", "casaos").
+            Both None and empty string result in no prefix.
+        suffix: Package suffix (default: "container").
+            Empty string results in no suffix.
 
     Returns:
         Full package name (e.g., "marine-signalk-server-container")
@@ -30,6 +35,8 @@ def compute_package_name(
         >>> compute_package_name("grafana", prefix="marine")
         "marine-grafana-container"
         >>> compute_package_name("homarr", prefix=None)
+        "homarr-container"
+        >>> compute_package_name("homarr", prefix="")
         "homarr-container"
         >>> compute_package_name("myapp", prefix="halos", suffix="")
         "halos-myapp"
@@ -116,7 +123,8 @@ def expand_dependency(dep: str, prefix: str | None = None) -> str:
 
     Args:
         dep: Dependency string (e.g., "@influxdb" or "docker-ce (>= 20.10)")
-        prefix: Optional prefix for @ references
+        prefix: Optional prefix for @ references. If None or empty string,
+            the expanded name will have no prefix (e.g., "influxdb-container").
 
     Returns:
         Expanded dependency string
@@ -127,6 +135,8 @@ def expand_dependency(dep: str, prefix: str | None = None) -> str:
     Examples:
         >>> expand_dependency("@influxdb", prefix="marine")
         "marine-influxdb-container"
+        >>> expand_dependency("@influxdb", prefix=None)
+        "influxdb-container"
         >>> expand_dependency("docker-ce (>= 20.10)", prefix="marine")
         "docker-ce (>= 20.10)"
         >>> expand_dependency("casaos-redis-container", prefix="marine")

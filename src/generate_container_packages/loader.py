@@ -1,5 +1,6 @@
 """File loading and data model construction."""
 
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,8 @@ from generate_container_packages.naming import (
     derive_app_id,
     expand_dependencies,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AppDefinition:
@@ -79,6 +82,15 @@ def load_input_files(directory: Path, prefix: str | None = None) -> AppDefinitio
     metadata = load_yaml(directory / "metadata.yaml")
     compose = load_yaml(directory / "docker-compose.yml")
     config = load_yaml(directory / "config.yml")
+
+    # Warn if deprecated package_name field is present
+    if "package_name" in metadata:
+        logger.warning(
+            "metadata.yaml contains deprecated 'package_name' field. "
+            "This field is now computed automatically and will be ignored. "
+            "Use 'app_id' instead if you need to override the base identifier."
+        )
+        del metadata["package_name"]
 
     # Derive app_id from directory name if not specified in metadata
     if not metadata.get("app_id"):
