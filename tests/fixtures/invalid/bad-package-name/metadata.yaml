@@ -1,8 +1,8 @@
-# Bad package name - doesn't end with -container
-name: Bad Package Name App
-package_name: bad-package-name  # Should end with -container
+# Bad app_id - contains uppercase letters which are not allowed
+name: Bad App ID App
+app_id: Bad-App-Id  # Uppercase not allowed in app_id
 version: 1.0.0
-description: Test app with invalid package name
+description: Test app with invalid app_id
 homepage: https://example.com
 maintainer: Test Developer <test@example.com>
 license: MIT

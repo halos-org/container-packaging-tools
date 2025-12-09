@@ -584,7 +584,7 @@ def main() -> int:
 
         # Step 2: Load input files
         logger.info("Loading input files...")
-        app_def = load_input_files(input_dir)
+        app_def = load_input_files(input_dir, prefix=args.prefix)
         logger.info("✓ Files loaded")
 
         # Step 3: Render templates
@@ -710,6 +710,11 @@ def create_build_argument_parser() -> argparse.ArgumentParser:
     )
 
     # Build options
+    parser.add_argument(
+        "--prefix",
+        metavar="PREFIX",
+        help="Package name prefix (e.g., 'marine', 'halos', 'casaos')",
+    )
     parser.add_argument(
         "--keep-temp",
         action="store_true",

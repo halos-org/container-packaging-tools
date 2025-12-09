@@ -1,6 +1,5 @@
 # Invalid version format
 name: Invalid Version App
-package_name: invalid-version-container
 version: v1.0  # Invalid - should be semver format like 1.0.0
 description: Test app with invalid version format
 homepage: https://example.com

@@ -64,7 +64,8 @@ class TestPipelineLoading:
         assert app_def.metadata is not None
         assert app_def.compose is not None
         assert app_def.config is not None
-        assert app_def.metadata["package_name"] == "simple-test-app-container"
+        # Package name is computed from directory name (simple-app) at build time
+        assert app_def.metadata["package_name"] == "simple-app-container"
 
     def test_load_full_app(self):
         """Test loading full-app fixture."""
@@ -111,11 +112,12 @@ class TestPipelineRendering:
         assert (debian_dir / "compat").exists()
 
         # Verify systemd service (rendered directly to debian/)
-        service_file = debian_dir / "simple-test-app-container.service"
+        # Service file name is computed from directory name (simple-app)
+        service_file = debian_dir / "simple-app-container.service"
         assert service_file.exists()
 
         # Verify AppStream metadata (rendered directly to debian/)
-        appstream_file = debian_dir / "simple-test-app-container.metainfo.xml"
+        appstream_file = debian_dir / "simple-app-container.metainfo.xml"
         assert appstream_file.exists()
 
     def test_render_full_app(self, tmp_path):

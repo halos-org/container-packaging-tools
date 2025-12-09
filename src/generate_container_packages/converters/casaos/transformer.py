@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 
+from generate_container_packages.naming import compute_package_name, derive_app_id
 from generate_container_packages.utils import compute_file_hash
 
 from .models import CasaOSApp, CasaOSEnvVar, ConversionContext
@@ -25,21 +26,23 @@ class MetadataTransformer:
     - Field type inference with validation rules
     - Field grouping (network, authentication, storage, etc.)
     - Path transformation (CasaOS → HaLOS conventions)
-    - Package naming (casaos-{app}-container format)
+    - Package naming ({prefix}-{app}-container format)
     """
 
-    def __init__(self, mappings_dir: Path) -> None:
+    def __init__(self, mappings_dir: Path, prefix: str = "casaos") -> None:
         """Initialize transformer with mapping configurations.
 
         Args:
             mappings_dir: Directory containing mapping YAML files
                 (categories.yaml, field_types.yaml, paths.yaml)
+            prefix: Package name prefix (default: "casaos")
 
         Raises:
             FileNotFoundError: If mapping directory or required files don't exist
             ValueError: If mapping files contain invalid YAML or missing required keys
         """
         self.mappings_dir = Path(mappings_dir)
+        self.prefix = prefix
 
         # Verify mappings directory exists
         if not self.mappings_dir.exists():
@@ -642,59 +645,20 @@ class MetadataTransformer:
         return path
 
     def _generate_package_name(self, app_name: str) -> str:
-        """Generate package name with casaos- prefix.
+        """Generate package name using the configured prefix.
 
         Args:
             app_name: CasaOS application name
 
         Returns:
-            Debian-compatible package name: casaos-{app}-container
+            Debian-compatible package name: {prefix}-{app}-container
 
         Raises:
             ValueError: If generated package name would be invalid
         """
-        # Convert to lowercase
-        name = app_name.lower()
-
-        # Replace spaces with hyphens (preserve existing hyphens)
-        name = name.replace(" ", "-")
-
-        # Replace special characters with hyphens
-        # Keep only alphanumeric, hyphens, underscores, and dots
-        name = re.sub(r"[^a-z0-9._-]", "-", name)
-
-        # Replace underscores and dots with hyphens
-        name = name.replace("_", "-")
-        name = name.replace(".", "-")
-
-        # Collapse multiple consecutive hyphens
-        name = re.sub(r"-+", "-", name)
-
-        # Remove leading/trailing hyphens
-        name = name.strip("-")
-
-        # Validate the generated name
-        if not name:
-            raise ValueError(
-                f"Cannot generate package name from empty app name: '{app_name}'"
-            )
-
-        if not name[0].isalnum():
-            raise ValueError(
-                f"Invalid package name generated: 'casaos-{name}-container'\n"
-                f"Debian package names must start with alphanumeric character.\n"
-                f"Original app name: '{app_name}'"
-            )
-
-        if len(name) < 2:
-            raise ValueError(
-                f"Invalid package name generated: 'casaos-{name}-container'\n"
-                f"Package name too short (minimum 2 characters).\n"
-                f"Original app name: '{app_name}'"
-            )
-
-        # Add prefix and suffix
-        return f"casaos-{name}-container"
+        # Use naming module to derive app_id and compute package name
+        app_id = derive_app_id(app_name)
+        return compute_package_name(app_id, prefix=self.prefix)
 
     def _build_clean_compose(self, casaos_app: CasaOSApp) -> dict[str, Any]:
         """Build docker-compose dictionary with x-casaos metadata removed.

@@ -1,6 +1,5 @@
 # Missing required role::container-app tag
 name: Missing Tag App
-package_name: missing-tag-container
 version: 1.0.0
 description: Test app missing required tag
 homepage: https://example.com

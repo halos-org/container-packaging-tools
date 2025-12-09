@@ -1,6 +1,6 @@
 # Full App - Complete container app definition with all optional fields
 name: Full Featured Test App
-package_name: full-test-app-container
+# app_id is optional - derived from directory name if not specified
 version: 2.1.3-1
 upstream_version: 2.1.3
 description: A full-featured test application with all options

@@ -129,6 +129,28 @@ class TestCreateArgumentParser:
         args = parser.parse_args(["input_dir"])
         assert args.keep_temp is False
 
+    def test_prefix_option(self):
+        """Test that --prefix option is parsed correctly."""
+        parser = create_build_argument_parser()
+        args = parser.parse_args(["input_dir", "--prefix", "marine"])
+        assert args.prefix == "marine"
+
+    def test_prefix_option_default(self):
+        """Test that --prefix defaults to None."""
+        parser = create_build_argument_parser()
+        args = parser.parse_args(["input_dir"])
+        assert args.prefix is None
+
+    def test_prefix_various_values(self):
+        """Test various prefix values."""
+        parser = create_build_argument_parser()
+
+        args = parser.parse_args(["input_dir", "--prefix", "halos"])
+        assert args.prefix == "halos"
+
+        args = parser.parse_args(["input_dir", "--prefix", "casaos"])
+        assert args.prefix == "casaos"
+
     def test_version_flag(self):
         """Test that --version flag displays version."""
         parser = create_build_argument_parser()

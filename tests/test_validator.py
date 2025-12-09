@@ -62,14 +62,14 @@ class TestValidateInputDirectory:
         assert result.success is False
         assert any("metadata.yaml" in err for err in result.errors)
 
-    def test_invalid_package_name(self):
-        """Test validation with invalid package name."""
+    def test_invalid_app_id(self):
+        """Test validation with invalid app_id (uppercase)."""
         result = validate_input_directory(INVALID_FIXTURES / "bad-package-name")
 
         assert result.success is False
         assert len(result.errors) > 0
-        # Should detect missing -container suffix
-        assert any("container" in err.lower() for err in result.errors)
+        # Should detect invalid app_id pattern (uppercase not allowed)
+        assert any("app_id" in err.lower() for err in result.errors)
 
     def test_missing_tag(self):
         """Test validation when role::container-app tag is missing."""
@@ -104,7 +104,7 @@ class TestValidateMetadata:
         metadata = validate_metadata(VALID_FIXTURES / "simple-app" / "metadata.yaml")
 
         assert metadata.name == "Simple Test App"
-        assert metadata.package_name == "simple-test-app-container"
+        assert metadata.app_id is None  # Optional, derived from directory at build time
         assert metadata.version == "1.0.0"
 
     def test_metadata_with_optional_fields(self):
@@ -230,7 +230,7 @@ class TestFormatPydanticError:
         # Create invalid data to trigger error
         invalid_data = {
             "name": "Test",
-            "package_name": "test",  # Missing -container suffix
+            "app_id": "Invalid-App-Id",  # Uppercase not allowed in app_id
             "version": "1.0.0",
             "description": "Test",
             "maintainer": "Test <test@example.com>",
@@ -246,7 +246,7 @@ class TestFormatPydanticError:
         except ValidationError as e:
             formatted = format_pydantic_error("metadata.yaml", e)
             assert "metadata.yaml" in formatted
-            assert "package_name" in formatted or "container" in formatted
+            assert "app_id" in formatted or "pattern" in formatted.lower()
 
     def test_format_multiple_errors(self):
         """Test formatting of multiple validation errors."""
@@ -257,7 +257,7 @@ class TestFormatPydanticError:
         # Create data with multiple errors
         invalid_data = {
             "name": "Test",
-            "package_name": "test",  # Missing -container suffix
+            "app_id": "Invalid-App-Id",  # Uppercase not allowed in app_id
             "version": "invalid",  # Invalid version format
             "description": "Test",
             "maintainer": "Invalid Email",  # Invalid email format

@@ -50,13 +50,17 @@ class PackageMetadata(BaseModel):
     Validates metadata.yaml files for container application packages.
     Ensures all required fields are present with correct formats and
     enforces Debian packaging conventions.
+
+    Note: package_name is computed at build time from app_id and prefix.
+    The app_id field is optional and defaults to the directory name.
     """
 
     # Required identity fields
     name: str = Field(min_length=1, description="Human-readable application name")
-    package_name: str = Field(
-        pattern=r"^[a-z0-9][a-z0-9+.-]+$",
-        description="Debian package name (must end with -container)",
+    app_id: str | None = Field(
+        None,
+        pattern=r"^[a-z0-9][a-z0-9-]*$",
+        description="Base application identifier (defaults to directory name)",
     )
     version: str = Field(
         min_length=1,
@@ -181,14 +185,6 @@ class PackageMetadata(BaseModel):
         None,
         description="Metadata for auto-converted apps (None for manual apps)",
     )
-
-    @field_validator("package_name")
-    @classmethod
-    def validate_package_name_suffix(cls, v: str) -> str:
-        """Validate that package name ends with -container suffix."""
-        if not v.endswith("-container"):
-            raise ValueError("Package name must end with '-container'")
-        return v
 
     @field_validator("tags")
     @classmethod

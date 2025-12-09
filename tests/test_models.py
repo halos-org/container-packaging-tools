@@ -63,7 +63,6 @@ class TestPackageMetadata:
         """Minimal valid metadata."""
         return {
             "name": "Test App",
-            "package_name": "test-app-container",
             "version": "1.0.0",
             "description": "A test application",
             "maintainer": "Test Developer <test@example.com>",
@@ -75,9 +74,9 @@ class TestPackageMetadata:
 
     def test_valid_minimal_metadata(self, valid_metadata):
         """Test minimal valid metadata passes validation."""
-        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]  # type: ignore[arg-type]
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
         assert metadata.name == "Test App"
-        assert metadata.package_name == "test-app-container"
+        assert metadata.app_id is None  # Defaults to None, derived at build time
         assert metadata.version == "1.0.0"
         assert metadata.description == "A test application"
 
@@ -115,19 +114,18 @@ class TestPackageMetadata:
             PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
         assert "name" in str(exc_info.value).lower()
 
-    def test_invalid_package_name_pattern(self, valid_metadata):
-        """Test invalid package name pattern raises ValidationError."""
-        valid_metadata["package_name"] = "Test-App-Container"  # Uppercase not allowed
-        with pytest.raises(ValidationError) as exc_info:
-            PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
-        assert "package_name" in str(exc_info.value).lower()
+    def test_valid_app_id(self, valid_metadata):
+        """Test valid app_id passes validation."""
+        valid_metadata["app_id"] = "test-app"
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert metadata.app_id == "test-app"
 
-    def test_package_name_missing_container_suffix(self, valid_metadata):
-        """Test package name without -container suffix raises ValidationError."""
-        valid_metadata["package_name"] = "test-app"
+    def test_invalid_app_id_pattern(self, valid_metadata):
+        """Test invalid app_id pattern raises ValidationError."""
+        valid_metadata["app_id"] = "Test-App"  # Uppercase not allowed
         with pytest.raises(ValidationError) as exc_info:
             PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
-        assert "must end with '-container'" in str(exc_info.value)
+        assert "app_id" in str(exc_info.value).lower()
 
     def test_invalid_version_format(self, valid_metadata):
         """Test invalid version format raises ValidationError."""
@@ -328,7 +326,7 @@ class TestPackageMetadata:
         assert "properties" in schema
         assert "required" in schema
         assert "name" in schema["properties"]
-        assert "package_name" in schema["properties"]
+        assert "app_id" in schema["properties"]
 
 
 class TestConfigField:
