@@ -53,7 +53,13 @@ class TestCategoriesMappings:
         )
 
         # Check all mapped sections are valid
-        for casaos_cat, debian_section in categories_config["mappings"].items():
+        for casaos_cat, mapping in categories_config["mappings"].items():
+            # Handle both old format (string) and new format (dict with section/tag)
+            if isinstance(mapping, str):
+                debian_section = mapping
+            else:
+                debian_section = mapping.get("section", "misc")
+
             assert debian_section in valid_sections, (
                 f"Invalid Debian section '{debian_section}' for category '{casaos_cat}'"
             )
