@@ -318,9 +318,6 @@ class MetadataTransformer:
         if mapping is None:
             return self._category_data.get("default", "misc")
 
-        # Handle both old format (string) and new format (dict with section/tag)
-        if isinstance(mapping, str):
-            return mapping
         return mapping.get("section", self._category_data.get("default", "misc"))
 
     def _get_category_tag(self, casaos_category: str) -> str | None:
@@ -339,10 +336,6 @@ class MetadataTransformer:
         mapping = mappings.get(casaos_category)
 
         if mapping is None:
-            return None
-
-        # Handle both old format (string, no tag) and new format (dict with section/tag)
-        if isinstance(mapping, str):
             return None
 
         tag = mapping.get("tag")
