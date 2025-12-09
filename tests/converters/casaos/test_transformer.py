@@ -143,6 +143,50 @@ class TestCategoryMapping:
         )  # uppercase should not match
 
 
+class TestCategoryTagMapping:
+    """Test category:: tag generation from CasaOS categories."""
+
+    def test_entertainment_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test Entertainment category generates category::entertainment tag."""
+        assert transformer._get_category_tag("Entertainment") == "category::entertainment"
+
+    def test_media_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test Media category generates category::media tag."""
+        assert transformer._get_category_tag("Media") == "category::media"
+
+    def test_developer_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test Developer category generates category::development tag."""
+        assert transformer._get_category_tag("Developer") == "category::development"
+
+    def test_utilities_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test Utilities category generates category::utilities tag."""
+        assert transformer._get_category_tag("Utilities") == "category::utilities"
+
+    def test_network_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test Network category generates category::networking tag."""
+        assert transformer._get_category_tag("Network") == "category::networking"
+
+    def test_system_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test System category generates category::system-tools tag."""
+        assert transformer._get_category_tag("System") == "category::system-tools"
+
+    def test_monitoring_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test Monitoring category generates category::monitoring tag."""
+        assert transformer._get_category_tag("Monitoring") == "category::monitoring"
+
+    def test_games_category_tag(self, transformer: MetadataTransformer) -> None:
+        """Test Games category generates category::games tag."""
+        assert transformer._get_category_tag("Games") == "category::games"
+
+    def test_unknown_category_no_tag(self, transformer: MetadataTransformer) -> None:
+        """Test unknown category returns None (no tag generated)."""
+        assert transformer._get_category_tag("UnknownCategory") is None
+
+    def test_empty_category_no_tag(self, transformer: MetadataTransformer) -> None:
+        """Test empty category returns None (no tag generated)."""
+        assert transformer._get_category_tag("") is None
+
+
 class TestFieldTypeInference:
     """Test field type inference from environment variable names."""
 
@@ -826,6 +870,121 @@ class TestTransformerIntegration:
         field_ids = [f["id"] for f in all_fields]
         assert "DB_HOST" in field_ids
         assert "POSTGRES_PASSWORD" in field_ids
+
+    def test_category_tag_added_to_metadata(
+        self,
+        transformer: MetadataTransformer,
+        conversion_context: ConversionContext,
+    ) -> None:
+        """Test that category:: tag is added to metadata tags based on CasaOS category."""
+        app = CasaOSApp(
+            id="sonarr",
+            name="Sonarr",
+            tagline="TV show manager",
+            description="Sonarr is a PVR for Usenet and BitTorrent users",
+            category="Entertainment",
+            services=[
+                CasaOSService(
+                    name="sonarr",
+                    image="linuxserver/sonarr:4.0.15",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                )
+            ],
+        )
+
+        result = transformer.transform(app, conversion_context)
+
+        # Category tag should be in metadata tags list
+        assert "tags" in result["metadata"]
+        assert "category::entertainment" in result["metadata"]["tags"]
+
+    def test_category_tag_for_developer_category(
+        self,
+        transformer: MetadataTransformer,
+        conversion_context: ConversionContext,
+    ) -> None:
+        """Test that Developer category generates category::development tag."""
+        app = CasaOSApp(
+            id="gitea",
+            name="Gitea",
+            tagline="Git with a cup of tea",
+            description="Self-hosted Git service",
+            category="Developer",
+            services=[
+                CasaOSService(
+                    name="gitea",
+                    image="gitea/gitea:1.21",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                )
+            ],
+        )
+
+        result = transformer.transform(app, conversion_context)
+
+        assert "tags" in result["metadata"]
+        assert "category::development" in result["metadata"]["tags"]
+
+    def test_category_tag_for_monitoring_category(
+        self,
+        transformer: MetadataTransformer,
+        conversion_context: ConversionContext,
+    ) -> None:
+        """Test that Monitoring category generates category::monitoring tag."""
+        app = CasaOSApp(
+            id="grafana",
+            name="Grafana",
+            tagline="Observability platform",
+            description="Open-source analytics and monitoring",
+            category="Monitoring",
+            services=[
+                CasaOSService(
+                    name="grafana",
+                    image="grafana/grafana:10.0.0",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                )
+            ],
+        )
+
+        result = transformer.transform(app, conversion_context)
+
+        assert "tags" in result["metadata"]
+        assert "category::monitoring" in result["metadata"]["tags"]
+
+    def test_unknown_category_no_tag(
+        self,
+        transformer: MetadataTransformer,
+        conversion_context: ConversionContext,
+    ) -> None:
+        """Test that unknown category does not add category:: tag."""
+        app = CasaOSApp(
+            id="custom-app",
+            name="Custom App",
+            tagline="Custom application",
+            description="An app with unknown category",
+            category="SomeUnknownCategory",
+            services=[
+                CasaOSService(
+                    name="app",
+                    image="myapp:1.0",
+                    environment=[],
+                    ports=[],
+                    volumes=[],
+                )
+            ],
+        )
+
+        result = transformer.transform(app, conversion_context)
+
+        # Tags list should exist but not contain any category:: tag
+        tags = result["metadata"].get("tags", [])
+        category_tags = [t for t in tags if t.startswith("category::")]
+        assert len(category_tags) == 0
 
 
 class TestVersionExtraction:

@@ -6,87 +6,184 @@
 #
 # Format:
 #   mappings:
-#     <CasaOS-Category>: <debian-section>
+#     <CasaOS-Category>:
+#       section: <debian-section>
+#       tag: <category-tag>  # Optional, for category:: debtag generation
 #   default: <fallback-section>
 #
 # References:
 # - Debian Policy Manual sections: https://www.debian.org/doc/debian-policy/ch-archive.html
 # - CasaOS categories: https://github.com/IceWhaleTech/CasaOS-AppStore
+# - HaLOS categorization: CATEGORIZATION_STRATEGY.md
 
-# Category mappings from CasaOS to Debian sections
+# Category mappings from CasaOS to Debian sections and category:: tags
 mappings:
   # Media and entertainment
-  Entertainment: video
-  Media: video
-  "Media Server": video
-  Streaming: video
-  Music: sound
-  Video: video
-  Photos: graphics
+  Entertainment:
+    section: video
+    tag: entertainment
+  Media:
+    section: video
+    tag: media
+  "Media Server":
+    section: video
+    tag: media
+  Streaming:
+    section: video
+    tag: media
+  Music:
+    section: sound
+    tag: media
+  Video:
+    section: video
+    tag: media
+  Photos:
+    section: graphics
+    tag: media
 
   # Productivity and office
-  Productivity: misc
-  Office: misc
-  Documents: text
-  Notes: text
-  Cloud: net
-  Storage: misc
+  Productivity:
+    section: misc
+    tag: productivity
+  Office:
+    section: misc
+    tag: productivity
+  Documents:
+    section: text
+    tag: productivity
+  Notes:
+    section: text
+    tag: productivity
+  Cloud:
+    section: net
+    tag: cloud-storage
+  Storage:
+    section: misc
+    tag: cloud-storage
 
   # Development and tools
-  Developer: devel
-  Development: devel
-  Tools: utils
-  Utilities: utils
+  Developer:
+    section: devel
+    tag: development
+  Development:
+    section: devel
+    tag: development
+  Tools:
+    section: utils
+    tag: utilities
+  Utilities:
+    section: utils
+    tag: utilities
 
   # Networking and communication
-  Network: net
-  Networking: net
-  Communication: comm
-  Chat: comm
-  Mail: mail
-  VPN: net
+  Network:
+    section: net
+    tag: networking
+  Networking:
+    section: net
+    tag: networking
+  Communication:
+    section: comm
+    tag: communication
+  Chat:
+    section: comm
+    tag: communication
+  Mail:
+    section: mail
+    tag: communication
+  VPN:
+    section: net
+    tag: networking
 
   # System and administration
-  System: admin
-  Administration: admin
-  Monitoring: admin
-  Backup: admin
-  Security: admin
+  System:
+    section: admin
+    tag: system-tools
+  Administration:
+    section: admin
+    tag: system-tools
+  Monitoring:
+    section: admin
+    tag: monitoring
+  Backup:
+    section: admin
+    tag: backup
+  Security:
+    section: admin
+    tag: security
 
   # Home automation and IoT
-  "Home Automation": misc
-  IoT: misc
-  "Smart Home": misc
+  "Home Automation":
+    section: misc
+    tag: home-automation
+  IoT:
+    section: misc
+    tag: home-automation
+  "Smart Home":
+    section: misc
+    tag: home-automation
 
   # Gaming
-  Games: games
-  Gaming: games
+  Games:
+    section: games
+    tag: games
+  Gaming:
+    section: games
+    tag: games
 
   # Education and learning
-  Education: education
-  Learning: education
+  Education:
+    section: education
+    tag: education
+  Learning:
+    section: education
+    tag: education
 
   # Database
-  Database: database
-  Databases: database
+  Database:
+    section: database
+    tag: database
+  Databases:
+    section: database
+    tag: database
 
   # Web services
-  Web: web
-  HTTP: httpd
-  Webserver: httpd
+  Web:
+    section: web
+    tag: web-services
+  HTTP:
+    section: httpd
+    tag: web-services
+  Webserver:
+    section: httpd
+    tag: web-services
 
   # Finance
-  Finance: misc
-  Financial: misc
+  Finance:
+    section: misc
+    tag: finance
+  Financial:
+    section: misc
+    tag: finance
 
   # Social
-  Social: net
-  "Social Media": net
+  Social:
+    section: net
+    tag: social
+  "Social Media":
+    section: net
+    tag: social
 
   # Download managers
-  Download: net
-  Downloads: net
-  Torrent: net
+  Download:
+    section: net
+    tag: download-managers
+  Downloads:
+    section: net
+    tag: download-managers
+  Torrent:
+    section: net
+    tag: download-managers
 
 # Default category for unmapped CasaOS categories
 # Used when a CasaOS category doesn't have an explicit mapping
@@ -97,3 +194,4 @@ default: misc
 # - Some CasaOS categories map to the same Debian section (e.g., Entertainment and Media → video)
 # - Marine-specific apps should be manually reviewed and may need custom handling
 # - When adding new mappings, ensure the Debian section exists in schemas/metadata.py
+# - The 'tag' field generates category::<tag> debtags for dashboard/store categorization

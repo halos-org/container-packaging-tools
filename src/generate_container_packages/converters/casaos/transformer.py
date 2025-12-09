@@ -285,6 +285,13 @@ class MetadataTransformer:
         if version:
             metadata["version"] = version
 
+        # Generate category:: tag from CasaOS category
+        category_tag = self._get_category_tag(casaos_app.category)
+        if category_tag:
+            metadata["tags"] = [category_tag]
+        else:
+            metadata["tags"] = []
+
         # Build config dictionary
         config = {"version": "1.0", "groups": config_groups}
 
@@ -306,7 +313,42 @@ class MetadataTransformer:
             return self._category_data.get("default", "misc")
 
         mappings = self._category_data.get("mappings", {})
-        return mappings.get(casaos_category, self._category_data.get("default", "misc"))
+        mapping = mappings.get(casaos_category)
+
+        if mapping is None:
+            return self._category_data.get("default", "misc")
+
+        # Handle both old format (string) and new format (dict with section/tag)
+        if isinstance(mapping, str):
+            return mapping
+        return mapping.get("section", self._category_data.get("default", "misc"))
+
+    def _get_category_tag(self, casaos_category: str) -> str | None:
+        """Get category:: tag for CasaOS category.
+
+        Args:
+            casaos_category: CasaOS category name
+
+        Returns:
+            Category tag in format "category::<tag>" or None if not mapped
+        """
+        if not casaos_category:
+            return None
+
+        mappings = self._category_data.get("mappings", {})
+        mapping = mappings.get(casaos_category)
+
+        if mapping is None:
+            return None
+
+        # Handle both old format (string, no tag) and new format (dict with section/tag)
+        if isinstance(mapping, str):
+            return None
+
+        tag = mapping.get("tag")
+        if tag:
+            return f"category::{tag}"
+        return None
 
     def _create_synopsis(self, text: str, max_length: int = 80) -> str:
         """Create a short synopsis from a longer description.
