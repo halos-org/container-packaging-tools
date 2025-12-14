@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml
 
-from generate_container_packages.naming import compute_package_name, derive_app_id
+from generate_container_packages.naming import derive_app_id
 from generate_container_packages.utils import compute_file_hash
 
 from .models import CasaOSApp, CasaOSEnvVar, ConversionContext
@@ -137,8 +137,8 @@ class MetadataTransformer:
             - Caller must validate config dict with ConfigSchema.model_validate()
             - Caller should add missing required fields (maintainer, license, etc.)
         """
-        # Generate package name
-        package_name = self._generate_package_name(casaos_app.name)
+        # Generate app_id from CasaOS app name
+        app_id = derive_app_id(casaos_app.name)
 
         # Map category
         debian_section = self._map_category(casaos_app.category)
@@ -271,7 +271,7 @@ class MetadataTransformer:
         # Build metadata dictionary
         metadata = {
             "name": casaos_app.name,
-            "package_name": package_name,
+            "app_id": app_id,
             "description": description,
             "long_description": long_description,
             "debian_section": debian_section,
@@ -678,22 +678,6 @@ class MetadataTransformer:
             return f"${{CONTAINER_DATA_ROOT}}{path}"
 
         return path
-
-    def _generate_package_name(self, app_name: str) -> str:
-        """Generate package name using the configured prefix.
-
-        Args:
-            app_name: CasaOS application name
-
-        Returns:
-            Debian-compatible package name: {prefix}-{app}-container
-
-        Raises:
-            ValueError: If generated package name would be invalid
-        """
-        # Use naming module to derive app_id and compute package name
-        app_id = derive_app_id(app_name)
-        return compute_package_name(app_id, prefix=self.prefix)
 
     def _build_clean_compose(self, casaos_app: CasaOSApp) -> dict[str, Any]:
         """Build docker-compose dictionary with x-casaos metadata removed.

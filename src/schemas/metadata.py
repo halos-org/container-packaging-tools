@@ -52,15 +52,14 @@ class PackageMetadata(BaseModel):
     enforces Debian packaging conventions.
 
     Note: package_name is computed at build time from app_id and prefix.
-    The app_id field is optional and defaults to the directory name.
     """
 
     # Required identity fields
     name: str = Field(min_length=1, description="Human-readable application name")
-    app_id: str | None = Field(
-        None,
+    app_id: str = Field(
+        min_length=1,
         pattern=r"^[a-z0-9][a-z0-9-]*$",
-        description="Base application identifier (defaults to directory name)",
+        description="Base application identifier (lowercase alphanumeric and hyphens)",
     )
     version: str = Field(
         min_length=1,

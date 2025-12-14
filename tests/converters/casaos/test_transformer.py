@@ -148,7 +148,9 @@ class TestCategoryTagMapping:
 
     def test_entertainment_category_tag(self, transformer: MetadataTransformer) -> None:
         """Test Entertainment category generates category::entertainment tag."""
-        assert transformer._get_category_tag("Entertainment") == "category::entertainment"
+        assert (
+            transformer._get_category_tag("Entertainment") == "category::entertainment"
+        )
 
     def test_media_category_tag(self, transformer: MetadataTransformer) -> None:
         """Test Media category generates category::media tag."""
@@ -625,71 +627,6 @@ class TestPathTransformation:
         assert result == "${CONTAINER_DATA_ROOT}/AppData/MyApp/config"
 
 
-class TestPackageNaming:
-    """Test package naming with casaos- prefix."""
-
-    def test_simple_name_lowercase(self, transformer: MetadataTransformer) -> None:
-        """Test simple app name is lowercased."""
-        result = transformer._generate_package_name("Nginx")
-        assert result == "casaos-nginx-container"
-
-    def test_name_with_spaces(self, transformer: MetadataTransformer) -> None:
-        """Test spaces are replaced with hyphens."""
-        result = transformer._generate_package_name("Signal K")
-        assert result == "casaos-signal-k-container"
-
-    def test_name_with_multiple_spaces(self, transformer: MetadataTransformer) -> None:
-        """Test multiple spaces are collapsed to single hyphen."""
-        result = transformer._generate_package_name("My  Cool  App")
-        assert result == "casaos-my-cool-app-container"
-
-    def test_name_with_special_chars(self, transformer: MetadataTransformer) -> None:
-        """Test special characters are replaced with hyphens."""
-        result = transformer._generate_package_name("App@Home!")
-        assert result == "casaos-app-home-container"
-
-    def test_name_with_underscores(self, transformer: MetadataTransformer) -> None:
-        """Test underscores are preserved."""
-        result = transformer._generate_package_name("my_app")
-        assert result == "casaos-my-app-container"
-
-    def test_name_with_dots(self, transformer: MetadataTransformer) -> None:
-        """Test dots are replaced with hyphens."""
-        result = transformer._generate_package_name("app.service")
-        assert result == "casaos-app-service-container"
-
-    def test_name_with_leading_hyphen(self, transformer: MetadataTransformer) -> None:
-        """Test leading hyphens are removed."""
-        result = transformer._generate_package_name("-app")
-        assert result == "casaos-app-container"
-
-    def test_name_with_trailing_hyphen(self, transformer: MetadataTransformer) -> None:
-        """Test trailing hyphens are removed."""
-        result = transformer._generate_package_name("app-")
-        assert result == "casaos-app-container"
-
-    def test_name_with_consecutive_hyphens(
-        self, transformer: MetadataTransformer
-    ) -> None:
-        """Test consecutive hyphens are collapsed."""
-        result = transformer._generate_package_name("my--app")
-        assert result == "casaos-my-app-container"
-
-    def test_casaos_prefix_always_present(
-        self, transformer: MetadataTransformer
-    ) -> None:
-        """Test casaos- prefix is always added."""
-        result = transformer._generate_package_name("test")
-        assert result.startswith("casaos-")
-
-    def test_container_suffix_always_present(
-        self, transformer: MetadataTransformer
-    ) -> None:
-        """Test -container suffix is always added."""
-        result = transformer._generate_package_name("test")
-        assert result.endswith("-container")
-
-
 class TestTransformerIntegration:
     """Integration tests for full transformation."""
 
@@ -710,7 +647,7 @@ class TestTransformerIntegration:
         # Check metadata basics
         metadata = result["metadata"]
         assert metadata["name"] == "Nginx Test"
-        assert metadata["package_name"] == "casaos-nginx-test-container"
+        assert metadata["app_id"] == "nginx-test"
         assert metadata["debian_section"] == "utils"  # Utilities → utils
         assert (
             metadata["description"] == "Web server"

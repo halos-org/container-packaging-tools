@@ -39,7 +39,7 @@ class TestPipelineValidation:
 
     def test_validate_invalid_fixture_raises(self):
         """Test that invalid fixtures return validation errors."""
-        fixture_dir = Path("tests/fixtures/invalid/bad-package-name")
+        fixture_dir = Path("tests/fixtures/invalid/bad-app-id")
         assert fixture_dir.exists()
 
         result = validate_input_directory(fixture_dir)
@@ -64,8 +64,8 @@ class TestPipelineLoading:
         assert app_def.metadata is not None
         assert app_def.compose is not None
         assert app_def.config is not None
-        # Package name is computed from directory name (simple-app) at build time
-        assert app_def.metadata["package_name"] == "simple-app-container"
+        # Package name is computed from app_id at build time
+        assert app_def.metadata["package_name"] == "simple-test-app-container"
 
     def test_load_full_app(self):
         """Test loading full-app fixture."""
@@ -112,12 +112,12 @@ class TestPipelineRendering:
         assert (debian_dir / "compat").exists()
 
         # Verify systemd service (rendered directly to debian/)
-        # Service file name is computed from directory name (simple-app)
-        service_file = debian_dir / "simple-app-container.service"
+        # Service file name is computed from app_id
+        service_file = debian_dir / "simple-test-app-container.service"
         assert service_file.exists()
 
         # Verify AppStream metadata (rendered directly to debian/)
-        appstream_file = debian_dir / "simple-app-container.metainfo.xml"
+        appstream_file = debian_dir / "simple-test-app-container.metainfo.xml"
         assert appstream_file.exists()
 
     def test_render_full_app(self, tmp_path):
@@ -267,7 +267,7 @@ class TestEndToEndPipeline:
 
     def test_invalid_input_fails_validation(self):
         """Test that invalid input fails at validation stage."""
-        fixture_dir = Path("tests/fixtures/invalid/bad-package-name")
+        fixture_dir = Path("tests/fixtures/invalid/bad-app-id")
 
         result = validate_input_directory(fixture_dir)
         assert not result.success

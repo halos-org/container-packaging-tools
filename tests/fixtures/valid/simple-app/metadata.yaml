@@ -1,6 +1,6 @@
 # Simple App - Minimal valid container app definition
 name: Simple Test App
-# app_id is optional - derived from directory name if not specified
+app_id: simple-test-app
 version: 1.0.0
 upstream_version: 1.0.0
 description: A simple test application for validation

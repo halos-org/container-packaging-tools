@@ -64,7 +64,7 @@ class TestValidateInputDirectory:
 
     def test_invalid_app_id(self):
         """Test validation with invalid app_id (uppercase)."""
-        result = validate_input_directory(INVALID_FIXTURES / "bad-package-name")
+        result = validate_input_directory(INVALID_FIXTURES / "bad-app-id")
 
         assert result.success is False
         assert len(result.errors) > 0
@@ -104,7 +104,7 @@ class TestValidateMetadata:
         metadata = validate_metadata(VALID_FIXTURES / "simple-app" / "metadata.yaml")
 
         assert metadata.name == "Simple Test App"
-        assert metadata.app_id is None  # Optional, derived from directory at build time
+        assert metadata.app_id == "simple-test-app"
         assert metadata.version == "1.0.0"
 
     def test_metadata_with_optional_fields(self):

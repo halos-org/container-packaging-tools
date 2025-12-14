@@ -10,7 +10,6 @@ import yaml
 from generate_container_packages import __version__
 from generate_container_packages.naming import (
     compute_package_name,
-    derive_app_id,
     expand_dependencies,
 )
 
@@ -83,18 +82,13 @@ def load_input_files(directory: Path, prefix: str | None = None) -> AppDefinitio
     compose = load_yaml(directory / "docker-compose.yml")
     config = load_yaml(directory / "config.yml")
 
-    # Warn if deprecated package_name field is present
+    # Reject deprecated package_name field
     if "package_name" in metadata:
-        logger.warning(
-            "metadata.yaml contains deprecated 'package_name' field. "
-            "This field is now computed automatically and will be ignored. "
-            "Use 'app_id' instead if you need to override the base identifier."
+        raise ValueError(
+            "metadata.yaml contains invalid 'package_name' field. "
+            "This field has been removed from the schema. "
+            "Use 'app_id' to specify the base application identifier."
         )
-        del metadata["package_name"]
-
-    # Derive app_id from directory name if not specified in metadata
-    if not metadata.get("app_id"):
-        metadata["app_id"] = derive_app_id(directory.name)
 
     # Compute package_name from app_id and prefix
     metadata["package_name"] = compute_package_name(

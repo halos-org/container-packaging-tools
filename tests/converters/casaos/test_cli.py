@@ -784,7 +784,7 @@ class TestConvertCasaOSIntegration:
 
         # Basic structure checks
         assert "name" in metadata
-        assert "package_name" in metadata
+        assert "app_id" in metadata
         assert "version" in config
         assert "services" in compose
 

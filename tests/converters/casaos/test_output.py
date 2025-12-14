@@ -46,7 +46,7 @@ class TestWritePackage:
         """Valid metadata dictionary."""
         return {
             "name": "Test App",
-            "package_name": "test-app-container",
+            "app_id": "test-app",
             "version": "1.0.0",
             "description": "Test application",
             "long_description": "A test application for unit testing",
@@ -218,7 +218,7 @@ class TestWritePackage:
             metadata_yaml = yaml.safe_load(f)
 
         assert metadata_yaml["name"] == "Test App"
-        assert metadata_yaml["package_name"] == "test-app-container"
+        assert metadata_yaml["app_id"] == "test-app"
         assert metadata_yaml["version"] == "1.0.0"
         assert metadata_yaml["maintainer"] == "Test Developer <test@example.com>"
         assert metadata_yaml["license"] == "MIT"
@@ -405,7 +405,7 @@ class TestYAMLFormatting:
 
         metadata = {
             "name": "Test App",
-            "package_name": "test-app-container",
+            "app_id": "test-app",
             "version": "1.0.0",
             "description": "Short description",
             "long_description": "This is a very long description\nthat spans multiple lines\nand should be formatted nicely",
@@ -456,7 +456,7 @@ class TestYAMLFormatting:
 
         metadata = {
             "name": "Test App",
-            "package_name": "test-app-container",
+            "app_id": "test-app",
             "version": "1.0.0",
             "description": "Test",
             "maintainer": "Test Developer <test@example.com>",

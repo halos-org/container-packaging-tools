@@ -64,13 +64,13 @@ Missing the required `metadata.yaml` file.
 - `config.yml` ✓
 - `metadata.yaml` ✗ (intentionally missing)
 
-### bad-package-name
+### bad-app-id
 
-Package name doesn't end with `-container` suffix.
+Invalid app_id with uppercase characters.
 
-**Expected Error:** Package name must end with `-container`
+**Expected Error:** app_id must match pattern `^[a-z0-9][a-z0-9-]*$`
 
-**Violation:** `package_name: bad-package-name` (should be `bad-package-name-container`)
+**Violation:** `app_id: Bad-App-Id` (uppercase not allowed)
 
 ### missing-tag
 

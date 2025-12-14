@@ -63,6 +63,7 @@ class TestPackageMetadata:
         """Minimal valid metadata."""
         return {
             "name": "Test App",
+            "app_id": "test-app",
             "version": "1.0.0",
             "description": "A test application",
             "maintainer": "Test Developer <test@example.com>",
@@ -76,7 +77,7 @@ class TestPackageMetadata:
         """Test minimal valid metadata passes validation."""
         metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
         assert metadata.name == "Test App"
-        assert metadata.app_id is None  # Defaults to None, derived at build time
+        assert metadata.app_id == "test-app"
         assert metadata.version == "1.0.0"
         assert metadata.description == "A test application"
 
@@ -114,11 +115,12 @@ class TestPackageMetadata:
             PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
         assert "name" in str(exc_info.value).lower()
 
-    def test_valid_app_id(self, valid_metadata):
-        """Test valid app_id passes validation."""
-        valid_metadata["app_id"] = "test-app"
-        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
-        assert metadata.app_id == "test-app"
+    def test_missing_app_id(self, valid_metadata):
+        """Test missing app_id raises ValidationError."""
+        del valid_metadata["app_id"]
+        with pytest.raises(ValidationError) as exc_info:
+            PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert "app_id" in str(exc_info.value).lower()
 
     def test_invalid_app_id_pattern(self, valid_metadata):
         """Test invalid app_id pattern raises ValidationError."""

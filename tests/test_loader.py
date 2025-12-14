@@ -269,38 +269,38 @@ class TestPrefixSupport:
     """Tests for prefix support in loader."""
 
     def test_package_name_computed_without_prefix(self):
-        """Test package name is computed from directory name without prefix."""
+        """Test package name is computed from app_id without prefix."""
         app_def = load_input_files(VALID_FIXTURES / "simple-app")
 
-        # app_id should be derived from directory name
-        assert app_def.metadata["app_id"] == "simple-app"
+        # app_id is read from metadata
+        assert app_def.metadata["app_id"] == "simple-test-app"
         # package_name should be computed without prefix
-        assert app_def.metadata["package_name"] == "simple-app-container"
+        assert app_def.metadata["package_name"] == "simple-test-app-container"
 
     def test_package_name_computed_with_prefix(self):
         """Test package name is computed with prefix."""
         app_def = load_input_files(VALID_FIXTURES / "simple-app", prefix="marine")
 
-        assert app_def.metadata["app_id"] == "simple-app"
-        assert app_def.metadata["package_name"] == "marine-simple-app-container"
+        assert app_def.metadata["app_id"] == "simple-test-app"
+        assert app_def.metadata["package_name"] == "marine-simple-test-app-container"
 
     def test_package_name_with_different_prefixes(self):
         """Test package names with various prefixes."""
         # Test with marine prefix
         app_def = load_input_files(VALID_FIXTURES / "simple-app", prefix="marine")
-        assert app_def.metadata["package_name"] == "marine-simple-app-container"
+        assert app_def.metadata["package_name"] == "marine-simple-test-app-container"
 
         # Test with halos prefix
         app_def = load_input_files(VALID_FIXTURES / "simple-app", prefix="halos")
-        assert app_def.metadata["package_name"] == "halos-simple-app-container"
+        assert app_def.metadata["package_name"] == "halos-simple-test-app-container"
 
         # Test with casaos prefix
         app_def = load_input_files(VALID_FIXTURES / "simple-app", prefix="casaos")
-        assert app_def.metadata["package_name"] == "casaos-simple-app-container"
+        assert app_def.metadata["package_name"] == "casaos-simple-test-app-container"
 
-    def test_app_id_derived_from_directory(self):
-        """Test app_id is derived from directory name when not specified."""
+    def test_app_id_read_from_metadata(self):
+        """Test app_id is read from metadata.yaml."""
         app_def = load_input_files(VALID_FIXTURES / "full-app")
 
-        # app_id should be derived from directory name
-        assert app_def.metadata["app_id"] == "full-app"
+        # app_id is read from metadata
+        assert app_def.metadata["app_id"] == "full-featured-test-app"
