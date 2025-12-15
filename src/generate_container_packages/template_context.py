@@ -322,6 +322,7 @@ def _is_bindable_path(path: str) -> bool:
     3. Must not reference system paths (/dev, /sys, /proc, /run, /var/run, /tmp)
     4. Must not contain path traversal attempts (..)
     5. Environment variables must be from an allowed list for security
+    6. Must not look like a file path (ending with common config file extensions)
 
     Args:
         path: Volume source path (may contain env vars like ${CONTAINER_DATA_ROOT})
@@ -340,6 +341,8 @@ def _is_bindable_path(path: str) -> bool:
         False
         >>> _is_bindable_path("../etc/passwd")
         False
+        >>> _is_bindable_path("${CONTAINER_DATA_ROOT}/nginx.conf")
+        False
     """
     # Skip named volumes (no slashes means it's a named volume)
     if "/" not in path:
@@ -348,6 +351,39 @@ def _is_bindable_path(path: str) -> bool:
     # Prevent path traversal attacks
     if ".." in path:
         return False
+
+    # Skip file paths - these should not have directories created
+    # Common config file extensions that indicate a file mount, not a directory
+    file_extensions = (
+        ".conf",
+        ".config",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".xml",
+        ".txt",
+        ".ini",
+        ".properties",
+        ".toml",
+        ".env",
+        ".cfg",
+        ".sock",
+        ".socket",
+        ".pid",
+        ".log",
+    )
+    # Check if path ends with a file extension (case-insensitive)
+    # Extract the basename (last path component) to check for extensions
+    basename = path.rsplit("/", 1)[-1].lower()
+    for ext in file_extensions:
+        # Only match if there's a non-dot character before the extension
+        # This allows hidden directories like ".config" but blocks files like "nginx.conf"
+        if (
+            basename.endswith(ext)
+            and len(basename) > len(ext)
+            and basename[-len(ext) - 1] != "."
+        ):
+            return False
 
     # Skip system paths that should never be created
     # Note: /var/run is a symlink to /run on systemd systems

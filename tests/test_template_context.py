@@ -291,6 +291,44 @@ class TestIsBindablePath:
         assert not _is_bindable_path("./data")
         assert not _is_bindable_path("config/files")
 
+    def test_rejects_file_paths(self):
+        """Test that paths ending with file extensions are rejected."""
+        # Config file extensions
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/nginx.conf")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/settings.json")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/config.yaml")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/config.yml")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/settings.xml")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/app.toml")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/settings.ini")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/config.cfg")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/vars.env")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/readme.txt")
+        # Socket and system files
+        assert not _is_bindable_path("/var/lib/app/app.sock")
+        assert not _is_bindable_path("/var/lib/app/app.socket")
+        assert not _is_bindable_path("/var/lib/app/app.pid")
+        assert not _is_bindable_path("/var/lib/app/app.log")
+        # Case insensitive
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/Config.JSON")
+        assert not _is_bindable_path("${CONTAINER_DATA_ROOT}/settings.YAML")
+
+    def test_accepts_directory_paths(self):
+        """Test that directory-like paths are still accepted."""
+        # Paths without file extensions
+        assert _is_bindable_path("${CONTAINER_DATA_ROOT}/config")
+        assert _is_bindable_path("${CONTAINER_DATA_ROOT}/data")
+        assert _is_bindable_path("${CONTAINER_DATA_ROOT}/logs")
+        assert _is_bindable_path("/opt/myapp/storage")
+
+    def test_accepts_hidden_directories(self):
+        """Test that hidden directories (starting with .) are accepted."""
+        # Hidden directories should be allowed, not mistaken for file extensions
+        assert _is_bindable_path("${HOME}/.config")
+        assert _is_bindable_path("${HOME}/.local")
+        assert _is_bindable_path("${HOME}/.cache")
+        assert _is_bindable_path("/opt/app/.data")
+
 
 class TestExtractVolumeDirectories:
     """Tests for _extract_volume_directories function."""
