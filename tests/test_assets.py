@@ -26,12 +26,31 @@ class TestAssetsLoading:
         """Test that asset files are enumerated correctly."""
         app_def = load_input_files(VALID_FIXTURES / "app-with-assets")
 
-        assert len(app_def.asset_files) == 3
+        assert len(app_def.asset_files) == 4
         # Convert to strings for easier comparison
-        asset_names = [str(f) for f in app_def.asset_files]
+        asset_names = [str(f.path) for f in app_def.asset_files]
         assert "nginx.conf" in asset_names
         assert "templates/index.html" in asset_names
         assert "templates/error.html" in asset_names
+        assert "bin/setup.sh" in asset_names
+
+    def test_executable_files_detected(self):
+        """Test that executable files are detected correctly."""
+        app_def = load_input_files(VALID_FIXTURES / "app-with-assets")
+
+        # Find the setup.sh asset
+        setup_asset = next(
+            (f for f in app_def.asset_files if str(f.path) == "bin/setup.sh"), None
+        )
+        assert setup_asset is not None
+        assert setup_asset.executable is True
+
+        # Non-executable files should have executable=False
+        nginx_asset = next(
+            (f for f in app_def.asset_files if str(f.path) == "nginx.conf"), None
+        )
+        assert nginx_asset is not None
+        assert nginx_asset.executable is False
 
     def test_load_app_without_assets(self):
         """Test loading an app without assets directory."""
@@ -44,7 +63,7 @@ class TestAssetsLoading:
         """Test that asset files are sorted for deterministic output."""
         app_def = load_input_files(VALID_FIXTURES / "app-with-assets")
 
-        asset_names = [str(f) for f in app_def.asset_files]
+        asset_names = [str(f.path) for f in app_def.asset_files]
         assert asset_names == sorted(asset_names)
 
 
@@ -67,6 +86,7 @@ class TestAssetsCopying:
         assert (assets_dir / "nginx.conf").exists()
         assert (assets_dir / "templates" / "index.html").exists()
         assert (assets_dir / "templates" / "error.html").exists()
+        assert (assets_dir / "bin" / "setup.sh").exists()
 
     def test_copy_assets_preserves_content(self, tmp_path):
         """Test that asset file content is preserved."""
@@ -128,9 +148,33 @@ class TestAssetsTemplateContext:
         context = build_context(app_def)
 
         assert "asset_files" in context
-        assert len(context["asset_files"]) == 3
-        assert "nginx.conf" in context["asset_files"]
-        assert "templates/index.html" in context["asset_files"]
+        assert len(context["asset_files"]) == 4
+        # Asset files should be dicts with path and executable keys
+        paths = [a["path"] for a in context["asset_files"]]
+        assert "nginx.conf" in paths
+        assert "templates/index.html" in paths
+        assert "bin/setup.sh" in paths
+
+    def test_executable_flag_in_context(self):
+        """Test that executable flag is passed to context."""
+        from generate_container_packages.template_context import build_context
+
+        app_def = load_input_files(VALID_FIXTURES / "app-with-assets")
+        context = build_context(app_def)
+
+        # Find the setup.sh asset in context
+        setup_asset = next(
+            (a for a in context["asset_files"] if a["path"] == "bin/setup.sh"), None
+        )
+        assert setup_asset is not None
+        assert setup_asset["executable"] is True
+
+        # Non-executable file
+        nginx_asset = next(
+            (a for a in context["asset_files"] if a["path"] == "nginx.conf"), None
+        )
+        assert nginx_asset is not None
+        assert nginx_asset["executable"] is False
 
     def test_empty_asset_files_when_no_assets(self):
         """Test asset_files is empty when no assets."""
@@ -165,6 +209,28 @@ class TestAssetsIntegration:
         assert "assets/nginx.conf" in content
         assert "assets/templates/index.html" in content
         assert "assets/templates/error.html" in content
+        assert "assets/bin/setup.sh" in content
+
+    @pytest.mark.integration
+    def test_executable_assets_have_755_permissions(self, tmp_path):
+        """Test that executable assets are installed with 755 permissions."""
+        from generate_container_packages.loader import load_input_files
+        from generate_container_packages.renderer import render_all_templates
+
+        app_def = load_input_files(VALID_FIXTURES / "app-with-assets")
+        output_dir = tmp_path / "rendered"
+
+        render_all_templates(app_def, output_dir)
+
+        rules_file = output_dir / "debian" / "rules"
+        content = rules_file.read_text()
+
+        # Executable file (bin/setup.sh) should have 755 permissions
+        assert "install -D -m 755 assets/bin/setup.sh" in content
+
+        # Non-executable files should have 644 permissions
+        assert "install -D -m 644 assets/nginx.conf" in content
+        assert "install -D -m 644 assets/templates/index.html" in content
 
     @pytest.mark.integration
     def test_no_assets_section_when_no_assets(self, tmp_path):

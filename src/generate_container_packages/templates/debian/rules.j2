@@ -28,10 +28,10 @@ override_dh_auto_install:
 {% endif %}
 
 {% if has_assets %}
-	# Install assets
+	# Install assets (755 for executables, 644 for regular files)
 {% for asset in asset_files %}
-	install -D -m 644 assets/{{ asset }} \
-		debian/{{ package.name }}/{{ paths.lib }}/{{ asset }}
+	install -D -m {{ '755' if asset.executable else '644' }} assets/{{ asset.path }} \
+		debian/{{ package.name }}/{{ paths.lib }}/{{ asset.path }}
 {% endfor %}
 {% endif %}
 

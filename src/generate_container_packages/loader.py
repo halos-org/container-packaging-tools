@@ -1,6 +1,8 @@
 """File loading and data model construction."""
 
 import logging
+import stat
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -14,6 +16,23 @@ from generate_container_packages.naming import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AssetFile:
+    """Represents an asset file with its path and permissions.
+
+    Attributes:
+        path: Relative path from assets directory
+        executable: Whether the file should be installed with executable permissions
+    """
+
+    path: Path
+    executable: bool = False
+
+    def __str__(self) -> str:
+        """Return string representation of the path."""
+        return str(self.path)
 
 
 class AppDefinition:
@@ -32,7 +51,7 @@ class AppDefinition:
         icon_path: Path | None = None,
         screenshot_paths: list[Path] | None = None,
         assets_dir: Path | None = None,
-        asset_files: list[Path] | None = None,
+        asset_files: list[AssetFile] | None = None,
     ):
         """Initialize AppDefinition.
 
@@ -44,7 +63,7 @@ class AppDefinition:
             icon_path: Path to icon file (if exists)
             screenshot_paths: List of paths to screenshot files
             assets_dir: Path to assets directory (if exists)
-            asset_files: List of asset file paths relative to assets_dir
+            asset_files: List of AssetFile objects with path and permissions info
         """
         self.metadata = metadata
         self.compose = compose
@@ -127,12 +146,20 @@ def load_input_files(directory: Path, prefix: str | None = None) -> AppDefinitio
 
     # Find optional assets directory
     assets_dir = directory / "assets"
-    asset_files: list[Path] = []
+    asset_files: list[AssetFile] = []
     if assets_dir.is_dir():
         # Enumerate all files in assets directory (recursively)
-        asset_files = sorted(
-            f.relative_to(assets_dir) for f in assets_dir.rglob("*") if f.is_file()
-        )
+        # Check if each file is executable and create AssetFile objects
+        for f in sorted(assets_dir.rglob("*")):
+            if f.is_file():
+                relative_path = f.relative_to(assets_dir)
+                # Check if file has executable permission (any of user/group/other)
+                is_executable = bool(
+                    f.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+                )
+                asset_files.append(
+                    AssetFile(path=relative_path, executable=is_executable)
+                )
     else:
         assets_dir = None
 

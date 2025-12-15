@@ -201,7 +201,10 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         "has_screenshots": len(app_def.screenshot_paths) > 0,
         "screenshot_count": len(app_def.screenshot_paths),
         "has_assets": len(app_def.asset_files) > 0,
-        "asset_files": [str(f) for f in app_def.asset_files],
+        "asset_files": [
+            {"path": str(f.path), "executable": f.executable}
+            for f in app_def.asset_files
+        ],
     }
 
     return context
