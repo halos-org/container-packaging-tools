@@ -200,6 +200,11 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         "icon_extension": _get_icon_extension(app_def.icon_path),
         "has_screenshots": len(app_def.screenshot_paths) > 0,
         "screenshot_count": len(app_def.screenshot_paths),
+        "has_assets": len(app_def.asset_files) > 0,
+        "asset_files": [
+            {"path": str(f.path), "executable": f.executable}
+            for f in app_def.asset_files
+        ],
     }
 
     return context

@@ -1,0 +1,26 @@
+# App with assets - Test fixture for assets directory feature
+name: App With Assets
+app_id: app-with-assets
+version: 1.0.0
+upstream_version: 1.0.0
+description: A test application with static assets
+long_description: |
+  This test application includes static assets in an assets/ directory
+  that should be installed to the package's lib directory.
+homepage: https://example.com/app-with-assets
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - role::container-app
+  - implemented-in::docker
+debian_section: net
+architecture: all
+
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+default_config:
+  APP_PORT: "8080"

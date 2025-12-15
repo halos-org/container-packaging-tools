@@ -1,6 +1,8 @@
 """File loading and data model construction."""
 
 import logging
+import stat
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -14,6 +16,23 @@ from generate_container_packages.naming import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AssetFile:
+    """Represents an asset file with its path and permissions.
+
+    Attributes:
+        path: Relative path from assets directory
+        executable: Whether the file should be installed with executable permissions
+    """
+
+    path: Path
+    executable: bool = False
+
+    def __str__(self) -> str:
+        """Return string representation of the path."""
+        return str(self.path)
 
 
 class AppDefinition:
@@ -31,6 +50,8 @@ class AppDefinition:
         input_dir: Path,
         icon_path: Path | None = None,
         screenshot_paths: list[Path] | None = None,
+        assets_dir: Path | None = None,
+        asset_files: list[AssetFile] | None = None,
     ):
         """Initialize AppDefinition.
 
@@ -41,6 +62,8 @@ class AppDefinition:
             input_dir: Path to input directory
             icon_path: Path to icon file (if exists)
             screenshot_paths: List of paths to screenshot files
+            assets_dir: Path to assets directory (if exists)
+            asset_files: List of AssetFile objects with path and permissions info
         """
         self.metadata = metadata
         self.compose = compose
@@ -48,6 +71,8 @@ class AppDefinition:
         self.input_dir = input_dir
         self.icon_path = icon_path
         self.screenshot_paths = screenshot_paths or []
+        self.assets_dir = assets_dir
+        self.asset_files = asset_files or []
 
         # Computed fields
         now = datetime.now(UTC)
@@ -119,6 +144,25 @@ def load_input_files(directory: Path, prefix: str | None = None) -> AppDefinitio
     screenshot_patterns = ["screenshot*.png", "screenshot*.jpg"]
     screenshot_paths = find_optional_files(directory, screenshot_patterns)
 
+    # Find optional assets directory
+    assets_dir = directory / "assets"
+    asset_files: list[AssetFile] = []
+    if assets_dir.is_dir():
+        # Enumerate all files in assets directory (recursively)
+        # Check if each file is executable and create AssetFile objects
+        for f in sorted(assets_dir.rglob("*")):
+            if f.is_file():
+                relative_path = f.relative_to(assets_dir)
+                # Check if file has executable permission (any of user/group/other)
+                is_executable = bool(
+                    f.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+                )
+                asset_files.append(
+                    AssetFile(path=relative_path, executable=is_executable)
+                )
+    else:
+        assets_dir = None
+
     return AppDefinition(
         metadata=metadata,
         compose=compose,
@@ -126,6 +170,8 @@ def load_input_files(directory: Path, prefix: str | None = None) -> AppDefinitio
         input_dir=directory,
         icon_path=icon_path,
         screenshot_paths=screenshot_paths,
+        assets_dir=assets_dir,
+        asset_files=asset_files,
     )
 
 

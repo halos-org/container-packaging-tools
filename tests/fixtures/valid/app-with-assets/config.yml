@@ -1,0 +1,14 @@
+version: "1.0"
+groups:
+  - id: general
+    label: General Settings
+    description: Basic application configuration
+    fields:
+      - id: APP_PORT
+        label: Application Port
+        type: integer
+        default: 8080
+        required: true
+        min: 1024
+        max: 65535
+        description: Port on which the application will listen

@@ -151,6 +151,10 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
             dst = source_dir / screenshot_path.name
             shutil.copy2(screenshot_path, dst)
 
+    # Copy optional assets directory
+    if app_def.assets_dir and app_def.assets_dir.exists():
+        shutil.copytree(app_def.assets_dir, source_dir / "assets")
+
     # Generate env.template from default_config
     generate_env_template(app_def, source_dir)
 
