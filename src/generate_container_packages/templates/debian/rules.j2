@@ -35,6 +35,12 @@ override_dh_auto_install:
 {% endfor %}
 {% endif %}
 
+{% if has_web_ui %}
+	# Install app registry file for homarr-container-adapter
+	install -D -m 644 webapp-registry.toml \
+		debian/{{ package.name }}/etc/halos/webapps.d/{{ package.name }}.toml
+{% endif %}
+
 	# Install systemd service file
 	install -D -m 644 debian/{{ package.name }}.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service
