@@ -256,3 +256,74 @@ class TestRenderAllTemplates:
         metainfo_file = output_dir / "debian" / "web-app-container.metainfo.xml"
         content = metainfo_file.read_text()
         assert "8080" in content or "webapp" in content
+
+    def test_systemd_service_does_not_create_volume_directories(self, tmp_path):
+        """Test that systemd service file does not handle volume directories.
+
+        Volume directory creation and ownership is handled by postinst only.
+        The systemd service should not contain mkdir/chown for volumes -
+        if directories are missing, the service should fail fast rather than
+        silently recreating them.
+        """
+        metadata = {
+            "name": "Volume App",
+            "package_name": "volume-app-container",
+            "version": "1.0.0",
+            "description": "App with volumes",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "default_config": {"PUID": "1000", "PGID": "1000"},
+        }
+
+        compose = {
+            "services": {
+                "app": {
+                    "image": "test:latest",
+                    "user": "${PUID}:${PGID}",
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/config:/app/config",
+                        "${CONTAINER_DATA_ROOT}/data:/app/data",
+                    ],
+                }
+            }
+        }
+
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose=compose,
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
+
+        # Use the source templates directory
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
+        output_dir = tmp_path / "output"
+
+        render_all_templates(app_def, output_dir, template_dir)
+
+        # Read the generated systemd service file
+        service_file = output_dir / "debian" / "volume-app-container.service"
+        content = service_file.read_text()
+
+        # The service file should NOT contain any volume directory handling
+        assert "VolumeInfo(" not in content, "VolumeInfo repr leaked into template"
+        assert "CONTAINER_DATA_ROOT" not in content, (
+            "systemd service should not reference CONTAINER_DATA_ROOT - "
+            "volume directory creation belongs in postinst only"
+        )
+        assert "/bin/mkdir" not in content, (
+            "systemd service should not create directories - "
+            "this is handled by postinst"
+        )
+        assert "/bin/chown" not in content, (
+            "systemd service should not set ownership - this is handled by postinst"
+        )
