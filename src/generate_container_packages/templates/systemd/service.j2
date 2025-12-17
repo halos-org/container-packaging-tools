@@ -13,7 +13,7 @@ EnvironmentFile=-{{ service.runtime_env_file }}
 ExecStartPre=/bin/mkdir -p ${CONTAINER_DATA_ROOT}
 {# Auto-create bind mount directories to prevent "bind source path does not exist" errors #}
 {% for directory in service.volume_directories %}
-ExecStartPre=/bin/mkdir -p {{ directory }}
+ExecStartPre=/bin/mkdir -p {{ directory.path }}
 {% endfor %}
 ExecStart=docker compose up
 ExecStop=docker compose down

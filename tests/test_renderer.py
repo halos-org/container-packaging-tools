@@ -256,3 +256,74 @@ class TestRenderAllTemplates:
         metainfo_file = output_dir / "debian" / "web-app-container.metainfo.xml"
         content = metainfo_file.read_text()
         assert "8080" in content or "webapp" in content
+
+    def test_systemd_service_renders_volume_paths_correctly(self, tmp_path):
+        """Test that systemd service file uses volume paths, not VolumeInfo repr.
+
+        Regression test for bug where {{ directory }} was used instead of
+        {{ directory.path }}, causing mkdir commands like:
+        ExecStartPre=/bin/mkdir -p VolumeInfo(path='...')
+        """
+        metadata = {
+            "name": "Volume App",
+            "package_name": "volume-app-container",
+            "version": "1.0.0",
+            "description": "App with volumes",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "default_config": {"PUID": "1000", "PGID": "1000"},
+        }
+
+        compose = {
+            "services": {
+                "app": {
+                    "image": "test:latest",
+                    "user": "${PUID}:${PGID}",
+                    "volumes": [
+                        "${CONTAINER_DATA_ROOT}/config:/app/config",
+                        "${CONTAINER_DATA_ROOT}/data:/app/data",
+                    ],
+                }
+            }
+        }
+
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose=compose,
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
+
+        # Use the source templates directory (not the legacy root templates/)
+        # The src templates have volume_directories support
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
+        output_dir = tmp_path / "output"
+
+        render_all_templates(app_def, output_dir, template_dir)
+
+        # Read the generated systemd service file
+        service_file = output_dir / "debian" / "volume-app-container.service"
+        content = service_file.read_text()
+
+        # The service file should NOT contain VolumeInfo repr strings
+        assert "VolumeInfo(" not in content, (
+            "systemd service file contains VolumeInfo repr string - "
+            "template should use {{ directory.path }} not {{ directory }}"
+        )
+
+        # The service file SHOULD contain the actual paths
+        assert "${CONTAINER_DATA_ROOT}/config" in content
+        assert "${CONTAINER_DATA_ROOT}/data" in content
+
+        # Verify the mkdir commands use proper paths
+        assert "ExecStartPre=/bin/mkdir -p ${CONTAINER_DATA_ROOT}/config" in content
+        assert "ExecStartPre=/bin/mkdir -p ${CONTAINER_DATA_ROOT}/data" in content
