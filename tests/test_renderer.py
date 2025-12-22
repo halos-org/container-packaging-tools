@@ -18,8 +18,13 @@ class TestSetupJinjaEnvironment:
 
     def test_valid_template_directory(self):
         """Test setting up environment with valid template directory."""
-        # Use the actual templates directory from the project
-        template_dir = Path(__file__).parent.parent / "templates"
+        # Use the actual templates directory from the package
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
         env = setup_jinja_environment(template_dir)
 
         assert env is not None
@@ -93,7 +98,12 @@ class TestRenderAllTemplates:
         )
 
         # Use actual template directory
-        template_dir = Path(__file__).parent.parent / "templates"
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
         output_dir = tmp_path / "output"
 
         render_all_templates(app_def, output_dir, template_dir)
@@ -136,7 +146,12 @@ class TestRenderAllTemplates:
             icon_path=None,
         )
 
-        template_dir = Path(__file__).parent.parent / "templates"
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
         output_dir = tmp_path / "output"
 
         render_all_templates(app_def, output_dir, template_dir)
@@ -174,7 +189,12 @@ class TestRenderAllTemplates:
             icon_path=None,
         )
 
-        template_dir = Path(__file__).parent.parent / "templates"
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
         output_dir = tmp_path / "output"
 
         render_all_templates(app_def, output_dir, template_dir)
@@ -214,7 +234,12 @@ class TestRenderAllTemplates:
             icon_path=icon_path,
         )
 
-        template_dir = Path(__file__).parent.parent / "templates"
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
         output_dir = tmp_path / "output"
 
         render_all_templates(app_def, output_dir, template_dir)
@@ -247,7 +272,12 @@ class TestRenderAllTemplates:
             icon_path=None,
         )
 
-        template_dir = Path(__file__).parent.parent / "templates"
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
         output_dir = tmp_path / "output"
 
         render_all_templates(app_def, output_dir, template_dir)
