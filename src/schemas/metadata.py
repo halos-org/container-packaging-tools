@@ -17,6 +17,9 @@ class WebUI(BaseModel):
     protocol: Literal["http", "https"] | None = Field(
         None, description="Protocol used by web UI"
     )
+    visible: bool = Field(
+        False, description="Whether app appears on Homarr dashboards (default: false)"
+    )
 
 
 class SourceMetadata(BaseModel):

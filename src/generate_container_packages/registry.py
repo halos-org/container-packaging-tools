@@ -118,6 +118,10 @@ def generate_registry_toml(
 
     lines.append(f'category = "{category}"')
 
+    # Visibility for Homarr dashboard (default: false)
+    visible = web_ui.get("visible", False)
+    lines.append(f"visible = {str(visible).lower()}")
+
     lines.append("")
     lines.append("[type]")
     if container_name:
