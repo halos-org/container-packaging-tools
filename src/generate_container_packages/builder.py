@@ -12,6 +12,7 @@ from generate_container_packages.labels import generate_homarr_labels
 from generate_container_packages.loader import AppDefinition
 from generate_container_packages.prestart import generate_prestart_script
 from generate_container_packages.registry import generate_registry_toml
+from generate_container_packages.traefik import inject_traefik_labels
 
 
 class BuildError(Exception):
@@ -137,6 +138,12 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
     compose_with_labels = inject_homarr_labels(
         app_def.compose, app_def.metadata, app_def.icon_path
     )
+
+    # Inject Traefik labels and network
+    compose_with_labels = inject_traefik_labels(
+        compose_with_labels, app_def.metadata, app_def.compose
+    )
+
     # Fix boolean restart values that PyYAML parsed from "no"/"yes"
     compose_with_labels = _fix_restart_policy(compose_with_labels)
     compose_dst = source_dir / "docker-compose.yml"
