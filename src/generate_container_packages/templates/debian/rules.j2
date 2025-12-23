@@ -41,6 +41,12 @@ override_dh_auto_install:
 		debian/{{ package.name }}/etc/halos/webapps.d/{{ package.name }}.toml
 {% endif %}
 
+{% if is_oidc_app %}
+	# Install OIDC client snippet for Authelia
+	install -D -m 644 oidc-client.yml \
+		debian/{{ package.name }}/etc/halos/oidc-clients.d/{{ package.app_id }}.yml
+{% endif %}
+
 	# Install systemd service file
 	install -D -m 644 debian/{{ package.name }}.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service
