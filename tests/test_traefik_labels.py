@@ -3,6 +3,7 @@
 import pytest
 
 from generate_container_packages.traefik import (
+    _extract_container_port,
     generate_traefik_labels,
     inject_proxy_network,
 )
@@ -226,6 +227,89 @@ class TestGenerateTraefikLabels:
             labels["traefik.http.services.grafana.loadbalancer.server.port"] == "3000"
         )
         assert "traefik.http.services.grafana.loadbalancer.server.url" not in labels
+
+    def test_bridge_networking_uses_container_port_from_compose(self) -> None:
+        """Bridge networking uses container port from docker-compose, not web_ui.port."""
+        metadata = {
+            "app_id": "avnav",
+            "web_ui": {"enabled": True, "port": 8082},  # Host port (wrong for Traefik)
+            "traefik": {
+                "subdomain": "avnav",
+                "auth": "none",
+            },
+        }
+        # docker-compose: ports: ["${PORT:-3011}:8080"] -> container port is 8080
+        compose: dict = {"services": {"avnav": {"ports": ["${PORT:-3011}:8080"]}}}
+        labels = generate_traefik_labels(metadata, compose)
+
+        # Should use container port 8080, not web_ui.port 8082
+        assert labels["traefik.http.services.avnav.loadbalancer.server.port"] == "8080"
+
+    def test_bridge_networking_falls_back_to_web_ui_port(self) -> None:
+        """Bridge networking falls back to web_ui.port when no ports in compose."""
+        metadata = {
+            "app_id": "myapp",
+            "web_ui": {"enabled": True, "port": 9000},
+            "traefik": {
+                "subdomain": "myapp",
+                "auth": "forward_auth",
+            },
+        }
+        compose: dict = {"services": {"myapp": {}}}  # No ports defined
+        labels = generate_traefik_labels(metadata, compose)
+
+        # Should fall back to web_ui.port
+        assert labels["traefik.http.services.myapp.loadbalancer.server.port"] == "9000"
+
+
+class TestExtractContainerPort:
+    """Tests for _extract_container_port helper function."""
+
+    def test_simple_host_container_format(self) -> None:
+        """Extract container port from host:container format."""
+        compose = {"services": {"app": {"ports": ["3011:8080"]}}}
+        assert _extract_container_port(compose) == 8080
+
+    def test_env_var_host_container_format(self) -> None:
+        """Extract container port when host is env var."""
+        compose = {"services": {"app": {"ports": ["${PORT:-3011}:8080"]}}}
+        assert _extract_container_port(compose) == 8080
+
+    def test_container_port_only(self) -> None:
+        """Extract port when only container port specified."""
+        compose = {"services": {"app": {"ports": ["8080"]}}}
+        assert _extract_container_port(compose) == 8080
+
+    def test_with_protocol_suffix(self) -> None:
+        """Extract port with protocol suffix like /tcp."""
+        compose = {"services": {"app": {"ports": ["3011:8080/tcp"]}}}
+        assert _extract_container_port(compose) == 8080
+
+    def test_long_syntax_dict_format(self) -> None:
+        """Extract port from long syntax dict format."""
+        compose = {
+            "services": {
+                "app": {
+                    "ports": [{"target": 8080, "published": 3011, "protocol": "tcp"}]
+                }
+            }
+        }
+        assert _extract_container_port(compose) == 8080
+
+    def test_integer_port(self) -> None:
+        """Extract port when specified as integer."""
+        compose = {"services": {"app": {"ports": [8080]}}}
+        assert _extract_container_port(compose) == 8080
+
+    def test_no_ports_returns_none(self) -> None:
+        """Return None when no ports defined."""
+        compose = {"services": {"app": {}}}
+        assert _extract_container_port(compose) is None
+
+    def test_empty_ports_returns_none(self) -> None:
+        """Return None when ports list is empty."""
+        compose = {"services": {"app": {"ports": []}}}
+        assert _extract_container_port(compose) is None
 
 
 class TestInjectProxyNetwork:

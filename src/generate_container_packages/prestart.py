@@ -51,7 +51,7 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
     The prestart script:
     1. Creates the runtime env directory
     2. Loads existing env files to access config values
-    3. Computes runtime values (HOSTNAME, HOMARR_URL)
+    3. Computes runtime values (HOSTNAME, HALOS_DOMAIN, HOMARR_URL)
     4. Writes computed values to runtime.env
 
     Args:
@@ -63,6 +63,7 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
     metadata = app_def.metadata
     package_name = metadata.get("package_name", "unknown")
     web_ui = metadata.get("web_ui", {})
+    traefik = metadata.get("traefik", {})
     default_config = metadata.get("default_config", {})
 
     # Paths
@@ -91,6 +92,19 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
         'HOSTNAME="$(hostname -s)"',
         'echo "HOSTNAME=$HOSTNAME" > "$RUNTIME_ENV"',
     ]
+
+    # Add HALOS_DOMAIN for traefik-enabled apps
+    # (explicit traefik config or implicit from web_ui.enabled)
+    has_traefik = bool(traefik) or (web_ui and web_ui.get("enabled", False))
+    if has_traefik:
+        lines.extend(
+            [
+                "",
+                "# Set HALOS_DOMAIN for Traefik routing",
+                'HALOS_DOMAIN="${HOSTNAME}.local"',
+                'echo "HALOS_DOMAIN=$HALOS_DOMAIN" >> "$RUNTIME_ENV"',
+            ]
+        )
 
     # Add HOMARR_URL if web_ui is enabled
     homarr_url_expr = get_homarr_url_expression(web_ui, default_config)

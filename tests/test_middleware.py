@@ -156,5 +156,4 @@ class TestGenerateForwardAuthMiddleware:
 
         assert result is not None
         assert "# Per-app ForwardAuth middleware for grafana" in result
-        assert "# Installed to" in result
-        assert "grafana.yml" in result
+        assert "# Installed to /etc/halos/traefik-dynamic.d/grafana.yml" in result

@@ -57,8 +57,13 @@ def generate_traefik_labels(
                     "Add traefik.host_port to metadata.yaml or ensure web_ui.port is set."
                 )
     else:
-        # For bridge networking, get port from web_ui
-        port = web_ui.get("port", 80) if web_ui else 80
+        # For bridge networking, get container port from docker-compose
+        # Fall back to web_ui.port only if no ports defined in compose
+        container_port = _extract_container_port(compose)
+        if container_port is not None:
+            port = container_port
+        else:
+            port = web_ui.get("port", 80) if web_ui else 80
 
     # Build labels
     labels: dict[str, str] = {
@@ -128,6 +133,61 @@ def _detect_host_networking(compose: dict[str, Any]) -> bool:
             if service_config.get("network_mode") == "host":
                 return True
     return False
+
+
+def _extract_container_port(compose: dict[str, Any]) -> int | None:
+    """Extract the container port from the first port mapping.
+
+    Docker-compose ports can be in formats like:
+    - "8080" (just container port)
+    - "3011:8080" (host:container)
+    - "${PORT:-3011}:8080" (env var host:container)
+    - "3011:8080/tcp" (with protocol)
+
+    Args:
+        compose: Parsed docker-compose.yml
+
+    Returns:
+        Container port as integer, or None if no ports defined
+    """
+    services = compose.get("services", {})
+    for service_config in services.values():
+        if not isinstance(service_config, dict):
+            continue
+
+        ports = service_config.get("ports", [])
+        if not ports:
+            continue
+
+        # Get first port mapping
+        port_mapping = ports[0]
+
+        # Handle dict format (long syntax)
+        if isinstance(port_mapping, dict):
+            target = port_mapping.get("target")
+            if target is not None:
+                return int(target)
+            continue
+
+        # Handle string format (short syntax)
+        if isinstance(port_mapping, str):
+            # Remove protocol suffix if present (e.g., "/tcp", "/udp")
+            port_str = port_mapping.split("/")[0]
+
+            # Check for host:container format
+            if ":" in port_str:
+                # Take the right side (container port)
+                container_port = port_str.rsplit(":", 1)[1]
+                return int(container_port)
+            else:
+                # Just container port
+                return int(port_str)
+
+        # Handle integer format
+        if isinstance(port_mapping, int):
+            return port_mapping
+
+    return None
 
 
 def inject_traefik_network(

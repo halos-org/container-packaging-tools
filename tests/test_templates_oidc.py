@@ -194,9 +194,7 @@ class TestOIDCPostrm:
         content = postrm.read_text()
 
         # Verify middleware removal
-        assert (
-            "/var/lib/container-apps/traefik-container/dynamic/grafana.yml" in content
-        )
+        assert "/etc/halos/traefik-dynamic.d/grafana.yml" in content
 
     def test_non_oidc_app_no_cleanup(self, tmp_path):
         """Non-OIDC app postrm should not have OIDC cleanup."""
@@ -236,7 +234,7 @@ class TestOIDCPostrm:
 
         # Verify no OIDC/middleware cleanup
         assert "/etc/halos/oidc-clients.d/" not in content
-        assert "traefik-container/dynamic/" not in content
+        assert "/etc/halos/traefik-dynamic.d/" not in content
 
 
 class TestOIDCSystemdService:
@@ -465,4 +463,4 @@ class TestOIDCRulesInstallation:
 
         # Verify middleware installation
         assert "traefik-middleware.yml" in content
-        assert "traefik-container/dynamic/grafana.yml" in content
+        assert "/etc/halos/traefik-dynamic.d/grafana.yml" in content

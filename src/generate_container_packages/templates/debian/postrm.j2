@@ -13,7 +13,7 @@ case "$1" in
 
 {% if has_custom_forward_auth %}
         # Remove per-app ForwardAuth middleware
-        rm -f "/var/lib/container-apps/traefik-container/dynamic/{{ package.app_id }}.yml"
+        rm -f "/etc/halos/traefik-dynamic.d/{{ package.app_id }}.yml"
 {% endif %}
 
 {% if has_routing %}

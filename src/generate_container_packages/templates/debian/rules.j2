@@ -50,7 +50,7 @@ override_dh_auto_install:
 {% if has_custom_forward_auth %}
 	# Install per-app ForwardAuth middleware for Traefik
 	install -D -m 644 traefik-middleware.yml \
-		debian/{{ package.name }}/var/lib/container-apps/traefik-container/dynamic/{{ package.app_id }}.yml
+		debian/{{ package.name }}/etc/halos/traefik-dynamic.d/{{ package.app_id }}.yml
 {% endif %}
 
 {% if has_routing %}
