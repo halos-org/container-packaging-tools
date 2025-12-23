@@ -32,6 +32,15 @@ case "$1" in
         fi
         {% endfor %}
 
+{% if is_oidc_app %}
+        # Generate OIDC client secret if not exists
+        OIDC_SECRET_FILE="${CONTAINER_DATA_ROOT}/oidc-secret"
+        if [ ! -f "${OIDC_SECRET_FILE}" ]; then
+            openssl rand -hex 32 > "${OIDC_SECRET_FILE}"
+            chmod 600 "${OIDC_SECRET_FILE}"
+        fi
+{% endif %}
+
         # Only interact with systemd if it's running (not in containers or minimal envs)
         if [ -d /run/systemd/system ]; then
             # Reload systemd to recognize new service

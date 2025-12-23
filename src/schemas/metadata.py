@@ -3,7 +3,14 @@
 import subprocess
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
 
 
 class WebUI(BaseModel):
@@ -60,6 +67,90 @@ class Layout(BaseModel):
         ge=0,
         description="Explicit row position. If omitted, auto-positioned.",
     )
+
+
+class TraefikForwardAuth(BaseModel):
+    """Custom header mappings for Forward Auth.
+
+    When specified, generates a per-app Traefik middleware that maps
+    Authelia response headers to custom header names expected by the app.
+    """
+
+    headers: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Mapping of Authelia header names to app-expected header names. "
+            "Example: {'Remote-User': 'X-WEBAUTH-USER'}"
+        ),
+    )
+
+
+class TraefikOIDC(BaseModel):
+    """OIDC configuration for apps with native OpenID Connect support.
+
+    When auth=oidc, the app handles authentication directly with Authelia
+    instead of using Forward Auth middleware.
+    """
+
+    client_name: str = Field(
+        min_length=1,
+        description="Human-readable client name shown in consent screens",
+    )
+    scopes: list[str] = Field(
+        default=["openid", "profile", "email"],
+        min_length=1,
+        description="OAuth2 scopes to request",
+    )
+    redirect_path: str = Field(
+        default="/callback",
+        description="OAuth2 callback path (relative to app root)",
+    )
+    consent_mode: Literal["implicit", "explicit", "pre-configured"] = Field(
+        default="implicit",
+        description="Authelia consent mode for this client",
+    )
+
+
+class TraefikConfig(BaseModel):
+    """Traefik routing and SSO configuration for container apps.
+
+    Controls how the app integrates with the Traefik reverse proxy and
+    Authelia authentication system.
+    """
+
+    subdomain: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$|^$",
+        description=(
+            "Subdomain for routing (defaults to app_id). "
+            "Must be lowercase alphanumeric with hyphens, or empty string for root domain."
+        ),
+    )
+    auth: Literal["forward_auth", "oidc", "none"] = Field(
+        default="forward_auth",
+        description="Authentication mode: forward_auth (default), oidc, or none",
+    )
+    forward_auth: TraefikForwardAuth | None = Field(
+        default=None,
+        description="Custom forward auth configuration (optional, uses default if not specified)",
+    )
+    oidc: TraefikOIDC | None = Field(
+        default=None,
+        description="OIDC client configuration (required if auth=oidc)",
+    )
+    host_port: int | None = Field(
+        default=None,
+        ge=1,
+        le=65535,
+        description="Port for host networking apps (Traefik routes to host.docker.internal:port)",
+    )
+
+    @model_validator(mode="after")
+    def validate_oidc_required(self) -> "TraefikConfig":
+        """Ensure oidc section is present when auth=oidc."""
+        if self.auth == "oidc" and self.oidc is None:
+            raise ValueError("oidc config required when auth='oidc'")
+        return self
 
 
 class SourceMetadata(BaseModel):
@@ -220,6 +311,11 @@ class PackageMetadata(BaseModel):
     # Dashboard layout configuration
     layout: Layout | None = Field(
         None, description="Homarr dashboard layout configuration"
+    )
+
+    # Traefik routing and SSO configuration
+    traefik: TraefikConfig | None = Field(
+        None, description="Traefik routing and SSO configuration"
     )
 
     # Default configuration

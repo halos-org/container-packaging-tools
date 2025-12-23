@@ -6,6 +6,16 @@ case "$1" in
         # Remove configuration directory and all contents
         rm -rf "{{ paths.etc }}"
 
+{% if is_oidc_app %}
+        # Remove OIDC client snippet
+        rm -f "/etc/halos/oidc-clients.d/{{ package.app_id }}.yml"
+{% endif %}
+
+{% if has_custom_forward_auth %}
+        # Remove per-app ForwardAuth middleware
+        rm -f "/var/lib/container-apps/traefik-container/dynamic/{{ package.app_id }}.yml"
+{% endif %}
+
         # Only interact with systemd if it's running (not in containers or minimal envs)
         if [ -d /run/systemd/system ]; then
             # Reload systemd (service file removed automatically by dpkg)

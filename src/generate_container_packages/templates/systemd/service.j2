@@ -2,6 +2,10 @@
 Description={{ service.description }}
 After=docker.service
 Requires=docker.service
+{% if is_oidc_app %}
+After=halos-authelia-container.service
+Wants=halos-authelia-container.service
+{% endif %}
 
 [Service]
 Type=simple

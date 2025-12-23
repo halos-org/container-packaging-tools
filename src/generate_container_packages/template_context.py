@@ -189,6 +189,17 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
     web_ui = metadata.get("web_ui", {})
     has_web_ui = web_ui.get("enabled", False) if web_ui else False
 
+    # Get traefik config for SSO integration
+    traefik = metadata.get("traefik", {})
+    traefik_auth = traefik.get("auth", "forward_auth") if traefik else "forward_auth"
+    is_oidc_app = traefik_auth == "oidc"
+
+    # Check if custom forward auth headers are configured
+    forward_auth = traefik.get("forward_auth", {}) if traefik else {}
+    has_custom_forward_auth = (
+        bool(forward_auth.get("headers")) if forward_auth else False
+    )
+
     context = {
         "package": _build_package_context(metadata),
         "service": _build_service_context(package_name, metadata, app_def.compose),
@@ -209,6 +220,10 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
             {"path": str(f.path), "executable": f.executable}
             for f in app_def.asset_files
         ],
+        # SSO configuration
+        "traefik": traefik,
+        "is_oidc_app": is_oidc_app,
+        "has_custom_forward_auth": has_custom_forward_auth,
     }
 
     return context
@@ -223,8 +238,19 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Dictionary with package metadata formatted for Debian control files
     """
+    # app_id may not be present in test fixtures, derive from package_name if needed
+    app_id = metadata.get("app_id")
+    if app_id is None:
+        package_name = metadata["package_name"]
+        # Remove -container suffix if present
+        if package_name.endswith("-container"):
+            app_id = package_name[:-10]
+        else:
+            app_id = package_name
+
     return {
         "name": metadata["package_name"],
+        "app_id": app_id,
         "version": metadata["version"],
         "architecture": metadata["architecture"],
         "section": metadata["debian_section"],

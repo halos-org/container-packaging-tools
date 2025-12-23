@@ -10,8 +10,11 @@ import yaml
 
 from generate_container_packages.labels import generate_homarr_labels
 from generate_container_packages.loader import AppDefinition
+from generate_container_packages.middleware import generate_forwardauth_middleware
+from generate_container_packages.oidc_snippet import generate_oidc_snippet
 from generate_container_packages.prestart import generate_prestart_script
 from generate_container_packages.registry import generate_registry_toml
+from generate_container_packages.traefik import inject_traefik_labels
 
 
 class BuildError(Exception):
@@ -137,6 +140,12 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
     compose_with_labels = inject_homarr_labels(
         app_def.compose, app_def.metadata, app_def.icon_path
     )
+
+    # Inject Traefik labels and network
+    compose_with_labels = inject_traefik_labels(
+        compose_with_labels, app_def.metadata, app_def.compose
+    )
+
     # Fix boolean restart values that PyYAML parsed from "no"/"yes"
     compose_with_labels = _fix_restart_policy(compose_with_labels)
     compose_dst = source_dir / "docker-compose.yml"
@@ -166,6 +175,12 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
     # Generate app registry file for homarr-container-adapter
     generate_registry_file(app_def, source_dir)
+
+    # Generate OIDC client snippet for Authelia (if OIDC app)
+    generate_oidc_snippet_file(app_def, source_dir)
+
+    # Generate per-app ForwardAuth middleware (if custom headers)
+    generate_middleware_file(app_def, source_dir)
 
 
 def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
@@ -473,3 +488,48 @@ def generate_registry_file(app_def: AppDefinition, source_dir: Path) -> None:
 
     registry_file = source_dir / "webapp-registry.toml"
     registry_file.write_text(registry_content, encoding="utf-8")
+
+
+def generate_oidc_snippet_file(app_def: AppDefinition, source_dir: Path) -> None:
+    """Generate OIDC client snippet file for Authelia.
+
+    The snippet file is installed to /etc/halos/oidc-clients.d/{app_id}.yml
+    and merged by Authelia's prestart script to register the OIDC client.
+
+    Args:
+        app_def: Application definition
+        source_dir: Destination directory
+
+    The file is only generated if traefik.auth is 'oidc' in metadata.
+    """
+    snippet_content = generate_oidc_snippet(app_def.metadata)
+
+    if snippet_content is None:
+        # Not an OIDC app, skip snippet generation
+        return
+
+    oidc_snippet_file = source_dir / "oidc-client.yml"
+    oidc_snippet_file.write_text(snippet_content, encoding="utf-8")
+
+
+def generate_middleware_file(app_def: AppDefinition, source_dir: Path) -> None:
+    """Generate per-app ForwardAuth middleware file for Traefik.
+
+    The middleware file is installed to
+    /var/lib/container-apps/traefik-container/dynamic/{app_id}.yml
+    and loaded by Traefik's file provider.
+
+    Args:
+        app_def: Application definition
+        source_dir: Destination directory
+
+    The file is only generated if custom forward_auth headers are specified.
+    """
+    middleware_content = generate_forwardauth_middleware(app_def.metadata)
+
+    if middleware_content is None:
+        # No custom headers, skip middleware generation
+        return
+
+    middleware_file = source_dir / "traefik-middleware.yml"
+    middleware_file.write_text(middleware_content, encoding="utf-8")
