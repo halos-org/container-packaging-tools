@@ -53,6 +53,12 @@ override_dh_auto_install:
 		debian/{{ package.name }}/var/lib/container-apps/traefik-container/dynamic/{{ package.app_id }}.yml
 {% endif %}
 
+{% if has_routing %}
+	# Install generic routing declaration for reverse proxy
+	install -D -m 644 routing.yml \
+		debian/{{ package.name }}/etc/halos/routing.d/{{ package.app_id }}.yml
+{% endif %}
+
 	# Install systemd service file
 	install -D -m 644 debian/{{ package.name }}.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service

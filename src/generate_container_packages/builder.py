@@ -14,6 +14,7 @@ from generate_container_packages.middleware import generate_forwardauth_middlewa
 from generate_container_packages.oidc_snippet import generate_oidc_snippet
 from generate_container_packages.prestart import generate_prestart_script
 from generate_container_packages.registry import generate_registry_toml
+from generate_container_packages.routing import generate_routing_yml
 from generate_container_packages.traefik import inject_traefik_labels
 
 
@@ -181,6 +182,9 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
     # Generate per-app ForwardAuth middleware (if custom headers)
     generate_middleware_file(app_def, source_dir)
+
+    # Generate routing.yml for generic proxy routing
+    generate_routing_file(app_def, source_dir)
 
 
 def generate_env_template(app_def: AppDefinition, source_dir: Path) -> None:
@@ -533,3 +537,29 @@ def generate_middleware_file(app_def: AppDefinition, source_dir: Path) -> None:
 
     middleware_file = source_dir / "traefik-middleware.yml"
     middleware_file.write_text(middleware_content, encoding="utf-8")
+
+
+def generate_routing_file(app_def: AppDefinition, source_dir: Path) -> None:
+    """Generate generic routing.yml file for reverse proxy.
+
+    The routing file is installed to /etc/halos/routing.d/{app_id}.yml
+    and read by the reverse proxy (e.g., Traefik) at runtime to generate
+    native routing configuration.
+
+    Args:
+        app_def: Application definition
+        source_dir: Destination directory
+
+    The file is only generated if routing or traefik config is present,
+    or if web_ui is enabled.
+    """
+    routing_content = generate_routing_yml(
+        app_def.metadata, app_def.compose, app_def.metadata["package_name"]
+    )
+
+    if routing_content is None:
+        # No routing needed, skip file generation
+        return
+
+    routing_file = source_dir / "routing.yml"
+    routing_file.write_text(routing_content, encoding="utf-8")

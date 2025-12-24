@@ -16,6 +16,11 @@ case "$1" in
         rm -f "/var/lib/container-apps/traefik-container/dynamic/{{ package.app_id }}.yml"
 {% endif %}
 
+{% if has_routing %}
+        # Remove routing declaration
+        rm -f "/etc/halos/routing.d/{{ package.app_id }}.yml"
+{% endif %}
+
         # Only interact with systemd if it's running (not in containers or minimal envs)
         if [ -d /run/systemd/system ]; then
             # Reload systemd (service file removed automatically by dpkg)

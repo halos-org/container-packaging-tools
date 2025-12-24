@@ -200,6 +200,11 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         bool(forward_auth.get("headers")) if forward_auth else False
     )
 
+    # Check if routing.yml should be generated
+    # Routing is generated if: routing config exists, or traefik config exists, or web_ui is enabled
+    routing = metadata.get("routing")
+    has_routing = routing is not None or traefik is not None or has_web_ui
+
     context = {
         "package": _build_package_context(metadata),
         "service": _build_service_context(package_name, metadata, app_def.compose),
@@ -224,6 +229,9 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         "traefik": traefik,
         "is_oidc_app": is_oidc_app,
         "has_custom_forward_auth": has_custom_forward_auth,
+        # Routing configuration
+        "routing": routing,
+        "has_routing": has_routing,
     }
 
     return context

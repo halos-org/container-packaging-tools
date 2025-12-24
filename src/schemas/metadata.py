@@ -116,6 +116,9 @@ class TraefikConfig(BaseModel):
 
     Controls how the app integrates with the Traefik reverse proxy and
     Authelia authentication system.
+
+    Note: This is the legacy configuration key. New apps should use RoutingConfig
+    with the 'routing' key instead. Both are supported for backwards compatibility.
     """
 
     subdomain: str | None = Field(
@@ -151,6 +154,58 @@ class TraefikConfig(BaseModel):
         if self.auth == "oidc" and self.oidc is None:
             raise ValueError("oidc config required when auth='oidc'")
         return self
+
+
+# New generic routing configuration models (proxy-agnostic)
+
+
+class RoutingAuth(BaseModel):
+    """Authentication configuration for routing.
+
+    Defines how the app authenticates users through the reverse proxy.
+    This is a proxy-agnostic format that can be converted to Traefik,
+    nginx, or other reverse proxy configurations at runtime.
+    """
+
+    mode: Literal["forward_auth", "oidc", "none"] = Field(
+        default="forward_auth",
+        description="Authentication mode: forward_auth (default), oidc, or none",
+    )
+    forward_auth: TraefikForwardAuth | None = Field(
+        default=None,
+        description="Custom forward auth configuration with header mappings",
+    )
+
+
+class RoutingConfig(BaseModel):
+    """Generic, proxy-agnostic routing configuration.
+
+    This configuration format describes routing requirements without
+    being tied to a specific reverse proxy implementation. At runtime,
+    the reverse proxy (e.g., Traefik) reads this and generates its
+    native configuration.
+
+    Prefer using this over TraefikConfig for new apps.
+    """
+
+    subdomain: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$|^$",
+        description=(
+            "Subdomain for routing (defaults to app_id). "
+            "Must be lowercase alphanumeric with hyphens, or empty string for root domain."
+        ),
+    )
+    auth: RoutingAuth | None = Field(
+        default=None,
+        description="Authentication configuration",
+    )
+    host_port: int | None = Field(
+        default=None,
+        ge=1,
+        le=65535,
+        description="Port for host networking apps",
+    )
 
 
 class SourceMetadata(BaseModel):
@@ -313,9 +368,14 @@ class PackageMetadata(BaseModel):
         None, description="Homarr dashboard layout configuration"
     )
 
-    # Traefik routing and SSO configuration
+    # Routing configuration (new generic format)
+    routing: RoutingConfig | None = Field(
+        None, description="Generic routing configuration (preferred)"
+    )
+
+    # Traefik routing and SSO configuration (legacy, for backwards compatibility)
     traefik: TraefikConfig | None = Field(
-        None, description="Traefik routing and SSO configuration"
+        None, description="Traefik routing and SSO configuration (legacy)"
     )
 
     # Default configuration
