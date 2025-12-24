@@ -441,3 +441,104 @@ class TestRoutingEdgeCases:
         with pytest.raises(ValueError) as exc_info:
             generate_routing_yml(metadata, compose, "myapp-container")
         assert "service" in str(exc_info.value).lower()
+
+
+class TestContainerPortExtraction:
+    """Tests for extracting container port from docker-compose port mappings."""
+
+    def test_container_port_preferred_over_web_ui_port(self) -> None:
+        """Container port from docker-compose is preferred over web_ui.port."""
+        metadata = {
+            "app_id": "grafana",
+            "web_ui": {"enabled": True, "port": 3001},  # Host port
+            "routing": {"subdomain": "grafana"},
+        }
+        # docker-compose maps 3001:3000, so container port is 3000
+        compose: dict = {"services": {"grafana": {"ports": ["3001:3000"]}}}
+        result = generate_routing_yml(metadata, compose, "grafana-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 3000
+
+    def test_container_port_with_env_var_host(self) -> None:
+        """Container port extracted correctly when host uses env var."""
+        metadata = {
+            "app_id": "grafana",
+            "web_ui": {"enabled": True, "port": 3001},
+            "routing": {"subdomain": "grafana"},
+        }
+        # Host port uses env var, container port is 3000
+        compose: dict = {"services": {"grafana": {"ports": ["${PORT:-3001}:3000"]}}}
+        result = generate_routing_yml(metadata, compose, "grafana-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 3000
+
+    def test_container_port_with_protocol(self) -> None:
+        """Container port extracted correctly when protocol is specified."""
+        metadata = {
+            "app_id": "myapp",
+            "web_ui": {"enabled": True, "port": 8080},
+            "routing": {"subdomain": "myapp"},
+        }
+        compose: dict = {"services": {"app": {"ports": ["8080:80/tcp"]}}}
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 80
+
+    def test_container_port_simple_format(self) -> None:
+        """Container port extracted when only container port is specified."""
+        metadata = {
+            "app_id": "myapp",
+            "routing": {"subdomain": "myapp"},
+        }
+        compose: dict = {"services": {"app": {"ports": ["8080"]}}}
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 8080
+
+    def test_container_port_long_syntax(self) -> None:
+        """Container port extracted from long syntax port definition."""
+        metadata = {
+            "app_id": "myapp",
+            "routing": {"subdomain": "myapp"},
+        }
+        compose: dict = {
+            "services": {"app": {"ports": [{"target": 3000, "published": 3001}]}}
+        }
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 3000
+
+    def test_fallback_to_web_ui_port_when_no_ports(self) -> None:
+        """Falls back to web_ui.port when no ports in docker-compose."""
+        metadata = {
+            "app_id": "myapp",
+            "web_ui": {"enabled": True, "port": 9999},
+            "routing": {"subdomain": "myapp"},
+        }
+        compose: dict = {"services": {"app": {}}}  # No ports
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 9999
+
+    def test_host_networking_ignores_compose_ports(self) -> None:
+        """Host networking uses host_port, not container port extraction."""
+        metadata = {
+            "app_id": "signalk",
+            "web_ui": {"enabled": True, "port": 3000},
+            "routing": {"subdomain": "signalk", "host_port": 3000},
+        }
+        # Host networking - ports in compose are ignored
+        compose: dict = {
+            "services": {"signalk": {"network_mode": "host", "ports": ["9999:8888"]}}
+        }
+        result = generate_routing_yml(metadata, compose, "signalk-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 3000
+        assert routing["routing"]["backend"]["type"] == "host"

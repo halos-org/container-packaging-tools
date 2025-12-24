@@ -211,7 +211,9 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
             has_custom_forward_auth = bool(fa_config.get("headers"))
         else:
             fa_config = routing.get("forward_auth", {})
-            has_custom_forward_auth = bool(fa_config.get("headers")) if fa_config else False
+            has_custom_forward_auth = (
+                bool(fa_config.get("headers")) if fa_config else False
+            )
 
     # Check if routing.yml should be generated
     has_routing = routing is not None or has_web_ui

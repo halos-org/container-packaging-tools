@@ -54,7 +54,7 @@ def generate_routing_yml(
     first_service = next(iter(services.keys()))
 
     # Determine port
-    port = _get_port(routing_config, web_ui, is_host_network)
+    port = _get_port(routing_config, web_ui, is_host_network, compose)
 
     # Determine subdomain
     subdomain = _get_subdomain(routing_config, app_id)
@@ -108,16 +108,76 @@ def _detect_host_networking(compose: dict[str, Any]) -> bool:
     return False
 
 
+def _extract_container_port(compose: dict[str, Any]) -> int | None:
+    """Extract the container port from the first port mapping.
+
+    Docker-compose ports can be in formats like:
+    - "8080" (just container port)
+    - "3011:8080" (host:container)
+    - "${PORT:-3011}:8080" (env var host:container)
+    - "3011:8080/tcp" (with protocol)
+
+    Args:
+        compose: Parsed docker-compose.yml
+
+    Returns:
+        Container port as integer, or None if no ports defined
+    """
+    services = compose.get("services", {})
+    for service_config in services.values():
+        if not isinstance(service_config, dict):
+            continue
+
+        ports = service_config.get("ports", [])
+        if not ports:
+            continue
+
+        # Get first port mapping
+        port_mapping = ports[0]
+
+        # Handle dict format (long syntax)
+        if isinstance(port_mapping, dict):
+            target = port_mapping.get("target")
+            if target is not None:
+                return int(target)
+            continue
+
+        # Handle string format (short syntax)
+        if isinstance(port_mapping, str):
+            # Remove protocol suffix if present (e.g., "/tcp", "/udp")
+            port_str = port_mapping.split("/")[0]
+
+            # Check for host:container format
+            if ":" in port_str:
+                # Take the right side (container port)
+                container_port = port_str.rsplit(":", 1)[1]
+                return int(container_port)
+            else:
+                # Just container port
+                return int(port_str)
+
+        # Handle integer format
+        if isinstance(port_mapping, int):
+            return port_mapping
+
+    return None
+
+
 def _get_port(
     routing_config: dict | None,
     web_ui: dict | None,
     is_host_network: bool,
+    compose: dict[str, Any],
 ) -> int:
     """Get the port for routing.
 
-    Priority:
-    1. routing.host_port (for host networking)
+    Priority for host networking:
+    1. routing.host_port
     2. web_ui.port
+
+    Priority for container networking:
+    1. Container port from docker-compose port mapping
+    2. web_ui.port (fallback)
     """
     # Check for explicit host_port in routing config
     host_port = None
@@ -135,11 +195,18 @@ def _get_port(
             "or port in web_ui config"
         )
 
-    # For container networking, use web_ui.port
+    # For container networking, prefer container port from docker-compose
+    container_port = _extract_container_port(compose)
+    if container_port is not None:
+        return container_port
+
+    # Fall back to web_ui.port
     if web_ui and web_ui.get("port"):
         return web_ui["port"]
 
-    raise ValueError("Port is required: set web_ui.port in metadata.yaml")
+    raise ValueError(
+        "Port is required: set web_ui.port in metadata.yaml or define ports in docker-compose.yml"
+    )
 
 
 def _get_subdomain(
