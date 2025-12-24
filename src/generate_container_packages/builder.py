@@ -15,7 +15,7 @@ from generate_container_packages.oidc_snippet import generate_oidc_snippet
 from generate_container_packages.prestart import generate_prestart_script
 from generate_container_packages.registry import generate_registry_toml
 from generate_container_packages.routing import generate_routing_yml
-from generate_container_packages.traefik import inject_traefik_labels
+from generate_container_packages.traefik import inject_traefik_network
 
 
 class BuildError(Exception):
@@ -142,10 +142,8 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
         app_def.compose, app_def.metadata, app_def.icon_path
     )
 
-    # Inject Traefik labels and network
-    compose_with_labels = inject_traefik_labels(
-        compose_with_labels, app_def.metadata, app_def.compose
-    )
+    # Inject Traefik network (labels generated at runtime from routing.yml)
+    compose_with_labels = inject_traefik_network(compose_with_labels, app_def.metadata)
 
     # Fix boolean restart values that PyYAML parsed from "no"/"yes"
     compose_with_labels = _fix_restart_policy(compose_with_labels)
