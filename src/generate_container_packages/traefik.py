@@ -130,67 +130,42 @@ def _detect_host_networking(compose: dict[str, Any]) -> bool:
     return False
 
 
-def inject_traefik_labels(
+def inject_traefik_network(
     compose: dict[str, Any],
     metadata: dict[str, Any],
-    original_compose: dict[str, Any],
 ) -> dict[str, Any]:
-    """Inject Traefik labels and network into docker-compose.
+    """Inject Traefik network into docker-compose (if routing enabled).
 
     This is the main integration point called by builder.py.
+    Traefik labels are NOT injected here - they're generated at runtime
+    by the Traefik container based on routing.yml declarations.
 
     Args:
-        compose: docker-compose dictionary (may already have Homarr labels)
+        compose: docker-compose dictionary
         metadata: Package metadata dictionary
-        original_compose: Original docker-compose for host networking detection
 
     Returns:
-        Modified docker-compose with Traefik labels and network added
+        Modified docker-compose with network added (if needed)
     """
-    # Generate traefik labels
-    traefik_labels = generate_traefik_labels(metadata, original_compose)
+    traefik_config = metadata.get("traefik")
+    routing_config = metadata.get("routing")
+    web_ui = metadata.get("web_ui")
 
-    if not traefik_labels:
+    # Check if routing is needed
+    has_routing = (
+        traefik_config is not None
+        or routing_config is not None
+        or (web_ui and web_ui.get("enabled"))
+    )
+
+    if not has_routing:
         return compose
 
-    # Deep copy to avoid modifying original
-    compose = copy.deepcopy(compose)
-
     # Detect host networking
-    is_host_network = _detect_host_networking(original_compose)
-
-    # Inject labels into the first/primary service
-    services = compose.get("services", {})
-    for service_config in services.values():
-        if not isinstance(service_config, dict):
-            continue
-
-        # Get or create labels section
-        existing_labels = service_config.get("labels", {})
-
-        # Convert list format to dict if needed
-        if isinstance(existing_labels, list):
-            label_dict = {}
-            for label in existing_labels:
-                if "=" in label:
-                    key, value = label.split("=", 1)
-                    label_dict[key] = value
-                else:
-                    label_dict[label] = ""
-            existing_labels = label_dict
-
-        # Merge Traefik labels (don't overwrite existing)
-        for key, value in traefik_labels.items():
-            if key not in existing_labels:
-                existing_labels[key] = value
-
-        service_config["labels"] = existing_labels
-        break  # Only add to first/primary service
+    is_host_network = _detect_host_networking(compose)
 
     # Inject proxy network (for non-host-networking apps)
-    compose = inject_proxy_network(compose, is_host_network)
-
-    return compose
+    return inject_proxy_network(compose, is_host_network)
 
 
 def inject_proxy_network(
