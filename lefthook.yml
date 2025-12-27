@@ -13,3 +13,7 @@ pre-commit:
           exit 0
         fi
       fail_text: "Run 'ruff check src/ tests/' to see issues."
+
+    check-hostnames:
+      run: .github/scripts/check-hardcoded-hostnames.sh
+      fail_text: "Hard-coded hostname references found. See error above for details."
