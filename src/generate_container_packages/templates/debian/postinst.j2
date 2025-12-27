@@ -41,6 +41,37 @@ case "$1" in
         fi
 {% endif %}
 
+{% if has_default_data %}
+        # Copy default data files to data volume on first install (if destination doesn't exist)
+        DEFAULT_DATA_SRC="{{ paths.lib }}/default-data"
+        if [ -d "$DEFAULT_DATA_SRC" ]; then
+            # Find all files in default-data and copy if destination doesn't exist
+            find "$DEFAULT_DATA_SRC" -type f | while read -r src_file; do
+                # Get relative path from default-data directory
+                rel_path="${src_file#$DEFAULT_DATA_SRC/}"
+                # Expand CONTAINER_DATA_ROOT in destination path
+                dst_file="${CONTAINER_DATA_ROOT}/${rel_path}"
+                dst_dir="$(dirname "$dst_file")"
+
+                # Only copy if destination file doesn't exist (preserve user modifications)
+                if [ ! -f "$dst_file" ]; then
+                    # Create destination directory if needed
+                    mkdir -p "$dst_dir"
+                    # Copy file preserving permissions
+                    cp -p "$src_file" "$dst_file"
+{% if service.volume_directories %}
+{% set first_vol = service.volume_directories[0] %}
+{% if first_vol.uid is not none and first_vol.gid is not none %}
+                    # Set ownership to match container user
+                    chown {{ first_vol.uid }}:{{ first_vol.gid }} "$dst_file"
+                    chown {{ first_vol.uid }}:{{ first_vol.gid }} "$dst_dir"
+{% endif %}
+{% endif %}
+                fi
+            done
+        fi
+{% endif %}
+
         # Only interact with systemd if it's running (not in containers or minimal envs)
         if [ -d /run/systemd/system ]; then
             # Reload systemd to recognize new service

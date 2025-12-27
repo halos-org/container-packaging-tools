@@ -1,0 +1,28 @@
+# App with default-data - Test fixture for default-data directory feature
+name: App With Default Data
+app_id: app-with-default-data
+version: 1.0.0
+upstream_version: 1.0.0
+description: A test application with default data files
+long_description: |
+  This test application includes default data files in a default-data/ directory
+  that should be copied to the data volume on first install.
+homepage: https://example.com/app-with-default-data
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - role::container-app
+  - implemented-in::docker
+debian_section: net
+architecture: all
+
+web_ui:
+  enabled: true
+  path: /
+  port: 3000
+  protocol: http
+
+default_config:
+  APP_PORT: "3000"
+  PUID: "1000"
+  PGID: "1000"

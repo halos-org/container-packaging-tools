@@ -1,0 +1,14 @@
+version: "1.0"
+groups:
+  - id: general
+    label: General Settings
+    description: General settings
+    fields:
+      - id: APP_PORT
+        type: integer
+        label: Application Port
+        description: Port for the application web interface
+        default: 3000
+        required: true
+        min: 1024
+        max: 65535

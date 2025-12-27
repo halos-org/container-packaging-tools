@@ -238,6 +238,12 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
             {"path": str(f.path), "executable": f.executable}
             for f in app_def.asset_files
         ],
+        # Default data files (copied to data volume on first install)
+        "has_default_data": len(app_def.default_data_files) > 0,
+        "default_data_files": [
+            {"path": str(f.path), "executable": f.executable}
+            for f in app_def.default_data_files
+        ],
         # SSO configuration
         "is_oidc_app": is_oidc_app,
         "has_custom_forward_auth": has_custom_forward_auth,

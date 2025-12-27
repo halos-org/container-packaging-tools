@@ -52,6 +52,8 @@ class AppDefinition:
         screenshot_paths: list[Path] | None = None,
         assets_dir: Path | None = None,
         asset_files: list[AssetFile] | None = None,
+        default_data_dir: Path | None = None,
+        default_data_files: list[AssetFile] | None = None,
     ):
         """Initialize AppDefinition.
 
@@ -64,6 +66,8 @@ class AppDefinition:
             screenshot_paths: List of paths to screenshot files
             assets_dir: Path to assets directory (if exists)
             asset_files: List of AssetFile objects with path and permissions info
+            default_data_dir: Path to default-data directory (if exists)
+            default_data_files: List of AssetFile objects for default data files
         """
         self.metadata = metadata
         self.compose = compose
@@ -73,6 +77,8 @@ class AppDefinition:
         self.screenshot_paths = screenshot_paths or []
         self.assets_dir = assets_dir
         self.asset_files = asset_files or []
+        self.default_data_dir = default_data_dir
+        self.default_data_files = default_data_files or []
 
         # Computed fields
         now = datetime.now(UTC)
@@ -163,6 +169,26 @@ def load_input_files(directory: Path, prefix: str | None = None) -> AppDefinitio
     else:
         assets_dir = None
 
+    # Find optional default-data directory
+    # These files are copied to the data volume on first install only
+    default_data_dir = directory / "default-data"
+    default_data_files: list[AssetFile] = []
+    if default_data_dir.is_dir():
+        # Enumerate all files in default-data directory (recursively)
+        # Check if each file is executable and create AssetFile objects
+        for f in sorted(default_data_dir.rglob("*")):
+            if f.is_file():
+                relative_path = f.relative_to(default_data_dir)
+                # Check if file has executable permission (any of user/group/other)
+                is_executable = bool(
+                    f.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+                )
+                default_data_files.append(
+                    AssetFile(path=relative_path, executable=is_executable)
+                )
+    else:
+        default_data_dir = None
+
     return AppDefinition(
         metadata=metadata,
         compose=compose,
@@ -172,6 +198,8 @@ def load_input_files(directory: Path, prefix: str | None = None) -> AppDefinitio
         screenshot_paths=screenshot_paths,
         assets_dir=assets_dir,
         asset_files=asset_files,
+        default_data_dir=default_data_dir,
+        default_data_files=default_data_files,
     )
 
 

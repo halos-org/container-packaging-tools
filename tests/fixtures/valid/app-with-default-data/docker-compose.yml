@@ -1,0 +1,11 @@
+services:
+  app:
+    image: example/app-with-default-data:${VERSION:-latest}
+    user: "${PUID:-1000}:${PGID:-1000}"
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - "${CONTAINER_DATA_ROOT:-./.signalk}:/home/node/.signalk"
+    logging:
+      driver: journald

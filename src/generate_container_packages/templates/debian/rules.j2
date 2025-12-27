@@ -35,6 +35,14 @@ override_dh_auto_install:
 {% endfor %}
 {% endif %}
 
+{% if has_default_data %}
+	# Install default-data files (copied to data volume on first install)
+{% for data_file in default_data_files %}
+	install -D -m {{ '755' if data_file.executable else '644' }} default-data/{{ data_file.path }} \
+		debian/{{ package.name }}/{{ paths.lib }}/default-data/{{ data_file.path }}
+{% endfor %}
+{% endif %}
+
 {% if has_web_ui %}
 	# Install app registry file for homarr-container-adapter
 	install -D -m 644 webapp-registry.toml \

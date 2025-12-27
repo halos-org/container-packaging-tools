@@ -1,0 +1,16 @@
+{
+  "strategy": "./tokensecurity",
+  "users": [
+    {
+      "username": "admin",
+      "type": "admin",
+      "password": "$2b$10$examplehashedpassword"
+    }
+  ],
+  "allow_readonly": false,
+  "oidc": {
+    "enabled": true,
+    "issuer": "https://auth.example.com",
+    "clientId": "app-client"
+  }
+}

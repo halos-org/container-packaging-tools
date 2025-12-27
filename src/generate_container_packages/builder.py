@@ -166,6 +166,11 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
     if app_def.assets_dir and app_def.assets_dir.exists():
         shutil.copytree(app_def.assets_dir, source_dir / "assets")
 
+    # Copy optional default-data directory
+    # These files are installed to lib dir and copied to data volume on first install
+    if app_def.default_data_dir and app_def.default_data_dir.exists():
+        shutil.copytree(app_def.default_data_dir, source_dir / "default-data")
+
     # Generate env.template from default_config
     generate_env_template(app_def, source_dir)
 
