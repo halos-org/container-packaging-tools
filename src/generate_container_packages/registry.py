@@ -40,6 +40,7 @@ def _escape_toml_string(value: str) -> str:
 def generate_registry_toml(
     metadata: dict[str, Any],
     compose: dict[str, Any],
+    hostname: str,
     icon_path: Path | None = None,
 ) -> str | None:
     """Generate TOML registry file content for an app.
@@ -47,6 +48,7 @@ def generate_registry_toml(
     Args:
         metadata: Package metadata dictionary
         compose: Docker compose configuration
+        hostname: System hostname for URL generation (e.g., from $HOSTNAME)
         icon_path: Path to auto-detected icon file (optional)
 
     Returns:
@@ -91,7 +93,6 @@ def generate_registry_toml(
         "",
         f'name = "{escaped_name}"',
         "# URL is computed at build time from web_ui config",
-        "# Using halos.local as the default hostname",
     ]
 
     # Build URL from web_ui config
@@ -103,9 +104,9 @@ def generate_registry_toml(
 
     # Standard URL format
     if (protocol == "http" and port == 80) or (protocol == "https" and port == 443):
-        url = f"{protocol}://halos.local{path}"
+        url = f"{protocol}://{hostname}{path}"
     else:
-        url = f"{protocol}://halos.local:{port}{path}"
+        url = f"{protocol}://{hostname}:{port}{path}"
 
     lines.append(f'url = "{url}"')
 
