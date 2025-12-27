@@ -43,10 +43,11 @@ case "$1" in
 
 {% if has_default_data %}
         # Copy default data files to data volume on first install (if destination doesn't exist)
+        # Note: Uses first volume's uid/gid for ownership. If no volumes defined, files are root-owned.
         DEFAULT_DATA_SRC="{{ paths.lib }}/default-data"
         if [ -d "$DEFAULT_DATA_SRC" ]; then
-            # Find all files in default-data and copy if destination doesn't exist
-            find "$DEFAULT_DATA_SRC" -type f | while read -r src_file; do
+            # Find all files using -print0 for robustness with special characters in filenames
+            find "$DEFAULT_DATA_SRC" -type f -print0 | while IFS= read -r -d '' src_file; do
                 # Get relative path from default-data directory
                 rel_path="${src_file#$DEFAULT_DATA_SRC/}"
                 # Expand CONTAINER_DATA_ROOT in destination path
@@ -62,9 +63,14 @@ case "$1" in
 {% if service.volume_directories %}
 {% set first_vol = service.volume_directories[0] %}
 {% if first_vol.uid is not none and first_vol.gid is not none %}
-                    # Set ownership to match container user
+                    # Set ownership to match container user (file and all parent dirs up to CONTAINER_DATA_ROOT)
                     chown {{ first_vol.uid }}:{{ first_vol.gid }} "$dst_file"
-                    chown {{ first_vol.uid }}:{{ first_vol.gid }} "$dst_dir"
+                    # Chown all directories from dst_dir up to CONTAINER_DATA_ROOT
+                    current_dir="$dst_dir"
+                    while [ "$current_dir" != "$CONTAINER_DATA_ROOT" ] && [ "$current_dir" != "/" ]; do
+                        chown {{ first_vol.uid }}:{{ first_vol.gid }} "$current_dir"
+                        current_dir="$(dirname "$current_dir")"
+                    done
 {% endif %}
 {% endif %}
                 fi
