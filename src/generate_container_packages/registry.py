@@ -142,7 +142,19 @@ def generate_registry_toml(
     # For container apps, use internal Docker network name and port
     if container_name:
         internal_port = web_ui.get("port", 80)
-        ping_url = f"http://{container_name}:{internal_port}{path}"
+        internal_protocol = web_ui.get("protocol", "http")
+
+        # Check if container uses host network mode
+        service_config = services.get(container_name, {})
+        network_mode = service_config.get("network_mode", "")
+
+        if network_mode == "host":
+            # Host network containers can't use Docker DNS, use host.docker.internal
+            ping_url = f"{internal_protocol}://host.docker.internal:{internal_port}{path}"
+        else:
+            # Standard bridge network - use container name
+            ping_url = f"{internal_protocol}://{container_name}:{internal_port}{path}"
+
         lines.append(f'ping_url = "{ping_url}"')
 
     lines.append("")

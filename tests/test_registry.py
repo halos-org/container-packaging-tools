@@ -272,3 +272,24 @@ class TestGenerateRegistryToml:
 
         assert result is not None
         assert "ping_url" not in result
+
+    def test_ping_url_uses_https_when_configured(self, minimal_metadata, minimal_compose):
+        """Test ping_url uses HTTPS when web_ui.protocol is https."""
+        minimal_metadata["web_ui"]["protocol"] = "https"
+        minimal_metadata["web_ui"]["port"] = 3001
+        result = generate_registry_toml(
+            minimal_metadata, minimal_compose, self.TEST_HOSTNAME
+        )
+
+        assert result is not None
+        assert 'ping_url = "https://test-app:3001/"' in result
+
+    def test_ping_url_uses_host_docker_internal_for_host_network(
+        self, minimal_metadata
+    ):
+        """Test ping_url uses host.docker.internal for host network containers."""
+        compose = {"services": {"test-app": {"image": "test:latest", "network_mode": "host"}}}
+        result = generate_registry_toml(minimal_metadata, compose, self.TEST_HOSTNAME)
+
+        assert result is not None
+        assert 'ping_url = "http://host.docker.internal:8080/"' in result
