@@ -56,6 +56,9 @@ def generate_routing_yml(
     # Determine port
     port = _get_port(routing_config, web_ui, is_host_network, compose)
 
+    # Determine scheme (protocol for backend connection)
+    scheme = _get_scheme(web_ui)
+
     # Determine subdomain
     subdomain = _get_subdomain(routing_config, app_id)
 
@@ -63,16 +66,21 @@ def generate_routing_yml(
     auth_mode, forward_auth_headers = _get_auth_config(routing_config)
 
     # Build the routing structure
+    backend_config: dict[str, Any] = {
+        "type": "host" if is_host_network else "container",
+        "service": first_service,
+        "port": port,
+    }
+    # Only include scheme if it's not the default (http)
+    if scheme != "http":
+        backend_config["scheme"] = scheme
+
     routing_data: dict[str, Any] = {
         "app_id": app_id,
         "package_name": package_name,
         "routing": {
             "subdomain": subdomain,
-            "backend": {
-                "type": "host" if is_host_network else "container",
-                "service": first_service,
-                "port": port,
-            },
+            "backend": backend_config,
             "entry_points": ["http", "https"],
         },
         "auth": {
@@ -207,6 +215,22 @@ def _get_port(
     raise ValueError(
         "Port is required: set web_ui.port in metadata.yaml or define ports in docker-compose.yml"
     )
+
+
+def _get_scheme(web_ui: dict | None) -> str:
+    """Get the scheme (protocol) for backend connections.
+
+    Reads from web_ui.protocol, defaults to "http".
+
+    Args:
+        web_ui: Web UI configuration dictionary
+
+    Returns:
+        Scheme string ("http" or "https")
+    """
+    if web_ui:
+        return web_ui.get("protocol", "http")
+    return "http"
 
 
 def _get_subdomain(

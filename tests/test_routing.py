@@ -542,3 +542,80 @@ class TestContainerPortExtraction:
         routing = yaml.safe_load(result)
         assert routing["routing"]["backend"]["port"] == 3000
         assert routing["routing"]["backend"]["type"] == "host"
+
+
+class TestBackendScheme:
+    """Tests for backend scheme (protocol) configuration in routing.yml."""
+
+    def test_default_scheme_is_http(self) -> None:
+        """Default scheme should be http (not included in output)."""
+        metadata = {
+            "app_id": "myapp",
+            "web_ui": {"enabled": True, "port": 8080},
+            "routing": {"subdomain": "myapp"},
+        }
+        compose: dict = {"services": {"app": {}}}
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        # scheme should not be present when it's http (default)
+        assert "scheme" not in routing["routing"]["backend"]
+
+    def test_explicit_http_scheme_not_included(self) -> None:
+        """Explicit http scheme should not be included (it's the default)."""
+        metadata = {
+            "app_id": "myapp",
+            "web_ui": {"enabled": True, "port": 8080, "protocol": "http"},
+            "routing": {"subdomain": "myapp"},
+        }
+        compose: dict = {"services": {"app": {}}}
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert "scheme" not in routing["routing"]["backend"]
+
+    def test_https_scheme_included(self) -> None:
+        """HTTPS scheme should be included in routing.yml."""
+        metadata = {
+            "app_id": "opencpn",
+            "web_ui": {"enabled": True, "port": 3001, "protocol": "https"},
+            "routing": {"subdomain": "opencpn"},
+        }
+        compose: dict = {"services": {"opencpn": {}}}
+        result = generate_routing_yml(metadata, compose, "opencpn-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["scheme"] == "https"
+
+    def test_https_scheme_with_host_networking(self) -> None:
+        """HTTPS scheme works with host networking."""
+        metadata = {
+            "app_id": "myapp",
+            "web_ui": {"enabled": True, "port": 443, "protocol": "https"},
+            "routing": {"subdomain": "myapp", "host_port": 443},
+        }
+        compose: dict = {"services": {"app": {"network_mode": "host"}}}
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["scheme"] == "https"
+        assert routing["routing"]["backend"]["type"] == "host"
+
+    def test_scheme_from_web_ui_protocol(self) -> None:
+        """Scheme is read from web_ui.protocol."""
+        metadata = {
+            "app_id": "secure-app",
+            "web_ui": {
+                "enabled": True,
+                "port": 8443,
+                "protocol": "https",
+                "path": "/",
+            },
+            "routing": {"subdomain": "secure"},
+        }
+        compose: dict = {"services": {"secure": {}}}
+        result = generate_routing_yml(metadata, compose, "secure-app-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["scheme"] == "https"
+        assert routing["routing"]["backend"]["port"] == 8443
