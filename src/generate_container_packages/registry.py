@@ -138,6 +138,13 @@ def generate_registry_toml(
     visible = web_ui.get("visible", False)
     lines.append(f"visible = {str(visible).lower()}")
 
+    # Generate ping_url for container health checks
+    # For container apps, use internal Docker network name and port
+    if container_name:
+        internal_port = web_ui.get("port", 80)
+        ping_url = f"http://{container_name}:{internal_port}{path}"
+        lines.append(f'ping_url = "{ping_url}"')
+
     lines.append("")
     lines.append("[type]")
     if container_name:

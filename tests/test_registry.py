@@ -254,3 +254,21 @@ class TestGenerateRegistryToml:
 
         assert result is not None
         assert "# No container_name" in result
+
+    def test_ping_url_uses_container_name_and_port(self, minimal_metadata, minimal_compose):
+        """Test ping_url uses container name and internal port for health checks."""
+        result = generate_registry_toml(
+            minimal_metadata, minimal_compose, self.TEST_HOSTNAME
+        )
+
+        assert result is not None
+        # ping_url should use container name (test-app) and internal port (8080)
+        assert 'ping_url = "http://test-app:8080/"' in result
+
+    def test_ping_url_not_generated_without_container(self, minimal_metadata):
+        """Test ping_url is not generated when no container name."""
+        compose = {"services": {}}
+        result = generate_registry_toml(minimal_metadata, compose, self.TEST_HOSTNAME)
+
+        assert result is not None
+        assert "ping_url" not in result
