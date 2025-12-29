@@ -92,21 +92,36 @@ def generate_registry_toml(
         f"# Installed to /etc/halos/webapps.d/{package_name}.toml",
         "",
         f'name = "{escaped_name}"',
-        "# URL is computed at build time from web_ui config",
     ]
 
-    # Build URL from web_ui config
-    protocol = web_ui.get("protocol", "http")
-    port = web_ui.get("port", 80)
+    # Build URL - prefer subdomain-based routing if configured
+    routing = metadata.get("routing")
     path = web_ui.get("path", "/")
     if not path.startswith("/"):
         path = "/" + path
 
-    # Standard URL format
-    if (protocol == "http" and port == 80) or (protocol == "https" and port == 443):
-        url = f"{protocol}://{hostname}{path}"
+    if routing is not None:
+        # Use subdomain-based URL via Traefik
+        subdomain = routing.get("subdomain")
+        app_id = metadata.get("app_id", "")
+        if subdomain is None:
+            subdomain = app_id
+
+        lines.append("# URL uses subdomain routing via Traefik")
+        if subdomain:
+            url = f"https://{subdomain}.{hostname}{path}"
+        else:
+            # Empty subdomain means root domain
+            url = f"https://{hostname}{path}"
     else:
-        url = f"{protocol}://{hostname}:{port}{path}"
+        # Fall back to port-based URL (legacy/no routing)
+        lines.append("# URL uses direct port access (no routing configured)")
+        protocol = web_ui.get("protocol", "http")
+        port = web_ui.get("port", 80)
+        if (protocol == "http" and port == 80) or (protocol == "https" and port == 443):
+            url = f"{protocol}://{hostname}{path}"
+        else:
+            url = f"{protocol}://{hostname}:{port}{path}"
 
     lines.append(f'url = "{url}"')
 
