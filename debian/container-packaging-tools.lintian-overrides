@@ -1,0 +1,9 @@
+# Jinja2 templates that generate scripts - they start with #! but are not
+# themselves executable scripts. The shebang is part of the template output.
+container-packaging-tools: script-not-executable [usr/lib/python3/dist-packages/generate_container_packages/templates/debian/postinst.j2]
+container-packaging-tools: script-not-executable [usr/lib/python3/dist-packages/generate_container_packages/templates/debian/postrm.j2]
+container-packaging-tools: script-not-executable [usr/lib/python3/dist-packages/generate_container_packages/templates/debian/prerm.j2]
+container-packaging-tools: script-not-executable [usr/lib/python3/dist-packages/generate_container_packages/templates/debian/rules.j2]
+
+# CLI tool uses --help for documentation; man page not required for internal tooling
+container-packaging-tools: no-manual-page [usr/bin/generate-container-packages]
