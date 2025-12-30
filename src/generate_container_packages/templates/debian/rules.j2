@@ -67,6 +67,14 @@ override_dh_auto_install:
 		debian/{{ package.name }}/etc/halos/routing.d/{{ package.app_id }}.yml
 {% endif %}
 
+{% if has_system_bin %}
+	# Install system binaries to /usr/bin/
+{% for bin_name in system_bin %}
+	install -D -m 755 assets/{{ bin_name }} \
+		debian/{{ package.name }}/usr/bin/{{ bin_name }}
+{% endfor %}
+{% endif %}
+
 	# Install systemd service file
 	install -D -m 644 debian/{{ package.name }}.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service

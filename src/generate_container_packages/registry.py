@@ -156,7 +156,9 @@ def generate_registry_toml(
 
         if network_mode == "host":
             # Host network containers can't use Docker DNS, use host.docker.internal
-            ping_url = f"{internal_protocol}://host.docker.internal:{internal_port}{path}"
+            ping_url = (
+                f"{internal_protocol}://host.docker.internal:{internal_port}{path}"
+            )
         else:
             # Standard bridge network - use container name
             ping_url = f"{internal_protocol}://{container_name}:{internal_port}{path}"

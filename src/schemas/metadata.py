@@ -206,6 +206,15 @@ class RoutingConfig(BaseModel):
         le=65535,
         description="Port for host networking apps",
     )
+    port: int | None = Field(
+        default=None,
+        ge=1,
+        le=65535,
+        description=(
+            "Backend port for routing. Overrides automatic port detection from "
+            "docker-compose. Use when the main web UI port differs from exposed ports."
+        ),
+    )
 
 
 class SourceMetadata(BaseModel):
@@ -362,6 +371,22 @@ class PackageMetadata(BaseModel):
         None, description="Suggested packages (Suggests)"
     )
 
+    # Package relationships
+    provides: list[str] | None = Field(
+        None,
+        description=(
+            "Virtual packages this package provides (e.g., ['halos-reverse-proxy']). "
+            "Allows other packages to depend on a capability rather than a specific implementation."
+        ),
+    )
+    conflicts: list[str] | None = Field(
+        None,
+        description=(
+            "Packages that conflict with this one (e.g., ['halos-reverse-proxy']). "
+            "Cannot be installed alongside conflicting packages."
+        ),
+    )
+
     # Web UI configuration
     web_ui: WebUI | None = Field(None, description="Web interface configuration")
 
@@ -373,6 +398,13 @@ class PackageMetadata(BaseModel):
     # Routing configuration (generic format)
     routing: RoutingConfig | None = Field(
         None, description="Generic routing configuration"
+    )
+
+    # System binaries to install to /usr/bin/
+    # These are scripts from assets/ that should be available system-wide
+    system_bin: list[str] | None = Field(
+        None,
+        description="List of asset files to install to /usr/bin/ (e.g., ['configure-container-routing'])",
     )
 
     # Default configuration
