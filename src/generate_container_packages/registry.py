@@ -40,15 +40,16 @@ def _escape_toml_string(value: str) -> str:
 def generate_registry_toml(
     metadata: dict[str, Any],
     compose: dict[str, Any],
-    hostname: str,
     icon_path: Path | None = None,
 ) -> str | None:
     """Generate TOML registry file content for an app.
 
+    URLs use the template variable {{domain}} which gets expanded at runtime
+    by homarr-container-adapter to the actual system domain.
+
     Args:
         metadata: Package metadata dictionary
         compose: Docker compose configuration
-        hostname: System hostname for URL generation (e.g., from $HOSTNAME)
         icon_path: Path to auto-detected icon file (optional)
 
     Returns:
@@ -100,6 +101,9 @@ def generate_registry_toml(
     if not path.startswith("/"):
         path = "/" + path
 
+    # Use {{domain}} template variable - expanded at runtime by homarr-container-adapter
+    domain_template = "{{domain}}"
+
     if routing is not None:
         # Use subdomain-based URL via Traefik
         subdomain = routing.get("subdomain")
@@ -108,20 +112,22 @@ def generate_registry_toml(
             subdomain = app_id
 
         lines.append("# URL uses subdomain routing via Traefik")
+        lines.append("# {{domain}} is expanded at runtime to the system hostname")
         if subdomain:
-            url = f"https://{subdomain}.{hostname}{path}"
+            url = f"https://{subdomain}.{domain_template}{path}"
         else:
             # Empty subdomain means root domain
-            url = f"https://{hostname}{path}"
+            url = f"https://{domain_template}{path}"
     else:
         # Fall back to port-based URL (legacy/no routing)
         lines.append("# URL uses direct port access (no routing configured)")
+        lines.append("# {{domain}} is expanded at runtime to the system hostname")
         protocol = web_ui.get("protocol", "http")
         port = web_ui.get("port", 80)
         if (protocol == "http" and port == 80) or (protocol == "https" and port == 443):
-            url = f"{protocol}://{hostname}{path}"
+            url = f"{protocol}://{domain_template}{path}"
         else:
-            url = f"{protocol}://{hostname}:{port}{path}"
+            url = f"{protocol}://{domain_template}:{port}{path}"
 
     lines.append(f'url = "{url}"')
 
