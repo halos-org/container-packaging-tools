@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "generate-container-packages"
-version = "0.2.1"
+version = "0.3.0"
 description = "Generate Debian packages from container application definitions"
 readme = "README.md"
 requires-python = ">=3.11"
