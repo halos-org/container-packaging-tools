@@ -1,6 +1,5 @@
 """Debian package building module."""
 
-import os
 import shutil
 import subprocess
 import tempfile
@@ -480,23 +479,18 @@ def generate_registry_file(app_def: AppDefinition, source_dir: Path) -> None:
     display apps on the Homarr dashboard. This replaces Docker-label-based
     discovery with static files.
 
+    URLs in the registry use template variables (e.g., {{domain}}) that are
+    expanded at runtime by homarr-container-adapter to the actual system
+    hostname.
+
     Args:
         app_def: Application definition
         source_dir: Destination directory
 
     The file is only generated if web_ui is enabled in metadata.
-
-    Requires HALOS_HOSTNAME environment variable to be set.
     """
-    hostname = os.environ.get("HALOS_HOSTNAME")
-    if not hostname:
-        raise BuildError(
-            "HALOS_HOSTNAME environment variable is required for registry generation. "
-            "Set it to the target system hostname (e.g., export HALOS_HOSTNAME=myhostname.local)"
-        )
-
     registry_content = generate_registry_toml(
-        app_def.metadata, app_def.compose, hostname, app_def.icon_path
+        app_def.metadata, app_def.compose, app_def.icon_path
     )
 
     if registry_content is None:
