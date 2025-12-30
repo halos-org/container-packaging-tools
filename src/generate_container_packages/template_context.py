@@ -250,6 +250,9 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         # Routing configuration
         "routing": routing,
         "has_routing": has_routing,
+        # System binaries to install to /usr/bin/
+        "system_bin": metadata.get("system_bin", []) or [],
+        "has_system_bin": bool(metadata.get("system_bin")),
     }
 
     return context
@@ -291,6 +294,8 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
         "depends": format_dependencies(metadata.get("depends", [])),
         "recommends": format_dependencies(metadata.get("recommends", [])),
         "suggests": format_dependencies(metadata.get("suggests", [])),
+        "provides": format_dependencies(metadata.get("provides", [])),
+        "conflicts": format_dependencies(metadata.get("conflicts", [])),
         # Additional fields for templates
         "human_name": metadata["name"],
         "upstream_version": metadata.get("upstream_version", metadata["version"]),

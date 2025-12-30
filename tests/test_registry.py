@@ -227,7 +227,9 @@ class TestGenerateRegistryToml:
         assert result is not None
         assert "# No container_name" in result
 
-    def test_ping_url_uses_container_name_and_port(self, minimal_metadata, minimal_compose):
+    def test_ping_url_uses_container_name_and_port(
+        self, minimal_metadata, minimal_compose
+    ):
         """Test ping_url uses container name and internal port for health checks."""
         result = generate_registry_toml(minimal_metadata, minimal_compose)
 
@@ -243,7 +245,9 @@ class TestGenerateRegistryToml:
         assert result is not None
         assert "ping_url" not in result
 
-    def test_ping_url_uses_https_when_configured(self, minimal_metadata, minimal_compose):
+    def test_ping_url_uses_https_when_configured(
+        self, minimal_metadata, minimal_compose
+    ):
         """Test ping_url uses HTTPS when web_ui.protocol is https."""
         minimal_metadata["web_ui"]["protocol"] = "https"
         minimal_metadata["web_ui"]["port"] = 3001
@@ -256,13 +260,17 @@ class TestGenerateRegistryToml:
         self, minimal_metadata
     ):
         """Test ping_url uses host.docker.internal for host network containers."""
-        compose = {"services": {"test-app": {"image": "test:latest", "network_mode": "host"}}}
+        compose = {
+            "services": {"test-app": {"image": "test:latest", "network_mode": "host"}}
+        }
         result = generate_registry_toml(minimal_metadata, compose)
 
         assert result is not None
         assert 'ping_url = "http://host.docker.internal:8080/"' in result
 
-    def test_template_variable_comment_in_output(self, minimal_metadata, minimal_compose):
+    def test_template_variable_comment_in_output(
+        self, minimal_metadata, minimal_compose
+    ):
         """Test that output includes comment explaining template expansion."""
         result = generate_registry_toml(minimal_metadata, minimal_compose)
 

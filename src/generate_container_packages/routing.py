@@ -181,21 +181,27 @@ def _get_port(
 
     Priority for host networking:
     1. routing.host_port
-    2. web_ui.port
+    2. routing.port
+    3. web_ui.port
 
     Priority for container networking:
-    1. Container port from docker-compose port mapping
-    2. web_ui.port (fallback)
+    1. routing.port (explicit override)
+    2. Container port from docker-compose port mapping
+    3. web_ui.port (fallback)
     """
-    # Check for explicit host_port in routing config
+    # Check for explicit ports in routing config
     host_port = None
+    explicit_port = None
     if routing_config:
         host_port = routing_config.get("host_port")
+        explicit_port = routing_config.get("port")
 
-    # For host networking, prefer host_port, fall back to web_ui.port
+    # For host networking, prefer host_port, then explicit port, fall back to web_ui.port
     if is_host_network:
         if host_port is not None:
             return host_port
+        if explicit_port is not None:
+            return explicit_port
         if web_ui and web_ui.get("port"):
             return web_ui["port"]
         raise ValueError(
@@ -203,7 +209,11 @@ def _get_port(
             "or port in web_ui config"
         )
 
-    # For container networking, prefer container port from docker-compose
+    # For container networking, explicit routing.port overrides docker-compose
+    if explicit_port is not None:
+        return explicit_port
+
+    # Then try container port from docker-compose
     container_port = _extract_container_port(compose)
     if container_port is not None:
         return container_port
@@ -213,7 +223,7 @@ def _get_port(
         return web_ui["port"]
 
     raise ValueError(
-        "Port is required: set web_ui.port in metadata.yaml or define ports in docker-compose.yml"
+        "Port is required: set routing.port, web_ui.port, or define ports in docker-compose.yml"
     )
 
 

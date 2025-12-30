@@ -18,6 +18,12 @@ Recommends: {{ package.recommends }}
 {% if package.suggests %}
 Suggests: {{ package.suggests }}
 {% endif %}
+{% if package.provides %}
+Provides: {{ package.provides }}
+{% endif %}
+{% if package.conflicts %}
+Conflicts: {{ package.conflicts }}
+{% endif %}
 Description: {{ package.description }}
 {{ package.long_description }}
 Tag: {{ package.tags }}
