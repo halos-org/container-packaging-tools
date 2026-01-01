@@ -233,6 +233,33 @@ class TestAssetsIntegration:
         assert "install -D -m 644 assets/templates/index.html" in content
 
     @pytest.mark.integration
+    def test_assets_installed_to_assets_subdirectory(self, tmp_path):
+        """Test that assets are installed to assets/ subdirectory in destination.
+
+        This ensures docker-compose.yml can reference ./assets/<file> and find
+        the files after package installation. Regression test for a bug where
+        assets were installed directly to lib dir without the assets/ prefix.
+        """
+        from generate_container_packages.loader import load_input_files
+        from generate_container_packages.renderer import render_all_templates
+
+        app_def = load_input_files(VALID_FIXTURES / "app-with-assets")
+        output_dir = tmp_path / "rendered"
+
+        render_all_templates(app_def, output_dir)
+
+        rules_file = output_dir / "debian" / "rules"
+        content = rules_file.read_text()
+
+        # Destination path must include assets/ subdirectory
+        # Format: install -D -m <mode> <source> <dest>
+        # Source: assets/<relative-path>
+        # Dest: debian/<pkg>/<lib-path>/assets/<relative-path>
+        assert "/assets/nginx.conf" in content
+        assert "/assets/templates/index.html" in content
+        assert "/assets/bin/setup.sh" in content
+
+    @pytest.mark.integration
     def test_no_assets_section_when_no_assets(self, tmp_path):
         """Test that no assets section is rendered when no assets."""
         from generate_container_packages.loader import load_input_files
