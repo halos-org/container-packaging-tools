@@ -187,7 +187,7 @@ class TestPackageMetadata:
                 "homepage": "https://example.com",
                 "icon": "icon.png",
                 "screenshots": ["screenshot1.png", "screenshot2.png"],
-                "depends": ["docker-ce"],
+                "depends": ["docker.io"],
                 "recommends": ["cockpit"],
                 "suggests": ["nginx"],
                 "web_ui": {

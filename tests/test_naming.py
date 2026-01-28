@@ -123,14 +123,14 @@ class TestExpandDependency:
 
     def test_system_package_unchanged(self):
         """Test that system packages are unchanged."""
-        assert expand_dependency("docker-ce", prefix="marine") == "docker-ce"
+        assert expand_dependency("docker.io", prefix="marine") == "docker.io"
         assert expand_dependency("nginx", prefix="marine") == "nginx"
         assert expand_dependency("python3", prefix="halos") == "python3"
 
     def test_system_package_with_version(self):
         """Test that system packages with version constraints are unchanged."""
-        result = expand_dependency("docker-ce (>= 20.10)", prefix="marine")
-        assert result == "docker-ce (>= 20.10)"
+        result = expand_dependency("docker.io (>= 20.10)", prefix="marine")
+        assert result == "docker.io (>= 20.10)"
 
     def test_full_package_name_unchanged(self):
         """Test that explicit full package names are unchanged."""
@@ -140,9 +140,9 @@ class TestExpandDependency:
     def test_alternative_packages_unchanged(self):
         """Test that alternative package syntax is unchanged."""
         result = expand_dependency(
-            "docker-ce (>= 20.10) | docker.io (>= 20.10)", prefix="marine"
+            "docker.io (>= 20.10) | docker-ce (>= 20.10)", prefix="marine"
         )
-        assert result == "docker-ce (>= 20.10) | docker.io (>= 20.10)"
+        assert result == "docker.io (>= 20.10) | docker-ce (>= 20.10)"
 
     def test_complex_at_reference(self):
         """Test @ reference with complex app_id."""
@@ -160,11 +160,11 @@ class TestExpandDependencies:
 
     def test_expand_list(self):
         """Test expanding a list of dependencies."""
-        deps = ["docker-ce (>= 20.10)", "@influxdb", "@grafana"]
+        deps = ["docker.io (>= 20.10)", "@influxdb", "@grafana"]
         result = expand_dependencies(deps, prefix="marine")
 
         assert result == [
-            "docker-ce (>= 20.10)",
+            "docker.io (>= 20.10)",
             "marine-influxdb-container",
             "marine-grafana-container",
         ]
@@ -180,7 +180,7 @@ class TestExpandDependencies:
     def test_mixed_dependencies(self):
         """Test mix of system packages, @ refs, and full names."""
         deps = [
-            "docker-ce (>= 20.10) | docker.io (>= 20.10)",
+            "docker.io (>= 20.10) | docker-ce (>= 20.10)",
             "@influxdb",
             "nginx",
             "casaos-redis-container",
@@ -189,7 +189,7 @@ class TestExpandDependencies:
         result = expand_dependencies(deps, prefix="marine")
 
         assert result == [
-            "docker-ce (>= 20.10) | docker.io (>= 20.10)",
+            "docker.io (>= 20.10) | docker-ce (>= 20.10)",
             "marine-influxdb-container",
             "nginx",
             "casaos-redis-container",

@@ -122,7 +122,7 @@ def expand_dependency(dep: str, prefix: str | None = None) -> str:
     the current prefix. Other dependencies are returned unchanged.
 
     Args:
-        dep: Dependency string (e.g., "@influxdb" or "docker-ce (>= 20.10)")
+        dep: Dependency string (e.g., "@influxdb" or "docker.io (>= 20.10)")
         prefix: Optional prefix for @ references. If None or empty string,
             the expanded name will have no prefix (e.g., "influxdb-container").
 
@@ -137,8 +137,8 @@ def expand_dependency(dep: str, prefix: str | None = None) -> str:
         "marine-influxdb-container"
         >>> expand_dependency("@influxdb", prefix=None)
         "influxdb-container"
-        >>> expand_dependency("docker-ce (>= 20.10)", prefix="marine")
-        "docker-ce (>= 20.10)"
+        >>> expand_dependency("docker.io (>= 20.10)", prefix="marine")
+        "docker.io (>= 20.10)"
         >>> expand_dependency("casaos-redis-container", prefix="marine")
         "casaos-redis-container"
     """
@@ -170,8 +170,8 @@ def expand_dependencies(
         List of expanded dependency strings, or None if input was None
 
     Examples:
-        >>> expand_dependencies(["docker-ce", "@influxdb"], prefix="marine")
-        ["docker-ce", "marine-influxdb-container"]
+        >>> expand_dependencies(["docker.io", "@influxdb"], prefix="marine")
+        ["docker.io", "marine-influxdb-container"]
     """
     if deps is None:
         return None

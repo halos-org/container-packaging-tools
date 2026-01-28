@@ -217,7 +217,7 @@ architecture: all
 
 # Dependencies (all optional)
 depends:                                # Hard dependencies
-  - docker-ce
+  - docker.io (>= 20.10) | docker-ce (>= 20.10)
   - docker-compose-plugin
 recommends:                             # Soft dependencies (installed by default)
   - cockpit
@@ -621,7 +621,7 @@ docker run --rm grafana/grafana:12.1.4 id
 |-------|------|-------------|---------|
 | `icon` | path | Icon filename (PNG or SVG) | `"icon.svg"` |
 | `screenshots` | list | Screenshot filenames | `["screenshot1.png"]` |
-| `depends` | list | Hard dependencies | `["docker-ce"]` |
+| `depends` | list | Hard dependencies | `["docker.io"]` |
 | `recommends` | list | Soft dependencies | `["cockpit"]` |
 | `suggests` | list | Optional packages | `["nginx-proxy"]` |
 | `web_ui` | object | Web UI configuration | See below |

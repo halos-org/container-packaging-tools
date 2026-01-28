@@ -93,7 +93,7 @@ class TestBuildContext:
             "tags": ["role::container-app", "field::marine"],
             "debian_section": "web",
             "architecture": "all",
-            "depends": ["docker-ce", "python3"],
+            "depends": ["docker.io", "python3"],
             "recommends": ["nginx"],
             "suggests": ["postgresql"],
             "web_ui": {"enabled": True, "path": "/admin", "port": 8080},
@@ -118,7 +118,7 @@ class TestBuildContext:
         assert context["package"]["homepage"] == "https://example.com"
         assert context["package"]["upstream_version"] == "2.1.3"
         assert "longer description" in context["package"]["long_description"]
-        assert context["package"]["depends"] == "docker-ce, python3"
+        assert context["package"]["depends"] == "docker.io, python3"
         assert context["package"]["recommends"] == "nginx"
         assert context["package"]["suggests"] == "postgresql"
         assert context["package"]["tags"] == "role::container-app, field::marine"
@@ -225,13 +225,13 @@ class TestFormatDependencies:
 
     def test_single_dependency(self):
         """Test formatting single dependency."""
-        result = format_dependencies(["docker-ce"])
-        assert result == "docker-ce"
+        result = format_dependencies(["docker.io"])
+        assert result == "docker.io"
 
     def test_multiple_dependencies(self):
         """Test formatting multiple dependencies."""
-        result = format_dependencies(["docker-ce", "python3", "nginx"])
-        assert result == "docker-ce, python3, nginx"
+        result = format_dependencies(["docker.io", "python3", "nginx"])
+        assert result == "docker.io, python3, nginx"
 
 
 class TestIsBindablePath:

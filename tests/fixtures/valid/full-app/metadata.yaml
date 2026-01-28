@@ -32,7 +32,7 @@ architecture: all
 
 # Dependencies
 depends:
-  - docker-ce
+  - docker.io
   - docker-compose-plugin
 recommends:
   - cockpit
