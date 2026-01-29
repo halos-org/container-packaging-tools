@@ -92,6 +92,10 @@ def render_all_templates(
                 f"Failed to render template {template_path}: {e}"
             ) from e
 
+    # Render file watcher systemd units if configured
+    if context.get("has_file_watchers"):
+        _render_file_watcher_templates(env, context, debian_dir)
+
     # Copy static files (compat)
     _copy_static_files(template_dir, debian_dir)
 
@@ -127,6 +131,40 @@ def _find_template_directory() -> Path:
         return package_path
 
     raise FileNotFoundError(f"Cannot find templates directory at: {package_path}")
+
+
+def _render_file_watcher_templates(
+    env: Environment, context: dict, debian_dir: Path
+) -> None:
+    """Render systemd path and watcher service templates for file watchers.
+
+    Args:
+        env: Jinja2 environment
+        context: Template context
+        debian_dir: Output directory for debian files
+    """
+    from typing import Any
+
+    path_template = env.get_template("systemd/path.j2")
+    service_template = env.get_template("systemd/watcher-service.j2")
+
+    package_name = context["package"]["name"]
+
+    for watcher in context["file_watchers"]:
+        # Create watcher-specific context
+        watcher_context: dict[str, Any] = {**context, "watcher": watcher}
+
+        # Render .path unit
+        path_output = debian_dir / f"{package_name}-watcher-{watcher['name']}.path"
+        rendered = path_template.render(watcher_context)
+        write_rendered_file(rendered, path_output)
+
+        # Render watcher .service unit
+        service_output = (
+            debian_dir / f"{package_name}-watcher-{watcher['name']}.service"
+        )
+        rendered = service_template.render(watcher_context)
+        write_rendered_file(rendered, service_output)
 
 
 def _copy_static_files(template_dir: Path, output_dir: Path) -> None:

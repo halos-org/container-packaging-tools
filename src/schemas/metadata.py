@@ -12,6 +12,9 @@ from pydantic import (
     model_validator,
 )
 
+# Valid watch types for systemd .path units
+WatchType = Literal["directory_modified", "path_changed", "path_exists"]
+
 
 class WebUI(BaseModel):
     """Web UI configuration for the container application."""
@@ -217,6 +220,77 @@ class RoutingConfig(BaseModel):
     )
 
 
+class FileWatcherAction(BaseModel):
+    """Action to take when a watched path changes.
+
+    At least one of restart_service or script must be specified.
+    """
+
+    restart_service: bool = Field(
+        default=False,
+        description="Restart the main container service when path changes",
+    )
+    script: str | None = Field(
+        default=None,
+        description="Script to execute when path changes (absolute path)",
+    )
+
+    @field_validator("script")
+    @classmethod
+    def validate_script_is_absolute(cls, v: str | None) -> str | None:
+        """Ensure script path is absolute."""
+        if v is not None and not v.startswith("/"):
+            raise ValueError(f"script must be an absolute path, got: '{v}'")
+        return v
+
+    @model_validator(mode="after")
+    def validate_at_least_one_action(self) -> "FileWatcherAction":
+        """Ensure at least one action is specified."""
+        if not self.restart_service and not self.script:
+            raise ValueError(
+                "on_change must specify at least one of: restart_service, script"
+            )
+        return self
+
+
+class FileWatcher(BaseModel):
+    """File watcher configuration for systemd path units.
+
+    Defines a file or directory to watch and the action to take when it changes.
+    Each watcher generates a .path unit and corresponding .service unit.
+    """
+
+    name: str = Field(
+        min_length=1,
+        pattern=r"^[a-z0-9][a-z0-9-]*$",
+        description="Watcher identifier (lowercase alphanumeric and hyphens)",
+    )
+    watch_path: str = Field(
+        min_length=1,
+        description="Absolute path to watch for changes",
+    )
+    watch_type: WatchType = Field(
+        default="directory_modified",
+        description=(
+            "Type of change to watch for: "
+            "directory_modified (contents changed), "
+            "path_changed (file modified), "
+            "path_exists (file/dir created)"
+        ),
+    )
+    on_change: FileWatcherAction = Field(
+        description="Action to take when the watched path changes",
+    )
+
+    @field_validator("watch_path")
+    @classmethod
+    def validate_watch_path_is_absolute(cls, v: str) -> str:
+        """Ensure watch_path is absolute."""
+        if not v.startswith("/"):
+            raise ValueError(f"watch_path must be an absolute path, got: '{v}'")
+        return v
+
+
 class SourceMetadata(BaseModel):
     """Metadata about the source of a converted app.
 
@@ -406,6 +480,31 @@ class PackageMetadata(BaseModel):
         None,
         description="List of asset files to install to /usr/bin/ (e.g., ['configure-container-routing'])",
     )
+
+    # File watchers for systemd path units
+    file_watchers: list[FileWatcher] | None = Field(
+        None,
+        description=(
+            "File watchers that trigger actions when paths change. "
+            "Each watcher generates a systemd .path unit."
+        ),
+    )
+
+    @field_validator("file_watchers")
+    @classmethod
+    def validate_unique_watcher_names(
+        cls, v: list[FileWatcher] | None
+    ) -> list[FileWatcher] | None:
+        """Ensure all file watcher names are unique."""
+        if v is None:
+            return v
+        names = [w.name for w in v]
+        duplicates = [name for name in names if names.count(name) > 1]
+        if duplicates:
+            raise ValueError(
+                f"Duplicate file_watcher names: {', '.join(set(duplicates))}"
+            )
+        return v
 
     # Default configuration
     default_config: dict[str, str] | None = Field(

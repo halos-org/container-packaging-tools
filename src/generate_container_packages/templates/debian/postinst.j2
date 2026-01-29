@@ -86,6 +86,14 @@ case "$1" in
             # Enable service (but don't start automatically - let user configure first)
             # Users can start with: systemctl start {{ package.name }}.service
             systemctl enable {{ package.name }}.service || true
+{% if has_file_watchers %}
+
+            # Enable and start file watcher path units
+{% for watcher in file_watchers %}
+            systemctl enable {{ package.name }}-watcher-{{ watcher.name }}.path || true
+            systemctl start {{ package.name }}-watcher-{{ watcher.name }}.path || true
+{% endfor %}
+{% endif %}
         fi
         ;;
 esac

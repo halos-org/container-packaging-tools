@@ -1,0 +1,17 @@
+[Unit]
+Description=Watch {{ watcher.watch_path }} for {{ package.human_name }}
+PartOf={{ package.name }}.service
+After={{ package.name }}.service
+
+[Path]
+{% if watcher.watch_type == "directory_modified" %}
+PathModified={{ watcher.watch_path }}
+{% elif watcher.watch_type == "path_changed" %}
+PathChanged={{ watcher.watch_path }}
+{% elif watcher.watch_type == "path_exists" %}
+PathExists={{ watcher.watch_path }}
+{% endif %}
+Unit={{ package.name }}-watcher-{{ watcher.name }}.service
+
+[Install]
+WantedBy={{ package.name }}.service

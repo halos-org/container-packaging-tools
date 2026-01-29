@@ -253,9 +253,44 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         # System binaries to install to /usr/bin/
         "system_bin": metadata.get("system_bin", []) or [],
         "has_system_bin": bool(metadata.get("system_bin")),
+        # File watchers for systemd path units
+        "file_watchers": _build_file_watchers_context(metadata.get("file_watchers")),
+        "has_file_watchers": bool(metadata.get("file_watchers")),
     }
 
     return context
+
+
+def _build_file_watchers_context(
+    file_watchers: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Build file watchers context for templates.
+
+    Converts file_watchers from metadata format to template-friendly format.
+
+    Args:
+        file_watchers: List of file watcher configurations from metadata
+
+    Returns:
+        List of file watcher dicts ready for template rendering
+    """
+    if not file_watchers:
+        return []
+
+    result = []
+    for watcher in file_watchers:
+        # Convert nested on_change to flat structure for easier template access
+        on_change = watcher.get("on_change", {})
+        result.append(
+            {
+                "name": watcher["name"],
+                "watch_path": watcher["watch_path"],
+                "watch_type": watcher.get("watch_type", "directory_modified"),
+                "restart_service": on_change.get("restart_service", False),
+                "script": on_change.get("script"),
+            }
+        )
+    return result
 
 
 def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:

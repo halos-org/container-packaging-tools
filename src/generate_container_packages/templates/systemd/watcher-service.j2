@@ -1,0 +1,18 @@
+[Unit]
+Description=Handle {{ watcher.watch_path }} changes for {{ package.human_name }}
+After={{ package.name }}.service
+
+[Service]
+Type=oneshot
+{% if watcher.script %}
+ExecStart={{ watcher.script }}
+{% endif %}
+{% if watcher.restart_service %}
+{% if watcher.script %}
+ExecStartPost=/bin/systemctl restart {{ package.name }}.service
+{% else %}
+ExecStart=/bin/systemctl restart {{ package.name }}.service
+{% endif %}
+{% endif %}
+StandardOutput=journal
+StandardError=journal

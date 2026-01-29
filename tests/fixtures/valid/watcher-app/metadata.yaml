@@ -1,0 +1,50 @@
+# Watcher App - Test app with file watchers
+name: Watcher Test App
+app_id: watcher-test-app
+version: 1.0.0
+upstream_version: 1.0.0
+description: A test application with file watchers
+long_description: |
+  This is a test application used for validating file watcher
+  support in the container packaging tools.
+homepage: https://example.com/watcher-app
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - role::container-app
+  - implemented-in::docker
+debian_section: net
+architecture: all
+
+# Web UI configuration
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+# File watchers
+file_watchers:
+  - name: config-reload
+    watch_path: /etc/halos/watcher-app.d/
+    watch_type: directory_modified
+    on_change:
+      restart_service: true
+
+  - name: oidc-clients
+    watch_path: /etc/halos/oidc-clients.d/
+    watch_type: path_changed
+    on_change:
+      script: /usr/bin/reload-oidc-clients
+
+  - name: combined-watcher
+    watch_path: /etc/halos/combined.d/
+    watch_type: directory_modified
+    on_change:
+      script: /usr/bin/pre-reload-hook
+      restart_service: true
+
+# Default configuration
+default_config:
+  APP_PORT: "8080"
+  LOG_LEVEL: "info"

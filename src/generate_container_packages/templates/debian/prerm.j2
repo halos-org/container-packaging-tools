@@ -5,6 +5,14 @@ case "$1" in
     remove|deconfigure)
         # Only interact with systemd if it's running (not in containers or minimal envs)
         if [ -d /run/systemd/system ]; then
+{% if has_file_watchers %}
+            # Stop file watcher units first
+{% for watcher in file_watchers %}
+            systemctl stop {{ package.name }}-watcher-{{ watcher.name }}.path || true
+            systemctl stop {{ package.name }}-watcher-{{ watcher.name }}.service || true
+            systemctl disable {{ package.name }}-watcher-{{ watcher.name }}.path || true
+{% endfor %}
+{% endif %}
             # Stop the service before removal
             systemctl stop {{ package.name }}.service || true
             systemctl disable {{ package.name }}.service || true

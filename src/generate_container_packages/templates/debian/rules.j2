@@ -80,6 +80,16 @@ override_dh_auto_install:
 	install -D -m 644 debian/{{ package.name }}.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service
 
+{% if has_file_watchers %}
+	# Install file watcher systemd units
+{% for watcher in file_watchers %}
+	install -D -m 644 debian/{{ package.name }}-watcher-{{ watcher.name }}.path \
+		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}-watcher-{{ watcher.name }}.path
+	install -D -m 644 debian/{{ package.name }}-watcher-{{ watcher.name }}.service \
+		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}-watcher-{{ watcher.name }}.service
+{% endfor %}
+{% endif %}
+
 	# Install AppStream metadata
 	install -D -m 644 debian/{{ package.name }}.metainfo.xml \
 		debian/{{ package.name }}/{{ paths.metainfo }}/{{ package.name }}.metainfo.xml
