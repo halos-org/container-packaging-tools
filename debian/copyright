@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: container-packaging-tools
 Upstream-Contact: Hat Labs <info@hatlabs.fi>
-Source: https://github.com/hatlabs/container-packaging-tools
+Source: https://github.com/halos-org/container-packaging-tools
 
 Files: *
 Copyright: 2025 Hat Labs Oy

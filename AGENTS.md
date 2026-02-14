@@ -8,7 +8,7 @@ This repository should be used as part of the halos-distro workspace for AI-assi
 
 ```bash
 # Clone workspace and all repos
-git clone https://github.com/hatlabs/halos-distro.git
+git clone https://github.com/halos-org/halos-distro.git
 cd halos-distro
 ./run repos:clone
 ```
@@ -52,7 +52,7 @@ services:
 
 The validator enforces these conventions as **blocking errors**. Apps that don't follow them will fail to build.
 
-See [halos-distro#49](https://github.com/hatlabs/halos-distro/issues/49) for the full design rationale.
+See [halos-distro#49](https://github.com/halos-org/halos-distro/issues/49) for the full design rationale.
 
 ## Git Workflow Policy
 
@@ -80,7 +80,7 @@ This package provides `generate-container-packages` command that converts simple
 
 **Current Phase**: Planning & Initial Development
 
-All development tasks are tracked as GitHub issues. See the [Issues page](https://github.com/hatlabs/container-packaging-tools/issues) for current status.
+All development tasks are tracked as GitHub issues. See the [Issues page](https://github.com/halos-org/container-packaging-tools/issues) for current status.
 
 **Development Phases**:
 1. **Core Infrastructure** (Issues #1-6): Validation, loading, and context building
@@ -249,4 +249,4 @@ The resulting package will be installable on Debian 12+ (Trixie) and Raspberry P
 ## Related
 
 - **Parent**: [../AGENTS.md](../AGENTS.md) - Workspace documentation
-- **Users**: [halos-marine-containers](https://github.com/hatlabs/halos-marine-containers)
+- **Users**: [halos-marine-containers](https://github.com/halos-org/halos-marine-containers)

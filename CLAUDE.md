@@ -125,7 +125,7 @@ This package provides `generate-container-packages` command that converts simple
 
 **Current Phase**: Planning & Initial Development
 
-All development tasks are tracked as GitHub issues. See the [Issues page](https://github.com/hatlabs/container-packaging-tools/issues) for current status.
+All development tasks are tracked as GitHub issues. See the [Issues page](https://github.com/halos-org/container-packaging-tools/issues) for current status.
 
 **Development Phases**:
 1. **Core Infrastructure** (Issues #1-6): Validation, loading, and context building
@@ -294,4 +294,4 @@ The resulting package will be installable on Debian 12+ (Trixie) and Raspberry P
 ## Related
 
 - **Parent**: [../CLAUDE.md](../CLAUDE.md) - Workspace documentation
-- **Users**: [halos-marine-containers](https://github.com/hatlabs/halos-marine-containers)
+- **Users**: [halos-marine-containers](https://github.com/halos-org/halos-marine-containers)

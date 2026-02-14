@@ -8,9 +8,12 @@ concurrency:
   group: ${{ github.repository }}-main-release
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   build-release:
-    uses: hatlabs/shared-workflows/.github/workflows/build-release.yml@main
+    uses: halos-org/shared-workflows/.github/workflows/build-release.yml@main
     with:
       package-name: container-packaging-tools
       package-description: 'Tools for generating Debian packages from container application definitions'

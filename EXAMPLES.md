@@ -935,4 +935,4 @@ If you encounter issues:
 2. Compare your files against the examples in this document
 3. Verify all field IDs match between metadata.yaml, docker-compose.yml, and config.yml
 4. Test with the minimal example first to isolate issues
-5. Open an issue at [github.com/hatlabs/container-packaging-tools](https://github.com/hatlabs/container-packaging-tools/issues)
+5. Open an issue at [github.com/halos-org/container-packaging-tools](https://github.com/halos-org/container-packaging-tools/issues)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "generate-container-packages"
-version = "0.5.0"
+version = "0.5.1"
 description = "Generate Debian packages from container application definitions"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -44,9 +44,9 @@ dev = [
 generate-container-packages = "generate_container_packages.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/hatlabs/container-packaging-tools"
-Repository = "https://github.com/hatlabs/container-packaging-tools"
-Issues = "https://github.com/hatlabs/container-packaging-tools/issues"
+Homepage = "https://github.com/halos-org/container-packaging-tools"
+Repository = "https://github.com/halos-org/container-packaging-tools"
+Issues = "https://github.com/halos-org/container-packaging-tools/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

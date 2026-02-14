@@ -3,7 +3,7 @@
 Command-line tools for converting container application definitions into Debian packages.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/hatlabs/container-packaging-tools/actions/workflows/pr.yml/badge.svg)](https://github.com/hatlabs/container-packaging-tools/actions/workflows/pr.yml)
+[![CI](https://github.com/halos-org/container-packaging-tools/actions/workflows/pr.yml/badge.svg)](https://github.com/halos-org/container-packaging-tools/actions/workflows/pr.yml)
 
 ## Overview
 
@@ -41,7 +41,7 @@ For development with AI assistants, use the halos-distro workspace for full cont
 
 ```bash
 # Clone the workspace
-git clone https://github.com/hatlabs/halos-distro.git
+git clone https://github.com/halos-org/halos-distro.git
 cd halos-distro
 
 # Get all sub-repositories including container-packaging-tools
@@ -63,7 +63,7 @@ See `halos-distro/docs/` for development workflows:
 sudo apt install container-packaging-tools
 
 # Or build from source
-git clone https://github.com/hatlabs/container-packaging-tools.git
+git clone https://github.com/halos-org/container-packaging-tools.git
 cd container-packaging-tools
 ./run build
 sudo dpkg -i ../container-packaging-tools_*.deb
@@ -299,7 +299,7 @@ The tool generates a complete Debian package structure:
 
 ```bash
 # Clone the repository
-git clone https://github.com/hatlabs/container-packaging-tools.git
+git clone https://github.com/halos-org/container-packaging-tools.git
 cd container-packaging-tools
 
 # Build the development Docker container
@@ -412,10 +412,10 @@ Contributions are welcome! Please:
 
 ## Related Projects
 
-- **[halos-marine-containers](https://github.com/hatlabs/halos-marine-containers)** - Marine application definitions using this tool
-- **[halos-distro](https://github.com/hatlabs/halos-distro)** - HaLOS workspace and distribution
-- **[cockpit-apt](https://github.com/hatlabs/cockpit-apt)** - APT package manager for Cockpit
-- **[halos-pi-gen](https://github.com/hatlabs/halos-pi-gen)** - HaLOS image builder
+- **[halos-marine-containers](https://github.com/halos-org/halos-marine-containers)** - Marine application definitions using this tool
+- **[halos-distro](https://github.com/halos-org/halos-distro)** - HaLOS workspace and distribution
+- **[cockpit-apt](https://github.com/halos-org/cockpit-apt)** - APT package manager for Cockpit
+- **[halos-pi-gen](https://github.com/halos-org/halos-pi-gen)** - HaLOS image builder
 
 ## License
 
@@ -423,6 +423,6 @@ MIT License - see [debian/copyright](debian/copyright) for full details.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/hatlabs/container-packaging-tools/issues)
+- **Issues**: [GitHub Issues](https://github.com/halos-org/container-packaging-tools/issues)
 - **Documentation**: [EXAMPLES.md](EXAMPLES.md) and [docs/](docs/)
 - **HaLOS Project**: [hatlabs.github.io/halos](https://hatlabs.github.io/halos)
