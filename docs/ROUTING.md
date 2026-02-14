@@ -215,5 +215,5 @@ See the Authelia documentation for available OIDC options.
 
 ## Related Documentation
 
-- [SSO_SPEC.md](https://github.com/hatlabs/halos-core-containers/blob/main/docs/SSO_SPEC.md) - SSO technical specification
-- [SSO_ARCHITECTURE.md](https://github.com/hatlabs/halos-core-containers/blob/main/docs/SSO_ARCHITECTURE.md) - SSO system architecture
+- [SSO_SPEC.md](https://github.com/halos-org/halos-core-containers/blob/main/docs/SSO_SPEC.md) - SSO technical specification
+- [SSO_ARCHITECTURE.md](https://github.com/halos-org/halos-core-containers/blob/main/docs/SSO_ARCHITECTURE.md) - SSO system architecture
