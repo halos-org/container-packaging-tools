@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "generate-container-packages"
-version = "0.5.1"
+version = "0.5.2"
 description = "Generate Debian packages from container application definitions"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Hat Labs", email = "info@hatlabs.fi"}
+    {name = "Matti Airas", email = "matti.airas@hatlabs.fi"}
 ]
 keywords = ["debian", "packaging", "containers", "docker"]
 classifiers = [
