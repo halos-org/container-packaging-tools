@@ -37,12 +37,12 @@ Command-line tools for converting container application definitions into Debian 
 
 ## Agentic Coding Setup (Claude Code, GitHub Copilot, etc.)
 
-For development with AI assistants, use the halos-distro workspace for full context:
+For development with AI assistants, use the halos workspace for full context:
 
 ```bash
 # Clone the workspace
-git clone https://github.com/halos-org/halos-distro.git
-cd halos-distro
+git clone https://github.com/halos-org/halos.git
+cd halos
 
 # Get all sub-repositories including container-packaging-tools
 ./run repos:clone
@@ -51,7 +51,7 @@ cd halos-distro
 # Claude Code gets full context across all repos
 ```
 
-See `halos-distro/docs/` for development workflows:
+See `halos/docs/` for development workflows:
 - `LIFE_WITH_CLAUDE.md` - Quick start guide
 - `IMPLEMENTATION_CHECKLIST.md` - Development checklist
 - `DEVELOPMENT_WORKFLOW.md` - Detailed workflows
@@ -413,7 +413,7 @@ Contributions are welcome! Please:
 ## Related Projects
 
 - **[halos-marine-containers](https://github.com/halos-org/halos-marine-containers)** - Marine application definitions using this tool
-- **[halos-distro](https://github.com/halos-org/halos-distro)** - HaLOS workspace and distribution
+- **[halos](https://github.com/halos-org/halos)** - HaLOS workspace and distribution
 - **[cockpit-apt](https://github.com/halos-org/cockpit-apt)** - APT package manager for Cockpit
 - **[halos-pi-gen](https://github.com/halos-org/halos-pi-gen)** - HaLOS image builder
 
