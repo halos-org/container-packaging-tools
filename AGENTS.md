@@ -4,16 +4,16 @@
 
 ## 🎯 For Agentic Coding: Use the HaLOS Workspace
 
-This repository should be used as part of the halos-distro workspace for AI-assisted development:
+This repository should be used as part of the halos workspace for AI-assisted development:
 
 ```bash
 # Clone workspace and all repos
-git clone https://github.com/halos-org/halos-distro.git
-cd halos-distro
+git clone https://github.com/halos-org/halos.git
+cd halos
 ./run repos:clone
 ```
 
-See `halos-distro/docs/` for development workflows and guidance.
+See `halos/docs/` for development workflows and guidance.
 
 ## About This Project
 
@@ -52,7 +52,7 @@ services:
 
 The validator enforces these conventions as **blocking errors**. Apps that don't follow them will fail to build.
 
-See [halos-distro#49](https://github.com/halos-org/halos-distro/issues/49) for the full design rationale.
+See [halos#49](https://github.com/halos-org/halos/issues/49) for the full design rationale.
 
 ## Git Workflow Policy
 
