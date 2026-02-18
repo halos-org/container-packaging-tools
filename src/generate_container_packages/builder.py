@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from generate_container_packages.init import inject_init
 from generate_container_packages.labels import generate_homarr_labels
 from generate_container_packages.loader import AppDefinition
 from generate_container_packages.middleware import generate_forwardauth_middleware
@@ -148,6 +149,9 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
     # Inject systemd check to prevent direct docker compose usage
     compose_with_labels = inject_systemd_check(compose_with_labels)
+
+    # Inject init: true for proper signal handling on shutdown
+    compose_with_labels = inject_init(compose_with_labels)
 
     # Fix boolean restart values that PyYAML parsed from "no"/"yes"
     compose_with_labels = _fix_restart_policy(compose_with_labels)
