@@ -7,3 +7,7 @@ container-packaging-tools: script-not-executable [usr/lib/python3/dist-packages/
 
 # CLI tool uses --help for documentation; man page not required for internal tooling
 container-packaging-tools: no-manual-page [usr/bin/generate-container-packages]
+
+# Not intended for Debian archive; no ITP bug exists
+# (only emitted in build-release where changelog is generated dynamically)
+container-packaging-tools: initial-upload-closes-no-bugs
