@@ -46,35 +46,32 @@ case "$1" in
         # Note: Uses first volume's uid/gid for ownership. If no volumes defined, files are root-owned.
         DEFAULT_DATA_SRC="{{ paths.lib }}/default-data"
         if [ -d "$DEFAULT_DATA_SRC" ]; then
-            # Find all files using -print0 for robustness with special characters in filenames
-            find "$DEFAULT_DATA_SRC" -type f -print0 | while IFS= read -r -d '' src_file; do
-                # Get relative path from default-data directory
-                rel_path="${src_file#$DEFAULT_DATA_SRC/}"
-                # Expand CONTAINER_DATA_ROOT in destination path
-                dst_file="${CONTAINER_DATA_ROOT}/${rel_path}"
-                dst_dir="$(dirname "$dst_file")"
-
-                # Only copy if destination file doesn't exist (preserve user modifications)
-                if [ ! -f "$dst_file" ]; then
-                    # Create destination directory if needed
-                    mkdir -p "$dst_dir"
-                    # Copy file preserving permissions
-                    cp -p "$src_file" "$dst_file"
+            # Use find -exec for POSIX sh compatibility (no bash-only read -d)
+            find "$DEFAULT_DATA_SRC" -type f -exec sh -c '
+                DEFAULT_DATA_SRC="$1"
+                CONTAINER_DATA_ROOT="$2"
+                shift 2
+                for src_file do
+                    rel_path="${src_file#$DEFAULT_DATA_SRC/}"
+                    dst_file="${CONTAINER_DATA_ROOT}/${rel_path}"
+                    dst_dir="$(dirname "$dst_file")"
+                    if [ ! -f "$dst_file" ]; then
+                        mkdir -p "$dst_dir"
+                        cp -p "$src_file" "$dst_file"
 {% if service.volume_directories %}
 {% set first_vol = service.volume_directories[0] %}
 {% if first_vol.uid is not none and first_vol.gid is not none %}
-                    # Set ownership to match container user (file and all parent dirs up to CONTAINER_DATA_ROOT)
-                    chown {{ first_vol.uid }}:{{ first_vol.gid }} "$dst_file"
-                    # Chown all directories from dst_dir up to CONTAINER_DATA_ROOT
-                    current_dir="$dst_dir"
-                    while [ "$current_dir" != "$CONTAINER_DATA_ROOT" ] && [ "$current_dir" != "/" ]; do
-                        chown {{ first_vol.uid }}:{{ first_vol.gid }} "$current_dir"
-                        current_dir="$(dirname "$current_dir")"
-                    done
+                        chown {{ first_vol.uid }}:{{ first_vol.gid }} "$dst_file"
+                        current_dir="$dst_dir"
+                        while [ "$current_dir" != "$CONTAINER_DATA_ROOT" ] && [ "$current_dir" != "/" ]; do
+                            chown {{ first_vol.uid }}:{{ first_vol.gid }} "$current_dir"
+                            current_dir="$(dirname "$current_dir")"
+                        done
 {% endif %}
 {% endif %}
-                fi
-            done
+                    fi
+                done
+            ' _ "$DEFAULT_DATA_SRC" "$CONTAINER_DATA_ROOT" {} +
         fi
 {% endif %}
 
