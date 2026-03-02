@@ -4,9 +4,9 @@ This document describes how to configure routing and authentication for containe
 
 ## Overview
 
-HaLOS uses Traefik as a reverse proxy to route web traffic to container applications. Each application is accessible via a subdomain (`{app}.{hostname}.local`) and can be protected by Authelia SSO.
+HaLOS uses Traefik as a reverse proxy to route web traffic to container applications. Each routed application is assigned a dedicated HTTPS port at runtime and is accessible via a path redirect (`https://{hostname}/{app-id}/` redirects to the app's port). Applications can be protected by Authelia SSO.
 
-The routing configuration is defined in the `metadata.yaml` file under the `routing` key. At package install time, a `routing.yml` file is generated and installed to `/etc/halos/routing.d/`. At container start time, Traefik's `generate-routing-labels.sh` script reads these files and generates Docker labels for routing.
+The routing configuration is defined in the `metadata.yaml` file under the `routing` key. At package install time, a `routing.yml` file is generated and installed to `/etc/halos/routing.d/`. At container start time, `configure-container-routing` reads these files and generates Traefik configuration.
 
 ## Configuration Schema
 
@@ -21,10 +21,6 @@ package_name: marine-grafana-container
 version: 12.1.4
 
 routing:
-  # Subdomain for accessing the app (required)
-  # Empty string "" means root domain (e.g., halos.local instead of app.halos.local)
-  subdomain: grafana
-
   # Backend type (optional, default: "container")
   # Use "host" for apps using host networking
   backend:
@@ -59,7 +55,6 @@ The package build process generates a `routing.yml` file that includes both user
 app_id: grafana
 
 routing:
-  subdomain: grafana
   backend:
     service: grafana      # auto-derived from docker-compose.yml
     port: 3000            # auto-derived from port mapping
@@ -80,7 +75,6 @@ For applications that don't have native SSO support. Traefik intercepts requests
 
 ```yaml
 routing:
-  subdomain: grafana
   auth:
     mode: forward_auth
 ```
@@ -91,7 +85,6 @@ Some applications expect authentication headers with specific names. Use the `fo
 
 ```yaml
 routing:
-  subdomain: grafana
   auth:
     mode: forward_auth
     forward_auth:
@@ -108,7 +101,6 @@ For applications with native OpenID Connect support. The application handles the
 
 ```yaml
 routing:
-  subdomain: ""  # Root domain
   auth:
     mode: oidc
 ```
@@ -121,7 +113,6 @@ For applications that should be publicly accessible or that implement their own 
 
 ```yaml
 routing:
-  subdomain: signalk
   auth:
     mode: none
 ```
@@ -132,7 +123,6 @@ Some applications require host networking (e.g., to access hardware devices). Us
 
 ```yaml
 routing:
-  subdomain: signalk
   backend:
     type: host
   auth:
@@ -140,17 +130,6 @@ routing:
 ```
 
 This generates a Traefik backend URL pointing to `host.docker.internal` instead of the container name.
-
-## Root Domain
-
-To serve an application at the root domain (e.g., `halos.local` instead of `app.halos.local`), use an empty subdomain:
-
-```yaml
-routing:
-  subdomain: ""
-  auth:
-    mode: oidc
-```
 
 ## Generated Files
 
@@ -161,11 +140,11 @@ When a package is installed, the routing configuration generates:
 
 At container start time:
 
-3. **`/run/halos/routing-labels/{app_id}.yml`** - Docker Compose override with Traefik labels
+3. Traefik configuration is generated from routing declarations by `configure-container-routing`
 
 ## HTTP to HTTPS Redirect
 
-All HTTP requests are automatically redirected to HTTPS. The generated Traefik labels create separate HTTP and HTTPS routers:
+All HTTP requests are automatically redirected to HTTPS. The generated Traefik configuration creates separate HTTP and HTTPS routers:
 
 - HTTP router: Applies `redirect-to-https@file` middleware
 - HTTPS router: Applies TLS and authentication middleware
@@ -195,17 +174,16 @@ See the Authelia documentation for available OIDC options.
 
 ## Troubleshooting
 
-### App not accessible via subdomain
+### App not accessible
 
 1. Check if the routing.yml file exists: `ls /etc/halos/routing.d/`
-2. Check if Traefik picked up the labels: `docker inspect <container> | grep traefik`
+2. Check if Traefik picked up the configuration: `docker inspect <container> | grep traefik`
 3. Check Traefik logs: `journalctl -u halos-traefik-container`
 
 ### Authentication redirect loop
 
 1. Verify the auth mode is correct for the application
 2. Check Authelia logs: `journalctl -u halos-authelia-container`
-3. Ensure the subdomain is advertised via mDNS: `avahi-browse -a | grep <subdomain>`
 
 ### ForwardAuth headers not working
 

@@ -95,7 +95,7 @@ def generate_registry_toml(
         f'name = "{escaped_name}"',
     ]
 
-    # Build URL - prefer subdomain-based routing if configured
+    # Build URL — use path redirect for routed apps (port assigned at runtime)
     routing = metadata.get("routing")
     path = web_ui.get("path", "/")
     if not path.startswith("/"):
@@ -105,21 +105,16 @@ def generate_registry_toml(
     domain_template = "{{domain}}"
 
     if routing is not None:
-        # Use subdomain-based URL via Traefik
-        subdomain = routing.get("subdomain")
+        # Routed app — URL uses path redirect on port 443 (e.g., /signalk-server/)
+        # The path redirect 302s to the app's dedicated HTTPS port at runtime
         app_id = metadata.get("app_id", "")
-        if subdomain is None:
-            subdomain = app_id
-
-        lines.append("# URL uses subdomain routing via Traefik")
+        if not app_id:
+            raise ValueError("app_id is required for routed apps")
+        lines.append("# URL uses path redirect via Traefik (302 to dedicated HTTPS port)")
         lines.append("# {{domain}} is expanded at runtime to the system hostname")
-        if subdomain:
-            url = f"https://{subdomain}.{domain_template}{path}"
-        else:
-            # Empty subdomain means root domain
-            url = f"https://{domain_template}{path}"
+        url = f"https://{domain_template}/{app_id}/"
     else:
-        # Fall back to port-based URL (legacy/no routing)
+        # No routing — fall back to direct port access
         lines.append("# URL uses direct port access (no routing configured)")
         lines.append("# {{domain}} is expanded at runtime to the system hostname")
         protocol = web_ui.get("protocol", "http")

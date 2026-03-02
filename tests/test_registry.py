@@ -171,35 +171,28 @@ class TestGenerateRegistryToml:
         assert result is not None
         assert f'url = "http://{self.DOMAIN_TEMPLATE}:8080/app"' in result
 
-    def test_url_with_routing_subdomain(self, minimal_metadata, minimal_compose):
-        """Test URL uses subdomain when routing is configured."""
-        minimal_metadata["routing"] = {"subdomain": "myapp"}
+    def test_url_with_routing_uses_path_redirect(
+        self, minimal_metadata, minimal_compose
+    ):
+        """Test URL uses path redirect when routing is configured."""
+        minimal_metadata["app_id"] = "myapp"
+        minimal_metadata["routing"] = {"auth": {"mode": "none"}}
         result = generate_registry_toml(minimal_metadata, minimal_compose)
 
         assert result is not None
-        assert f'url = "https://myapp.{self.DOMAIN_TEMPLATE}/"' in result
-        assert "# URL uses subdomain routing via Traefik" in result
+        assert f'url = "https://{self.DOMAIN_TEMPLATE}/myapp/"' in result
+        assert "# URL uses path redirect via Traefik" in result
 
-    def test_url_with_routing_defaults_to_app_id(
+    def test_url_with_routing_uses_app_id(
         self, minimal_metadata, minimal_compose
     ):
-        """Test URL uses app_id as subdomain when not specified."""
+        """Test URL uses app_id for path redirect."""
         minimal_metadata["app_id"] = "testapp"
-        minimal_metadata["routing"] = {}  # No explicit subdomain
+        minimal_metadata["routing"] = {}
         result = generate_registry_toml(minimal_metadata, minimal_compose)
 
         assert result is not None
-        assert f'url = "https://testapp.{self.DOMAIN_TEMPLATE}/"' in result
-
-    def test_url_with_empty_subdomain_uses_root(
-        self, minimal_metadata, minimal_compose
-    ):
-        """Test empty subdomain means root domain (for Homarr)."""
-        minimal_metadata["routing"] = {"subdomain": ""}
-        result = generate_registry_toml(minimal_metadata, minimal_compose)
-
-        assert result is not None
-        assert f'url = "https://{self.DOMAIN_TEMPLATE}/"' in result
+        assert f'url = "https://{self.DOMAIN_TEMPLATE}/testapp/"' in result
 
     def test_escapes_special_characters(self, minimal_metadata, minimal_compose):
         """Test that special characters in name/description are escaped."""
@@ -276,3 +269,14 @@ class TestGenerateRegistryToml:
 
         assert result is not None
         assert "{{domain}} is expanded at runtime" in result
+
+    def test_routed_app_without_app_id_raises_error(
+        self, minimal_metadata, minimal_compose
+    ):
+        """Routed apps must have a non-empty app_id."""
+        minimal_metadata["routing"] = {"auth": {"mode": "none"}}
+        # No app_id set
+        minimal_metadata.pop("app_id", None)
+
+        with pytest.raises(ValueError, match="app_id is required"):
+            generate_registry_toml(minimal_metadata, minimal_compose)
