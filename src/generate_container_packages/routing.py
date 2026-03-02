@@ -59,9 +59,6 @@ def generate_routing_yml(
     # Determine scheme (protocol for backend connection)
     scheme = _get_scheme(web_ui)
 
-    # Determine subdomain
-    subdomain = _get_subdomain(routing_config, app_id)
-
     # Determine auth mode and config
     auth_mode, forward_auth_headers = _get_auth_config(routing_config)
 
@@ -79,9 +76,7 @@ def generate_routing_yml(
         "app_id": app_id,
         "package_name": package_name,
         "routing": {
-            "subdomain": subdomain,
             "backend": backend_config,
-            "entry_points": ["http", "https"],
         },
         "auth": {
             "mode": auth_mode,
@@ -241,26 +236,6 @@ def _get_scheme(web_ui: dict | None) -> str:
     if web_ui:
         return web_ui.get("protocol", "http")
     return "http"
-
-
-def _get_subdomain(
-    routing_config: dict | None,
-    app_id: str,
-) -> str:
-    """Get the subdomain for routing.
-
-    Priority:
-    1. routing.subdomain
-    2. app_id (default)
-    """
-    if routing_config and "subdomain" in routing_config:
-        subdomain = routing_config["subdomain"]
-        # Could be None (not specified) or "" (empty string for root)
-        if subdomain is not None:
-            return subdomain
-
-    # Default to app_id
-    return app_id
 
 
 def _get_auth_config(

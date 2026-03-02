@@ -40,7 +40,6 @@ class TestGenerateRoutingYml:
 
         assert routing["app_id"] == "myapp"
         assert routing["package_name"] == "myapp-container"
-        assert routing["routing"]["subdomain"] == "myapp"
         assert routing["routing"]["backend"]["type"] == "container"
         assert routing["routing"]["backend"]["port"] == 8080
         assert routing["auth"]["mode"] == "forward_auth"
@@ -51,9 +50,7 @@ class TestGenerateRoutingYml:
         metadata = {
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
-            "routing": {
-                "subdomain": "grafana",
-            },
+            "routing": {},
         }
         compose: dict = {"services": {"grafana": {}}}
         result = generate_routing_yml(metadata, compose, "marine-grafana-container")
@@ -63,11 +60,9 @@ class TestGenerateRoutingYml:
 
         assert routing["app_id"] == "grafana"
         assert routing["package_name"] == "marine-grafana-container"
-        assert routing["routing"]["subdomain"] == "grafana"
         assert routing["routing"]["backend"]["type"] == "container"
         assert routing["routing"]["backend"]["service"] == "grafana"
         assert routing["routing"]["backend"]["port"] == 3000
-        assert routing["routing"]["entry_points"] == ["http", "https"]
 
     def test_traefik_config_backwards_compat(self) -> None:
         """traefik: key works as backwards compatibility for routing:."""
@@ -75,7 +70,6 @@ class TestGenerateRoutingYml:
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
             "traefik": {
-                "subdomain": "grafana",
                 "auth": "forward_auth",
             },
         }
@@ -86,7 +80,6 @@ class TestGenerateRoutingYml:
         routing = yaml.safe_load(result)
 
         assert routing["app_id"] == "grafana"
-        assert routing["routing"]["subdomain"] == "grafana"
         assert routing["auth"]["mode"] == "forward_auth"
 
     def test_forward_auth_mode(self) -> None:
@@ -95,7 +88,6 @@ class TestGenerateRoutingYml:
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
             "routing": {
-                "subdomain": "grafana",
                 "auth": "forward_auth",
             },
         }
@@ -112,7 +104,6 @@ class TestGenerateRoutingYml:
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
             "routing": {
-                "subdomain": "grafana",
                 "auth": "forward_auth",
                 "forward_auth": {
                     "headers": {
@@ -138,7 +129,6 @@ class TestGenerateRoutingYml:
             "app_id": "homarr",
             "web_ui": {"enabled": True, "port": 7575},
             "routing": {
-                "subdomain": "",
                 "auth": "oidc",
                 "oidc": {
                     "client_name": "Homarr Dashboard",
@@ -157,7 +147,6 @@ class TestGenerateRoutingYml:
             "app_id": "avnav",
             "web_ui": {"enabled": True, "port": 8080},
             "routing": {
-                "subdomain": "avnav",
                 "auth": "none",
             },
         }
@@ -167,53 +156,22 @@ class TestGenerateRoutingYml:
         routing = yaml.safe_load(result)
         assert routing["auth"]["mode"] == "none"
 
-    def test_empty_subdomain_for_root_domain(self) -> None:
-        """Empty subdomain indicates root domain."""
-        metadata = {
-            "app_id": "homarr",
-            "web_ui": {"enabled": True, "port": 7575},
-            "routing": {
-                "subdomain": "",
-                "auth": "oidc",
-                "oidc": {"client_name": "Homarr"},
-            },
-        }
-        compose: dict = {"services": {"homarr": {}}}
-        result = generate_routing_yml(metadata, compose, "homarr-container")
-
-        routing = yaml.safe_load(result)
-        assert routing["routing"]["subdomain"] == ""
-
-    def test_custom_subdomain(self) -> None:
-        """Custom subdomain is used."""
-        metadata = {
-            "app_id": "signalk-server",
-            "web_ui": {"enabled": True, "port": 3000},
-            "routing": {
-                "subdomain": "signalk",
-                "auth": "forward_auth",
-            },
-        }
-        compose: dict = {"services": {"signalk": {}}}
-        result = generate_routing_yml(metadata, compose, "signalk-container")
-
-        routing = yaml.safe_load(result)
-        assert routing["routing"]["subdomain"] == "signalk"
-
-    def test_default_subdomain_from_app_id(self) -> None:
-        """When subdomain is None, app_id is used as default."""
+    def test_routing_without_subdomain(self) -> None:
+        """Routing config without subdomain still generates correct structure."""
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 8080},
             "routing": {
-                "auth": "forward_auth",
+                "auth": {"mode": "forward_auth"},
             },
         }
         compose: dict = {"services": {"app": {}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
 
         routing = yaml.safe_load(result)
-        assert routing["routing"]["subdomain"] == "myapp"
+        assert routing["app_id"] == "myapp"
+        assert "subdomain" not in routing["routing"]
+        assert routing["routing"]["backend"]["port"] == 8080
 
 
 class TestRoutingBackendDetection:
@@ -224,7 +182,7 @@ class TestRoutingBackendDetection:
         metadata = {
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
-            "routing": {"subdomain": "grafana"},
+            "routing": {},
         }
         compose: dict = {"services": {"grafana": {}}}
         result = generate_routing_yml(metadata, compose, "grafana-container")
@@ -238,7 +196,6 @@ class TestRoutingBackendDetection:
             "app_id": "signalk",
             "web_ui": {"enabled": True, "port": 3000},
             "routing": {
-                "subdomain": "signalk",
                 "host_port": 3000,
             },
         }
@@ -254,7 +211,7 @@ class TestRoutingBackendDetection:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 8080},
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"primary": {}, "secondary": {}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -267,7 +224,7 @@ class TestRoutingBackendDetection:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 9999},
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"app": {}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -281,7 +238,6 @@ class TestRoutingBackendDetection:
             "app_id": "signalk",
             "web_ui": {"enabled": True, "port": 3000},
             "routing": {
-                "subdomain": "signalk",
                 "host_port": 3001,  # Different from web_ui.port
             },
         }
@@ -300,7 +256,7 @@ class TestRoutingNetwork:
         metadata = {
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
-            "routing": {"subdomain": "grafana"},
+            "routing": {},
         }
         compose: dict = {"services": {"grafana": {}}}
         result = generate_routing_yml(metadata, compose, "grafana-container")
@@ -314,7 +270,6 @@ class TestRoutingNetwork:
             "app_id": "signalk",
             "web_ui": {"enabled": True, "port": 3000},
             "routing": {
-                "subdomain": "signalk",
                 "host_port": 3000,
             },
         }
@@ -333,7 +288,7 @@ class TestRoutingYmlFormat:
         metadata = {
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
-            "routing": {"subdomain": "grafana"},
+            "routing": {},
         }
         compose: dict = {"services": {"grafana": {}}}
         result = generate_routing_yml(metadata, compose, "grafana-container")
@@ -348,7 +303,6 @@ class TestRoutingYmlFormat:
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3000},
             "routing": {
-                "subdomain": "grafana",
                 "auth": "forward_auth",
                 "forward_auth": {
                     "headers": {"Remote-User": "X-WEBAUTH-USER"},
@@ -366,21 +320,6 @@ class TestRoutingYmlFormat:
         assert "auth" in routing
         assert "network" in routing
 
-    def test_entry_points_as_list(self) -> None:
-        """entry_points should be a list."""
-        metadata = {
-            "app_id": "grafana",
-            "web_ui": {"enabled": True, "port": 3000},
-            "routing": {"subdomain": "grafana"},
-        }
-        compose: dict = {"services": {"grafana": {}}}
-        result = generate_routing_yml(metadata, compose, "grafana-container")
-
-        routing = yaml.safe_load(result)
-        assert isinstance(routing["routing"]["entry_points"], list)
-        assert "http" in routing["routing"]["entry_points"]
-        assert "https" in routing["routing"]["entry_points"]
-
 
 class TestRoutingEdgeCases:
     """Tests for edge cases in routing.yml generation."""
@@ -390,7 +329,7 @@ class TestRoutingEdgeCases:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True},  # No port
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"app": {}}}
 
@@ -404,7 +343,6 @@ class TestRoutingEdgeCases:
             "app_id": "signalk",
             "web_ui": {"enabled": True, "port": 3000},
             "routing": {
-                "subdomain": "signalk",
                 # No host_port - should use web_ui.port
             },
         }
@@ -419,9 +357,7 @@ class TestRoutingEdgeCases:
         """Host networking without any port should raise an error."""
         metadata = {
             "app_id": "signalk",
-            "routing": {
-                "subdomain": "signalk",
-            },
+            "routing": {},
         }
         compose: dict = {"services": {"signalk": {"network_mode": "host"}}}
 
@@ -434,7 +370,7 @@ class TestRoutingEdgeCases:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 8080},
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {}}
 
@@ -451,7 +387,7 @@ class TestContainerPortExtraction:
         metadata = {
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3001},  # Host port
-            "routing": {"subdomain": "grafana"},
+            "routing": {},
         }
         # docker-compose maps 3001:3000, so container port is 3000
         compose: dict = {"services": {"grafana": {"ports": ["3001:3000"]}}}
@@ -465,7 +401,7 @@ class TestContainerPortExtraction:
         metadata = {
             "app_id": "grafana",
             "web_ui": {"enabled": True, "port": 3001},
-            "routing": {"subdomain": "grafana"},
+            "routing": {},
         }
         # Host port uses env var, container port is 3000
         compose: dict = {"services": {"grafana": {"ports": ["${PORT:-3001}:3000"]}}}
@@ -479,7 +415,7 @@ class TestContainerPortExtraction:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 8080},
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"app": {"ports": ["8080:80/tcp"]}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -491,7 +427,7 @@ class TestContainerPortExtraction:
         """Container port extracted when only container port is specified."""
         metadata = {
             "app_id": "myapp",
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"app": {"ports": ["8080"]}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -503,7 +439,7 @@ class TestContainerPortExtraction:
         """Container port extracted from long syntax port definition."""
         metadata = {
             "app_id": "myapp",
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {
             "services": {"app": {"ports": [{"target": 3000, "published": 3001}]}}
@@ -518,7 +454,7 @@ class TestContainerPortExtraction:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 9999},
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"app": {}}}  # No ports
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -531,7 +467,7 @@ class TestContainerPortExtraction:
         metadata = {
             "app_id": "signalk",
             "web_ui": {"enabled": True, "port": 3000},
-            "routing": {"subdomain": "signalk", "host_port": 3000},
+            "routing": {"host_port": 3000},
         }
         # Host networking - ports in compose are ignored
         compose: dict = {
@@ -552,7 +488,7 @@ class TestBackendScheme:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 8080},
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"app": {}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -566,7 +502,7 @@ class TestBackendScheme:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 8080, "protocol": "http"},
-            "routing": {"subdomain": "myapp"},
+            "routing": {},
         }
         compose: dict = {"services": {"app": {}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -579,7 +515,7 @@ class TestBackendScheme:
         metadata = {
             "app_id": "opencpn",
             "web_ui": {"enabled": True, "port": 3001, "protocol": "https"},
-            "routing": {"subdomain": "opencpn"},
+            "routing": {},
         }
         compose: dict = {"services": {"opencpn": {}}}
         result = generate_routing_yml(metadata, compose, "opencpn-container")
@@ -592,7 +528,7 @@ class TestBackendScheme:
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 443, "protocol": "https"},
-            "routing": {"subdomain": "myapp", "host_port": 443},
+            "routing": {"host_port": 443},
         }
         compose: dict = {"services": {"app": {"network_mode": "host"}}}
         result = generate_routing_yml(metadata, compose, "myapp-container")
@@ -611,7 +547,7 @@ class TestBackendScheme:
                 "protocol": "https",
                 "path": "/",
             },
-            "routing": {"subdomain": "secure"},
+            "routing": {},
         }
         compose: dict = {"services": {"secure": {}}}
         result = generate_routing_yml(metadata, compose, "secure-app-container")
