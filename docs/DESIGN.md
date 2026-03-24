@@ -507,7 +507,7 @@ EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
 ExecStart=/bin/sh -c 'docker compose --ansi never up'
 ExecStop=/bin/sh -c 'docker compose --ansi never down'
-Restart=on-failure
+Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
@@ -516,7 +516,7 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
-**Note**: Type=simple runs docker-compose in foreground mode, allowing systemd to properly manage the container lifecycle. Container logs are streamed to journal via stdout/stderr. Restart=on-failure provides automatic recovery.
+**Note**: Type=simple runs docker-compose in foreground mode, allowing systemd to properly manage the container lifecycle. Container logs are streamed to journal via stdout/stderr. Restart=always ensures the container restarts after both failures and clean exits (e.g., in-app restart requests), while `systemctl stop` still works correctly.
 
 ## Path Conventions
 
