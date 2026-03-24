@@ -36,7 +36,7 @@ ExecStop=/bin/sh -c '\
 ExecStart=docker compose up
 ExecStop=docker compose down
 {% endif %}
-Restart=on-failure
+Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
