@@ -44,8 +44,13 @@ def generate_registry_toml(
 ) -> str | None:
     """Generate TOML registry file content for an app.
 
-    URLs use the template variable {{domain}} which gets expanded at runtime
-    by homarr-container-adapter to the actual system domain.
+    Routed apps emit a path-only URL (e.g. ``/signalk-server/``) that the
+    browser resolves against the current origin — letting a single dashboard
+    work across every configured hostname (mDNS, VPN FQDN, DHCP-DNS).
+
+    Non-routed apps emit an absolute URL with the ``{{domain}}`` template,
+    expanded at runtime by homarr-container-adapter to the system domain.
+    Path-only is not used here because direct-port access requires a host.
 
     Args:
         metadata: Package metadata dictionary
@@ -101,20 +106,22 @@ def generate_registry_toml(
     if not path.startswith("/"):
         path = "/" + path
 
-    # Use {{domain}} template variable - expanded at runtime by homarr-container-adapter
-    domain_template = "{{domain}}"
-
     if routing is not None:
-        # Routed app — URL uses path redirect on port 443 (e.g., /signalk-server/)
-        # The path redirect 302s to the app's dedicated HTTPS port at runtime
+        # Routed app — emit a path-only URL (e.g. /signalk-server/) that
+        # Traefik's path-prefix router serves under every configured
+        # hostname. The browser resolves the href against the current origin,
+        # so the same card works on mDNS, VPN FQDN, DHCP-DNS, etc.
         app_id = metadata.get("app_id", "")
         if not app_id:
             raise ValueError("app_id is required for routed apps")
-        lines.append("# URL uses path redirect via Traefik (302 to dedicated HTTPS port)")
-        lines.append("# {{domain}} is expanded at runtime to the system hostname")
-        url = f"https://{domain_template}/{app_id}/"
+        lines.append("# Path-only URL: browser resolves against the current origin,")
+        lines.append("# letting the card work under every configured hostname.")
+        url = f"/{app_id}/"
     else:
-        # No routing — fall back to direct port access
+        # No routing — fall back to direct port access. Path-only doesn't
+        # apply here because a port can't be expressed as a path.
+        # {{domain}} is expanded at runtime by homarr-container-adapter.
+        domain_template = "{{domain}}"
         lines.append("# URL uses direct port access (no routing configured)")
         lines.append("# {{domain}} is expanded at runtime to the system hostname")
         protocol = web_ui.get("protocol", "http")
