@@ -76,6 +76,26 @@ All checks must pass locally before pushing. This prevents wasting CI resources 
 
 This package provides `generate-container-packages` command that converts simple container app definitions into full Debian packages. The goal is to make it easy for developers to add new container apps without understanding Debian packaging internals.
 
+## Homarr-Stack Breaks Auto-Injection
+
+The generator emits a conditional `Breaks:` line on generated .debs whenever an app's `metadata.yaml` would cause a path-only `url` to be written into `/etc/halos/webapps.d/<name>.toml`. The exact trigger condition lives in a single predicate, `registry.emits_path_only_url(metadata)`, shared by:
+
+- `registry.generate_registry_toml` — chooses path-only vs. absolute URL for the TOML.
+- `template_context._compute_homarr_stack_breaks` — decides whether to auto-inject the `Breaks:` clauses.
+
+Today that predicate is `metadata["routing"] is not None and metadata["web_ui"]["enabled"]`. `web_ui.visible` is recorded *into* the TOML (so the adapter can decide whether to show a card) but does not gate emission — a hidden routed web app still ships a path-only TOML and is loaded by the adapter for ping coverage, which means the peer-version constraints apply identically.
+
+The injected entries are:
+
+- `homarr-container-adapter (<< HOMARR_ADAPTER_MIN_VERSION)`
+- `halos-core-containers (<< HALOS_CORE_CONTAINERS_MIN_VERSION)`
+
+Both constants live in `src/generate_container_packages/template_context.py`. Bump them when a new contract evolution in the Homarr stack requires a higher minimum (e.g., a new schema field on `appHrefSchema`, or an adapter capability the generator starts relying on). Bump the predicate in `registry.emits_path_only_url` if the contract's trigger surface changes.
+
+`Breaks` is conditional: it constrains the named peer only when it is *installed*. A HaLOS device that runs container apps without the Homarr dashboard is unaffected. The choice of `Breaks` over `Depends` and of generator-injection over per-app metadata is documented in [the workspace policy doc](https://github.com/halos-org/halos/blob/main/docs/solutions/best-practices/2026-04-30-skip-apt-depends-pins-sibling-halos-packages.md) (look for the "manual partial upgrades" clause).
+
+App-declared `breaks:` entries in `metadata.yaml` are appended after the auto-injected ones; the two compose rather than overriding. The `breaks` field on `metadata.yaml` is a regular optional list of Debian relationship strings, peer with `depends`, `recommends`, `conflicts`, and `provides`.
+
 ## Project Status
 
 **Current Phase**: Planning & Initial Development

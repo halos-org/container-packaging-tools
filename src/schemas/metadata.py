@@ -460,6 +460,16 @@ class PackageMetadata(BaseModel):
             "Cannot be installed alongside conflicting packages."
         ),
     )
+    breaks: list[str] | None = Field(
+        None,
+        description=(
+            "Packages this package breaks (e.g., ['homarr-container-adapter (<< 0.4.6)']). "
+            "Conditional: only enforced when the named package is installed, in which "
+            "case the named version range cannot coexist with this one. Auto-injected "
+            "entries for the Homarr stack (added when routing + web_ui + visible is set) "
+            "are prepended to this list."
+        ),
+    )
 
     # Web UI configuration
     web_ui: WebUI | None = Field(None, description="Web interface configuration")

@@ -37,6 +37,37 @@ def _escape_toml_string(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def emits_path_only_url(metadata: dict[str, Any]) -> bool:
+    """Return True when the given metadata causes a path-only Homarr-card URL
+    to be written into the generated TOML registry file.
+
+    This is the single source of truth for the predicate that gates the
+    path-only contract:
+
+    - `registry.generate_registry_toml` uses it to decide which branch of the
+      URL builder to enter.
+    - `template_context._compute_homarr_stack_breaks` uses it to decide
+      whether to auto-inject Debian `Breaks:` clauses on the Homarr stack.
+
+    Keeping the two call sites tied to a single predicate ensures that
+    every TOML written with a path-only `url` is accompanied by `Breaks:`
+    lines that gate the .deb install against pre-contract peers — and
+    nothing more.
+
+    Args:
+        metadata: Parsed metadata.yaml contents
+
+    Returns:
+        True iff the app would emit a path-only URL into its TOML.
+    """
+    web_ui = metadata.get("web_ui") or {}
+    if not web_ui.get("enabled"):
+        return False
+    if metadata.get("routing") is None:
+        return False
+    return True
+
+
 def generate_registry_toml(
     metadata: dict[str, Any],
     compose: dict[str, Any],
@@ -100,13 +131,14 @@ def generate_registry_toml(
         f'name = "{escaped_name}"',
     ]
 
-    # Build URL — use path redirect for routed apps (port assigned at runtime)
-    routing = metadata.get("routing")
+    # Build URL — use path redirect for routed apps (port assigned at runtime).
+    # The predicate lives in `emits_path_only_url` so `template_context` can
+    # share it for `Breaks:` auto-injection without duplicating the trigger.
     path = web_ui.get("path", "/")
     if not path.startswith("/"):
         path = "/" + path
 
-    if routing is not None:
+    if emits_path_only_url(metadata):
         # Routed app — emit a path-only URL (e.g. /signalk-server/) that
         # Traefik's path-prefix router serves under every configured
         # hostname. The browser resolves the href against the current origin,

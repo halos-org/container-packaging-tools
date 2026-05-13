@@ -166,6 +166,58 @@ class TestRenderAllTemplates:
         assert "Description: A test application" in content
         assert "role::container-app" in content
         assert "Standards-Version: 4.5.0" in content
+        # Non-routed app: no Breaks: line should appear.
+        assert "Breaks:" not in content
+
+    def test_rendered_control_file_breaks_for_routed_visible_app(self, tmp_path):
+        """Routed + web_ui.enabled + web_ui.visible -> Breaks: line in control."""
+        metadata = {
+            "name": "Test App",
+            "package_name": "test-app-container",
+            "app_id": "test-app",
+            "version": "1.0.0",
+            "description": "A test application",
+            "maintainer": "Developer <dev@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "web",
+            "architecture": "all",
+            "routing": {"auth": {"mode": "none"}},
+            "web_ui": {
+                "enabled": True,
+                "visible": True,
+                "port": 8080,
+                "protocol": "http",
+                "path": "/",
+            },
+        }
+
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={"services": {"test-app": {"image": "test:latest"}}},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
+
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
+        output_dir = tmp_path / "output"
+
+        render_all_templates(app_def, output_dir, template_dir)
+
+        control_file = output_dir / "debian" / "control"
+        content = control_file.read_text()
+
+        # The Breaks: line is present, both peers pinned, in injected order.
+        assert (
+            "Breaks: homarr-container-adapter (<< 0.4.6), "
+            "halos-core-containers (<< 0.3.2)"
+        ) in content
 
     def test_executable_permissions_set(self, tmp_path):
         """Test that debian/rules and scripts have executable permissions."""
