@@ -270,8 +270,8 @@ class TestHomarrStackBreaksInjection:
             },
         }
 
-    def test_routed_visible_app_gets_homarr_stack_breaks(self, base_metadata):
-        """Routed + web_ui.enabled + web_ui.visible -> both peers pinned."""
+    def test_routed_enabled_app_gets_homarr_stack_breaks(self, base_metadata):
+        """Routed + web_ui.enabled -> both peers pinned. Same trigger as path-only TOML."""
         breaks = _compute_homarr_stack_breaks(base_metadata)
         assert breaks == [
             f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION})",
@@ -284,14 +284,35 @@ class TestHomarrStackBreaksInjection:
         assert _compute_homarr_stack_breaks(base_metadata) == []
 
     def test_web_ui_disabled_no_breaks(self, base_metadata):
-        """Disabled web_ui means no Homarr card; no peer constraint needed."""
+        """Disabled web_ui means generate_registry_toml returns None — no TOML, no peer constraint."""
         base_metadata["web_ui"]["enabled"] = False
         assert _compute_homarr_stack_breaks(base_metadata) == []
 
-    def test_web_ui_not_visible_no_breaks(self, base_metadata):
-        """Hidden routed apps don't render as Homarr cards; over-constraining is wrong."""
+    def test_web_ui_not_visible_still_gets_breaks(self, base_metadata):
+        """`visible: false` does NOT gate path-only emission, so it must not gate Breaks either.
+
+        A routed, enabled, hidden web app still ships a path-only TOML and is
+        loaded by the adapter for ping coverage; it just doesn't appear as a
+        Homarr card. The peer-version constraints apply identically.
+        """
         base_metadata["web_ui"]["visible"] = False
-        assert _compute_homarr_stack_breaks(base_metadata) == []
+        assert _compute_homarr_stack_breaks(base_metadata) == [
+            f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION})",
+            f"halos-core-containers (<< {HALOS_CORE_CONTAINERS_MIN_VERSION})",
+        ]
+
+    def test_routing_empty_dict_still_triggers_breaks(self, base_metadata):
+        """`routing: {}` (present empty dict) is not None, so the trigger fires.
+
+        Locks in the `is None` check semantics — a future schema default of
+        `{}` for routing would silently change the trigger if we relied on
+        truthiness instead.
+        """
+        base_metadata["routing"] = {}
+        assert _compute_homarr_stack_breaks(base_metadata) == [
+            f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION})",
+            f"halos-core-containers (<< {HALOS_CORE_CONTAINERS_MIN_VERSION})",
+        ]
 
     def test_no_web_ui_at_all_no_breaks(self, base_metadata):
         """Missing web_ui means no card to load — `.get()` returns falsy and short-circuits."""

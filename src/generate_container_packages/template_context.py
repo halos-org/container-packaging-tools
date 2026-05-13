@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from generate_container_packages.loader import AppDefinition
+from generate_container_packages.registry import emits_path_only_url
 
 # Minimum versions of HaLOS peer packages required by the path-only Homarr-card
 # contract that this generator emits for routed visible apps (see
@@ -318,15 +319,13 @@ def _compute_homarr_stack_breaks(metadata: dict[str, Any]) -> list[str]:
     Homarr-card contract, or an empty list when the app does not emit a
     path-only TOML.
 
-    Routed, web-UI-enabled, visible apps are the apps for which
-    `registry.generate_registry_toml` writes a path-only `url` field into
-    `/etc/halos/webapps.d/`. Those TOMLs require a sufficiently new
-    `homarr-container-adapter` (to accept path-only URLs during registry-file
-    load) and `halos-core-containers` (whose bundled Homarr fork image
-    accepts path-only `appHrefSchema`).
-
-    The trigger condition mirrors `registry.generate_registry_toml`'s
-    routed-branch precondition so the two stay in lock-step.
+    Apps that emit a path-only `url` into their TOML registry file (per
+    `registry.emits_path_only_url`) need both a sufficiently new
+    `homarr-container-adapter` (to accept path-only URLs during
+    registry-file load) and `halos-core-containers` (whose bundled Homarr
+    fork image accepts path-only `appHrefSchema`). The trigger is shared
+    with `registry.generate_registry_toml` via a single predicate, so the
+    two cannot drift.
 
     Args:
         metadata: Parsed metadata.yaml contents
@@ -334,12 +333,7 @@ def _compute_homarr_stack_breaks(metadata: dict[str, Any]) -> list[str]:
     Returns:
         List of Debian relationship strings (empty when no constraints apply).
     """
-    web_ui = metadata.get("web_ui") or {}
-    if metadata.get("routing") is None:
-        return []
-    if not web_ui.get("enabled"):
-        return []
-    if not web_ui.get("visible"):
+    if not emits_path_only_url(metadata):
         return []
     return [
         f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION})",
