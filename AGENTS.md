@@ -76,6 +76,19 @@ All checks must pass locally before pushing. This prevents wasting CI resources 
 
 This package provides `generate-container-packages` command that converts simple container app definitions into full Debian packages. The goal is to make it easy for developers to add new container apps without understanding Debian packaging internals.
 
+## Homarr-Stack Breaks Auto-Injection
+
+The generator emits a conditional `Breaks:` line on generated .debs whenever an app's `metadata.yaml` declares `routing:` AND `web_ui.enabled: true` AND `web_ui.visible: true` — i.e., whenever the app's `/etc/halos/webapps.d/<name>.toml` will be written with a path-only `url` and loaded by `homarr-container-adapter` for display in Homarr. The injected entries are:
+
+- `homarr-container-adapter (<< HOMARR_ADAPTER_MIN_VERSION)`
+- `halos-core-containers (<< HALOS_CORE_CONTAINERS_MIN_VERSION)`
+
+Both constants live in `src/generate_container_packages/template_context.py`. Bump them when a new contract evolution in the Homarr stack requires a higher minimum (e.g., a new schema field on `appHrefSchema`, or an adapter capability the generator starts relying on).
+
+`Breaks` is conditional: it constrains the named peer only when it is *installed*. A HaLOS device that runs container apps without the Homarr dashboard is unaffected. The choice of `Breaks` over `Depends` and of generator-injection over per-app metadata is documented in [the workspace policy doc](https://github.com/halos-org/halos/blob/main/docs/solutions/best-practices/2026-04-30-skip-apt-depends-pins-sibling-halos-packages.md) (look for the "manual partial upgrades" clause and the worked example for CPT-generated routed apps).
+
+App-declared `breaks:` entries in `metadata.yaml` are appended after the auto-injected ones; the two compose rather than overriding.
+
 ## Project Status
 
 **Current Phase**: Planning & Initial Development
