@@ -211,7 +211,7 @@ toml = [
 
 [[package]]
 name = "generate-container-packages"
-version = "0.5.4"
+version = "0.5.7"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
