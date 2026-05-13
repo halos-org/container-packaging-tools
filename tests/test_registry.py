@@ -171,28 +171,27 @@ class TestGenerateRegistryToml:
         assert result is not None
         assert f'url = "http://{self.DOMAIN_TEMPLATE}:8080/app"' in result
 
-    def test_url_with_routing_uses_path_redirect(
-        self, minimal_metadata, minimal_compose
-    ):
-        """Test URL uses path redirect when routing is configured."""
+    def test_url_with_routing_is_path_only(self, minimal_metadata, minimal_compose):
+        """Routed apps emit a path-only URL so the card works under every configured hostname."""
         minimal_metadata["app_id"] = "myapp"
         minimal_metadata["routing"] = {"auth": {"mode": "none"}}
         result = generate_registry_toml(minimal_metadata, minimal_compose)
 
         assert result is not None
-        assert f'url = "https://{self.DOMAIN_TEMPLATE}/myapp/"' in result
-        assert "# URL uses path redirect via Traefik" in result
+        assert 'url = "/myapp/"' in result
+        assert "# Path-only URL" in result
+        # Routed URLs must not bake in a hostname; the {{domain}} template
+        # should appear nowhere in the file (no scheme, no hostname).
+        assert self.DOMAIN_TEMPLATE not in result
 
-    def test_url_with_routing_uses_app_id(
-        self, minimal_metadata, minimal_compose
-    ):
-        """Test URL uses app_id for path redirect."""
+    def test_url_with_routing_uses_app_id(self, minimal_metadata, minimal_compose):
+        """Test URL uses app_id for the path-only href."""
         minimal_metadata["app_id"] = "testapp"
         minimal_metadata["routing"] = {}
         result = generate_registry_toml(minimal_metadata, minimal_compose)
 
         assert result is not None
-        assert f'url = "https://{self.DOMAIN_TEMPLATE}/testapp/"' in result
+        assert 'url = "/testapp/"' in result
 
     def test_escapes_special_characters(self, minimal_metadata, minimal_compose):
         """Test that special characters in name/description are escaped."""
