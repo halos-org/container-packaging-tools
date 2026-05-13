@@ -6,6 +6,9 @@ import pytest
 
 from generate_container_packages.loader import AppDefinition
 from generate_container_packages.template_context import (
+    HALOS_CORE_CONTAINERS_MIN_VERSION,
+    HOMARR_ADAPTER_MIN_VERSION,
+    _compute_homarr_stack_breaks,
     _extract_volume_directories,
     _is_bindable_path,
     build_context,
@@ -232,6 +235,152 @@ class TestFormatDependencies:
         """Test formatting multiple dependencies."""
         result = format_dependencies(["docker.io", "python3", "nginx"])
         assert result == "docker.io, python3, nginx"
+
+
+class TestHomarrStackBreaksInjection:
+    """Tests for auto-injected Breaks: entries on routed visible web apps.
+
+    Mirrors the trigger condition in `registry.generate_registry_toml` —
+    the same metadata that causes a path-only TOML to be emitted is the
+    metadata that requires a sufficiently new homarr-container-adapter and
+    halos-core-containers.
+    """
+
+    @pytest.fixture
+    def base_metadata(self):
+        """Minimal metadata that triggers Homarr-stack Breaks injection."""
+        return {
+            "name": "Test App",
+            "package_name": "test-app-container",
+            "app_id": "test-app",
+            "version": "1.0.0",
+            "description": "A test application",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "routing": {"auth": {"mode": "none"}},
+            "web_ui": {
+                "enabled": True,
+                "visible": True,
+                "port": 8080,
+                "protocol": "http",
+                "path": "/",
+            },
+        }
+
+    def test_routed_visible_app_gets_homarr_stack_breaks(self, base_metadata):
+        """Routed + web_ui.enabled + web_ui.visible -> both peers pinned."""
+        breaks = _compute_homarr_stack_breaks(base_metadata)
+        assert breaks == [
+            f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION})",
+            f"halos-core-containers (<< {HALOS_CORE_CONTAINERS_MIN_VERSION})",
+        ]
+
+    def test_no_routing_no_breaks(self, base_metadata):
+        """Apps without routing emit absolute URLs and don't require the path-only contract."""
+        del base_metadata["routing"]
+        assert _compute_homarr_stack_breaks(base_metadata) == []
+
+    def test_web_ui_disabled_no_breaks(self, base_metadata):
+        """Disabled web_ui means no Homarr card; no peer constraint needed."""
+        base_metadata["web_ui"]["enabled"] = False
+        assert _compute_homarr_stack_breaks(base_metadata) == []
+
+    def test_web_ui_not_visible_no_breaks(self, base_metadata):
+        """Hidden routed apps don't render as Homarr cards; over-constraining is wrong."""
+        base_metadata["web_ui"]["visible"] = False
+        assert _compute_homarr_stack_breaks(base_metadata) == []
+
+    def test_no_web_ui_at_all_no_breaks(self, base_metadata):
+        """Missing web_ui means no card to load — `.get()` returns falsy and short-circuits."""
+        del base_metadata["web_ui"]
+        assert _compute_homarr_stack_breaks(base_metadata) == []
+
+    def test_build_context_emits_breaks_string_when_triggered(self, base_metadata):
+        """End-to-end through build_context: the package.breaks field is the formatted string."""
+        app_def = AppDefinition(
+            metadata=base_metadata,
+            compose={"services": {"test-app": {"image": "test:latest"}}},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+            screenshot_paths=[],
+        )
+        context = build_context(app_def)
+        assert (
+            f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION})"
+            in context["package"]["breaks"]
+        )
+        assert (
+            f"halos-core-containers (<< {HALOS_CORE_CONTAINERS_MIN_VERSION})"
+            in context["package"]["breaks"]
+        )
+
+    def test_build_context_emits_empty_breaks_when_not_triggered(self, base_metadata):
+        """Apps without routing produce an empty package.breaks string."""
+        del base_metadata["routing"]
+        app_def = AppDefinition(
+            metadata=base_metadata,
+            compose={"services": {"test-app": {"image": "test:latest"}}},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+            screenshot_paths=[],
+        )
+        context = build_context(app_def)
+        assert context["package"]["breaks"] == ""
+
+    def test_app_declared_breaks_compose_with_auto_injected(self, base_metadata):
+        """App-declared `breaks` append after auto-injected entries."""
+        base_metadata["breaks"] = ["other-package (<< 2.0)"]
+        app_def = AppDefinition(
+            metadata=base_metadata,
+            compose={"services": {"test-app": {"image": "test:latest"}}},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+            screenshot_paths=[],
+        )
+        context = build_context(app_def)
+        assert context["package"]["breaks"] == (
+            f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION}), "
+            f"halos-core-containers (<< {HALOS_CORE_CONTAINERS_MIN_VERSION}), "
+            "other-package (<< 2.0)"
+        )
+
+    def test_app_declared_breaks_without_routing(self, base_metadata):
+        """A non-routed app can still declare its own breaks; no auto-injection."""
+        del base_metadata["routing"]
+        base_metadata["breaks"] = ["other-package (<< 2.0)"]
+        app_def = AppDefinition(
+            metadata=base_metadata,
+            compose={"services": {"test-app": {"image": "test:latest"}}},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+            screenshot_paths=[],
+        )
+        context = build_context(app_def)
+        assert context["package"]["breaks"] == "other-package (<< 2.0)"
+
+    def test_breaks_explicit_none_does_not_error(self, base_metadata):
+        """Routed app with explicit `breaks: None` -> auto-injected entries only."""
+        base_metadata["breaks"] = None
+        app_def = AppDefinition(
+            metadata=base_metadata,
+            compose={"services": {"test-app": {"image": "test:latest"}}},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+            screenshot_paths=[],
+        )
+        context = build_context(app_def)
+        assert context["package"]["breaks"] == (
+            f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION}), "
+            f"halos-core-containers (<< {HALOS_CORE_CONTAINERS_MIN_VERSION})"
+        )
 
 
 class TestIsBindablePath:

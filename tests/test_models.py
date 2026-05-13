@@ -234,6 +234,29 @@ class TestPackageMetadata:
         assert metadata.layout.x_offset == 0
         assert metadata.layout.y_offset == 0
 
+    def test_metadata_with_breaks(self, valid_metadata):
+        """Test metadata accepts a `breaks` list for Debian Breaks: relationships."""
+        valid_metadata["breaks"] = [
+            "homarr-container-adapter (<< 0.4.6)",
+            "halos-core-containers (<< 0.3.2)",
+        ]
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert metadata.breaks == [
+            "homarr-container-adapter (<< 0.4.6)",
+            "halos-core-containers (<< 0.3.2)",
+        ]
+
+    def test_metadata_breaks_defaults_to_none(self, valid_metadata):
+        """`breaks` defaults to None when omitted (no Breaks: line gets emitted)."""
+        metadata = PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+        assert metadata.breaks is None
+
+    def test_metadata_breaks_rejects_non_list(self, valid_metadata):
+        """Pydantic rejects a scalar value for `breaks` — must be list of strings."""
+        valid_metadata["breaks"] = "homarr-container-adapter (<< 0.4.6)"
+        with pytest.raises(ValidationError):
+            PackageMetadata(**valid_metadata)  # type: ignore[arg-type]
+
     def test_missing_required_field(self, valid_metadata):
         """Test missing required field raises ValidationError."""
         del valid_metadata["name"]

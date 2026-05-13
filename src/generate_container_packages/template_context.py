@@ -7,6 +7,26 @@ from typing import Any
 
 from generate_container_packages.loader import AppDefinition
 
+# Minimum versions of HaLOS peer packages required by the path-only Homarr-card
+# contract that this generator emits for routed visible apps (see
+# `registry.generate_registry_toml` — the routed branch writes
+# `url = "/{app_id}/"`).
+#
+# When these constants change, update the matching note in this repo's AGENTS.md
+# and the workspace policy doc at
+# https://github.com/halos-org/halos/blob/main/docs/solutions/best-practices/2026-04-30-skip-apt-depends-pins-sibling-halos-packages.md
+HOMARR_ADAPTER_MIN_VERSION = "0.4.6"
+"""First `homarr-container-adapter` release whose `validate_app_url` accepts
+the path-only URL form (`/app_id/`). Older adapters reject the URL during
+registry-file load, skip the app with a `tracing::warn`, and the card never
+appears in Homarr."""
+
+HALOS_CORE_CONTAINERS_MIN_VERSION = "0.3.2"
+"""First `halos-core-containers` release whose bundled Homarr fork image
+(`v1.60.0-halos.1`) ships an `appHrefSchema` that accepts path-only hrefs.
+Older fork images reject the URL at the tRPC `app.create` validation
+boundary."""
+
 
 class VolumeOwnershipError(Exception):
     """Raised when volume ownership cannot be determined due to invalid user field."""
@@ -293,6 +313,40 @@ def _build_file_watchers_context(
     return result
 
 
+def _compute_homarr_stack_breaks(metadata: dict[str, Any]) -> list[str]:
+    """Return the auto-injected `Breaks:` entries required by the path-only
+    Homarr-card contract, or an empty list when the app does not emit a
+    path-only TOML.
+
+    Routed, web-UI-enabled, visible apps are the apps for which
+    `registry.generate_registry_toml` writes a path-only `url` field into
+    `/etc/halos/webapps.d/`. Those TOMLs require a sufficiently new
+    `homarr-container-adapter` (to accept path-only URLs during registry-file
+    load) and `halos-core-containers` (whose bundled Homarr fork image
+    accepts path-only `appHrefSchema`).
+
+    The trigger condition mirrors `registry.generate_registry_toml`'s
+    routed-branch precondition so the two stay in lock-step.
+
+    Args:
+        metadata: Parsed metadata.yaml contents
+
+    Returns:
+        List of Debian relationship strings (empty when no constraints apply).
+    """
+    web_ui = metadata.get("web_ui") or {}
+    if metadata.get("routing") is None:
+        return []
+    if not web_ui.get("enabled"):
+        return []
+    if not web_ui.get("visible"):
+        return []
+    return [
+        f"homarr-container-adapter (<< {HOMARR_ADAPTER_MIN_VERSION})",
+        f"halos-core-containers (<< {HALOS_CORE_CONTAINERS_MIN_VERSION})",
+    ]
+
+
 def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
     """Build package-level context from metadata.
 
@@ -311,6 +365,13 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
             app_id = package_name[:-10]
         else:
             app_id = package_name
+
+    # Auto-injected Homarr-stack breaks are prepended to any app-declared
+    # `breaks:` so the contract minimums always take effect; app-specific
+    # breaks compose with (do not replace) them.
+    breaks_list = _compute_homarr_stack_breaks(metadata) + list(
+        metadata.get("breaks") or []
+    )
 
     return {
         "name": metadata["package_name"],
@@ -331,6 +392,7 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
         "suggests": format_dependencies(metadata.get("suggests", [])),
         "provides": format_dependencies(metadata.get("provides", [])),
         "conflicts": format_dependencies(metadata.get("conflicts", [])),
+        "breaks": format_dependencies(breaks_list),
         # Additional fields for templates
         "human_name": metadata["name"],
         "upstream_version": metadata.get("upstream_version", metadata["version"]),

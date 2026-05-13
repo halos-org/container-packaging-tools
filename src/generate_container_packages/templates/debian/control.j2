@@ -24,6 +24,9 @@ Provides: {{ package.provides }}
 {% if package.conflicts %}
 Conflicts: {{ package.conflicts }}
 {% endif %}
+{% if package.breaks %}
+Breaks: {{ package.breaks }}
+{% endif %}
 Description: {{ package.description }}
 {{ package.long_description }}
 Tag: {{ package.tags }}, x-display-name::{{ package.human_name }}
