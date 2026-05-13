@@ -171,9 +171,7 @@ class TestGenerateRegistryToml:
         assert result is not None
         assert f'url = "http://{self.DOMAIN_TEMPLATE}:8080/app"' in result
 
-    def test_url_with_routing_is_path_only(
-        self, minimal_metadata, minimal_compose
-    ):
+    def test_url_with_routing_is_path_only(self, minimal_metadata, minimal_compose):
         """Routed apps emit a path-only URL so the card works under every configured hostname."""
         minimal_metadata["app_id"] = "myapp"
         minimal_metadata["routing"] = {"auth": {"mode": "none"}}
@@ -186,9 +184,7 @@ class TestGenerateRegistryToml:
         # should appear nowhere in the file (no scheme, no hostname).
         assert self.DOMAIN_TEMPLATE not in result
 
-    def test_url_with_routing_uses_app_id(
-        self, minimal_metadata, minimal_compose
-    ):
+    def test_url_with_routing_uses_app_id(self, minimal_metadata, minimal_compose):
         """Test URL uses app_id for the path-only href."""
         minimal_metadata["app_id"] = "testapp"
         minimal_metadata["routing"] = {}
