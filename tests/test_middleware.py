@@ -23,7 +23,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "grafana",
             "package_name": "grafana-container",
             "routing": {
-                "subdomain": "grafana",
                 "auth": {
                     "mode": "forward_auth",
                 },
@@ -38,7 +37,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "grafana",
             "package_name": "grafana-container",
             "routing": {
-                "subdomain": "grafana",
                 "auth": {
                     "mode": "forward_auth",
                     "forward_auth": {
@@ -56,7 +54,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "homarr",
             "package_name": "homarr-container",
             "routing": {
-                "subdomain": "",
                 "auth": {
                     "mode": "oidc",
                 },
@@ -71,7 +68,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "avnav",
             "package_name": "avnav-container",
             "routing": {
-                "subdomain": "avnav",
                 "auth": {
                     "mode": "none",
                 },
@@ -86,7 +82,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "grafana",
             "package_name": "grafana-container",
             "routing": {
-                "subdomain": "grafana",
                 "auth": {
                     "mode": "forward_auth",
                     "forward_auth": {
@@ -121,7 +116,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "grafana",
             "package_name": "grafana-container",
             "routing": {
-                "subdomain": "grafana",
                 "auth": {
                     "mode": "forward_auth",
                     "forward_auth": {
@@ -154,7 +148,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "grafana",
             "package_name": "grafana-container",
             "routing": {
-                "subdomain": "grafana",
                 "auth": {
                     "mode": "forward_auth",
                     "forward_auth": {
@@ -175,7 +168,6 @@ class TestGenerateForwardAuthMiddleware:
             "app_id": "grafana",
             "package_name": "grafana-container",
             "routing": {
-                "subdomain": "grafana",
                 "auth": "forward_auth",  # string, not dict
                 "forward_auth": {  # at routing level
                     "headers": {

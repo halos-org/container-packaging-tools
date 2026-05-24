@@ -23,7 +23,6 @@ class TestOIDCPostinst:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "oidc",
                 "auth": {"mode": "oidc"},
             },
         }
@@ -68,7 +67,6 @@ class TestOIDCPostinst:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "fwd",
                 "auth": {"mode": "forward_auth"},
             },
         }
@@ -116,7 +114,6 @@ class TestOIDCPostrm:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "oidc",
                 "auth": {"mode": "oidc"},
             },
         }
@@ -160,7 +157,6 @@ class TestOIDCPostrm:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "grafana",
                 "auth": {
                     "mode": "forward_auth",
                     "forward_auth": {
@@ -254,7 +250,6 @@ class TestOIDCSystemdService:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "oidc",
                 "auth": {"mode": "oidc"},
             },
         }
@@ -298,7 +293,6 @@ class TestOIDCSystemdService:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "fwd",
                 "auth": {"mode": "forward_auth"},
             },
         }
@@ -384,7 +378,6 @@ class TestOIDCRulesInstallation:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "oidc",
                 "auth": {"mode": "oidc"},
             },
         }
@@ -428,7 +421,6 @@ class TestOIDCRulesInstallation:
             "debian_section": "net",
             "architecture": "all",
             "routing": {
-                "subdomain": "grafana",
                 "auth": {
                     "mode": "forward_auth",
                     "forward_auth": {
