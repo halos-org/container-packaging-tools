@@ -156,8 +156,13 @@ class TestGenerateRoutingYml:
         routing = yaml.safe_load(result)
         assert routing["auth"]["mode"] == "none"
 
-    def test_routing_without_subdomain(self) -> None:
-        """Routing config without subdomain still generates correct structure."""
+    def test_generated_routing_omits_subdomain_key(self) -> None:
+        """Generated routing.yml never includes a subdomain key.
+
+        Subdomain routing has been removed from halos; the live reverse-proxy
+        prestart script in halos-core-containers expects path-based routing
+        only. Pinning this guards against accidental reintroduction.
+        """
         metadata = {
             "app_id": "myapp",
             "web_ui": {"enabled": True, "port": 8080},
@@ -448,6 +453,23 @@ class TestContainerPortExtraction:
 
         routing = yaml.safe_load(result)
         assert routing["routing"]["backend"]["port"] == 3000
+
+    def test_container_port_integer_format(self) -> None:
+        """Container port extracted when ports entry is a bare YAML integer.
+
+        docker-compose accepts ports as integers (`ports: [8080]`) in addition
+        to strings. The extractor has an isinstance(int) branch for this and it
+        otherwise has no test coverage.
+        """
+        metadata = {
+            "app_id": "myapp",
+            "routing": {},
+        }
+        compose: dict = {"services": {"app": {"ports": [8080]}}}
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["routing"]["backend"]["port"] == 8080
 
     def test_fallback_to_web_ui_port_when_no_ports(self) -> None:
         """Falls back to web_ui.port when no ports in docker-compose."""

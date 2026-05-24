@@ -76,9 +76,8 @@ class TestTraefikConfig:
     """Tests for TraefikConfig model."""
 
     def test_default_values(self) -> None:
-        """Default values should use forward_auth with no subdomain."""
+        """Default values should use forward_auth."""
         config = TraefikConfig()
-        assert config.subdomain is None
         assert config.auth == "forward_auth"
         assert config.forward_auth is None
         assert config.oidc is None
@@ -87,11 +86,9 @@ class TestTraefikConfig:
     def test_forward_auth_config(self) -> None:
         """Valid forward_auth configuration."""
         config = TraefikConfig(
-            subdomain="grafana",
             auth="forward_auth",
             forward_auth=TraefikForwardAuth(headers={"Remote-User": "X-WEBAUTH-USER"}),
         )
-        assert config.subdomain == "grafana"
         assert config.auth == "forward_auth"
         assert config.forward_auth is not None
         assert config.forward_auth.headers["Remote-User"] == "X-WEBAUTH-USER"
@@ -99,7 +96,6 @@ class TestTraefikConfig:
     def test_oidc_config(self) -> None:
         """Valid OIDC configuration."""
         config = TraefikConfig(
-            subdomain="homarr",
             auth="oidc",
             oidc=TraefikOIDC(
                 client_name="Homarr Dashboard",
@@ -107,18 +103,13 @@ class TestTraefikConfig:
                 redirect_path="/api/auth/callback/oidc",
             ),
         )
-        assert config.subdomain == "homarr"
         assert config.auth == "oidc"
         assert config.oidc is not None
         assert config.oidc.client_name == "Homarr Dashboard"
 
     def test_none_auth_config(self) -> None:
         """Valid none authentication configuration."""
-        config = TraefikConfig(
-            subdomain="avnav",
-            auth="none",
-        )
-        assert config.subdomain == "avnav"
+        config = TraefikConfig(auth="none")
         assert config.auth == "none"
 
     def test_oidc_requires_oidc_section(self) -> None:
@@ -130,7 +121,6 @@ class TestTraefikConfig:
     def test_host_port_config(self) -> None:
         """Valid host_port configuration for host networking apps."""
         config = TraefikConfig(
-            subdomain="signalk",
             auth="forward_auth",
             host_port=3000,
         )
@@ -147,36 +137,6 @@ class TestTraefikConfig:
         with pytest.raises(ValidationError) as exc_info:
             TraefikConfig(host_port=70000)
         assert "host_port" in str(exc_info.value)
-
-    def test_valid_subdomain_patterns(self) -> None:
-        """Valid subdomain patterns should pass."""
-        valid_subdomains = [
-            "a",
-            "grafana",
-            "my-app",
-            "app123",
-            "a1b2c3",
-            "my-cool-app",
-            "",  # Empty string is valid (means root domain)
-        ]
-        for subdomain in valid_subdomains:
-            config = TraefikConfig(subdomain=subdomain)
-            assert config.subdomain == subdomain
-
-    def test_invalid_subdomain_patterns(self) -> None:
-        """Invalid subdomain patterns should fail."""
-        invalid_subdomains = [
-            "-app",  # Starts with hyphen
-            "app-",  # Ends with hyphen
-            "APP",  # Uppercase
-            "my_app",  # Underscore
-            "my.app",  # Dot
-            "my app",  # Space
-        ]
-        for subdomain in invalid_subdomains:
-            with pytest.raises(ValidationError) as exc_info:
-                TraefikConfig(subdomain=subdomain)
-            assert "subdomain" in str(exc_info.value).lower()
 
     def test_invalid_auth_mode(self) -> None:
         """Invalid auth mode should fail."""

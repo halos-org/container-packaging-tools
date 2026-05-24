@@ -32,24 +32,18 @@ def generate_oidc_snippet(metadata: dict[str, Any]) -> str | None:
     app_id = metadata.get("app_id", "")
     package_name = metadata.get("package_name", "")
 
-    # Get subdomain (default to app_id if not specified)
-    subdomain_raw = traefik_config.get("subdomain")
-    subdomain: str = subdomain_raw if subdomain_raw is not None else app_id
-
     # Get redirect path and ensure it starts with /
     redirect_path = oidc_config.get("redirect_path", "/callback")
     if not redirect_path.startswith("/"):
         redirect_path = "/" + redirect_path
 
-    # Build redirect URIs
-    if subdomain:
-        base_url = f"{subdomain}.${{HALOS_DOMAIN}}"
-    else:
-        base_url = "${HALOS_DOMAIN}"
-
+    # Build redirect URIs. The reverse proxy's prestart script in
+    # halos-core-containers expands ${HALOS_DOMAIN} across every configured
+    # hostname at runtime (halos_expand_oidc_redirect_uri), so each entry here
+    # becomes one entry per hostname in the merged oidc-clients.yml.
     redirect_uris = [
-        f"http://{base_url}{redirect_path}",
-        f"https://{base_url}{redirect_path}",
+        f"http://${{HALOS_DOMAIN}}{redirect_path}",
+        f"https://${{HALOS_DOMAIN}}{redirect_path}",
     ]
 
     # Build snippet content

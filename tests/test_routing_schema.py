@@ -15,37 +15,8 @@ class TestRoutingConfig:
 
     def test_minimal_routing_config(self) -> None:
         """Minimal routing config should be valid."""
-        config = RoutingConfig(subdomain="myapp")
-        assert config.subdomain == "myapp"
+        config = RoutingConfig()
         assert config.auth is None  # Default to None, will be forward_auth at runtime
-
-    def test_subdomain_pattern_valid(self) -> None:
-        """Valid subdomains should pass validation."""
-        valid_subdomains = [
-            "myapp",
-            "my-app",
-            "my-long-app-name",
-            "app123",
-            "123app",
-            "",  # Empty string for root domain
-        ]
-        for subdomain in valid_subdomains:
-            config = RoutingConfig(subdomain=subdomain)
-            assert config.subdomain == subdomain
-
-    def test_subdomain_pattern_invalid(self) -> None:
-        """Invalid subdomains should fail validation."""
-        invalid_subdomains = [
-            "MyApp",  # Uppercase
-            "my_app",  # Underscore
-            "-myapp",  # Leading hyphen
-            "myapp-",  # Trailing hyphen
-            "my.app",  # Dot
-            "my app",  # Space
-        ]
-        for subdomain in invalid_subdomains:
-            with pytest.raises(ValidationError):
-                RoutingConfig(subdomain=subdomain)
 
     def test_auth_modes(self) -> None:
         """All auth modes should be valid."""
@@ -60,25 +31,40 @@ class TestRoutingConfig:
 
     def test_host_port_valid_range(self) -> None:
         """Host port in valid range should pass."""
-        config = RoutingConfig(subdomain="myapp", host_port=3000)
+        config = RoutingConfig(host_port=3000)
         assert config.host_port == 3000
 
-        config = RoutingConfig(subdomain="myapp", host_port=1)
+        config = RoutingConfig(host_port=1)
         assert config.host_port == 1
 
-        config = RoutingConfig(subdomain="myapp", host_port=65535)
+        config = RoutingConfig(host_port=65535)
         assert config.host_port == 65535
 
     def test_host_port_invalid_range(self) -> None:
         """Host port outside valid range should fail."""
         with pytest.raises(ValidationError):
-            RoutingConfig(subdomain="myapp", host_port=0)
+            RoutingConfig(host_port=0)
 
         with pytest.raises(ValidationError):
-            RoutingConfig(subdomain="myapp", host_port=65536)
+            RoutingConfig(host_port=65536)
 
         with pytest.raises(ValidationError):
-            RoutingConfig(subdomain="myapp", host_port=-1)
+            RoutingConfig(host_port=-1)
+
+    def test_legacy_subdomain_field_silently_ignored(self) -> None:
+        """RoutingConfig drops a leftover 'subdomain' key without raising.
+
+        Old metadata.yaml files may still carry 'routing.subdomain' from before
+        subdomain routing was retired. RoutingConfig has no explicit
+        model_config, so Pydantic's default extra='ignore' silently drops the
+        field. This test pins that backward-compat contract — a future
+        maintainer who adds extra='forbid' would break old files.
+        """
+        config = RoutingConfig.model_validate(
+            {"subdomain": "grafana", "host_port": 3000}
+        )
+        assert config.host_port == 3000
+        assert not hasattr(config, "subdomain")
 
 
 class TestRoutingAuth:
@@ -121,16 +107,16 @@ class TestPackageMetadataWithRouting:
     def test_routing_field_accepted(self, base_metadata: dict) -> None:
         """routing field should be accepted in PackageMetadata."""
         base_metadata["routing"] = {
-            "subdomain": "testapp",
+            "auth": {"mode": "forward_auth"},
         }
         metadata = PackageMetadata(**base_metadata)
         assert metadata.routing is not None
-        assert metadata.routing.subdomain == "testapp"
+        assert metadata.routing.auth is not None
+        assert metadata.routing.auth.mode == "forward_auth"
 
     def test_traefik_field_is_rejected(self, base_metadata: dict) -> None:
         """traefik field should be rejected (deprecated)."""
         base_metadata["traefik"] = {
-            "subdomain": "testapp",
             "auth": "forward_auth",
         }
         with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
@@ -140,7 +126,6 @@ class TestPackageMetadataWithRouting:
         """Full routing config should be valid."""
         base_metadata["web_ui"] = {"enabled": True, "port": 3000}
         base_metadata["routing"] = {
-            "subdomain": "grafana",
             "auth": {
                 "mode": "forward_auth",
                 "forward_auth": {
@@ -154,7 +139,6 @@ class TestPackageMetadataWithRouting:
         }
         metadata = PackageMetadata(**base_metadata)
         assert metadata.routing is not None
-        assert metadata.routing.subdomain == "grafana"
         assert metadata.routing.auth is not None
         assert metadata.routing.auth.mode == "forward_auth"
         assert metadata.routing.auth.forward_auth is not None

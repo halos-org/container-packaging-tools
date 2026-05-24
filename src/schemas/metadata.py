@@ -124,14 +124,6 @@ class TraefikConfig(BaseModel):
     with the 'routing' key instead. Both are supported for backwards compatibility.
     """
 
-    subdomain: str | None = Field(
-        default=None,
-        pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$|^$",
-        description=(
-            "Subdomain for routing (defaults to app_id). "
-            "Must be lowercase alphanumeric with hyphens, or empty string for root domain."
-        ),
-    )
     auth: Literal["forward_auth", "oidc", "none"] = Field(
         default="forward_auth",
         description="Authentication mode: forward_auth (default), oidc, or none",
@@ -191,14 +183,6 @@ class RoutingConfig(BaseModel):
     Prefer using this over TraefikConfig for new apps.
     """
 
-    subdomain: str | None = Field(
-        default=None,
-        pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$|^$",
-        description=(
-            "Subdomain for routing (defaults to app_id). "
-            "Must be lowercase alphanumeric with hyphens, or empty string for root domain."
-        ),
-    )
     auth: RoutingAuth | None = Field(
         default=None,
         description="Authentication configuration",
