@@ -28,6 +28,16 @@ HALOS_CORE_CONTAINERS_MIN_VERSION = "0.3.2"
 Older fork images reject the URL at the tRPC `app.create` validation
 boundary."""
 
+HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION = "0.5.0"
+"""First `halos-core-containers` release that ships the
+`halos-resolve-domain.service` producer, which publishes `HALOS_DOMAIN` to
+`/run/halos/domain.env`. Routed/web_ui apps generated here inherit that file as
+an `EnvironmentFile` and order against the producer, so they require core to be
+present at this version. A versioned `Depends` (not a soft Wants alone) is kept
+because the absence of the producer leaves `HALOS_DOMAIN` empty -> broken OIDC
+issuer/redirect URLs, which is not graceful degradation; see the workspace
+skip-apt-depends-pins policy doc for the 2-of-3-layers test this fails."""
+
 
 class VolumeOwnershipError(Exception):
     """Raised when volume ownership cannot be determined due to invalid user field."""
@@ -341,6 +351,32 @@ def _compute_homarr_stack_breaks(metadata: dict[str, Any]) -> list[str]:
     ]
 
 
+def _compute_producer_depends(metadata: dict[str, Any]) -> list[str]:
+    """Return the versioned `halos-core-containers` dependency required by apps
+    that consume the `HALOS_DOMAIN` producer, or an empty list when the app does
+    not route / expose a web UI.
+
+    Routed (`routing:` present) and web_ui apps inherit `HALOS_DOMAIN` from the
+    producer's `/run/halos/domain.env` via the generated unit's `EnvironmentFile`
+    and order against `halos-resolve-domain.service`. The producer lives in
+    `halos-core-containers`, so those apps must depend on a release that ships it.
+    Non-routed / non-web_ui apps never reference `HALOS_DOMAIN` and stay
+    independent of core.
+
+    Args:
+        metadata: Parsed metadata.yaml contents
+
+    Returns:
+        List of Debian relationship strings (empty when no dependency applies).
+    """
+    web_ui = metadata.get("web_ui") or {}
+    has_web_ui = bool(web_ui.get("enabled", False))
+    has_routing = metadata.get("routing") is not None or has_web_ui
+    if not has_routing:
+        return []
+    return [f"halos-core-containers (>= {HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION})"]
+
+
 def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
     """Build package-level context from metadata.
 
@@ -381,7 +417,9 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
         "maintainer": metadata["maintainer"],
         "license": metadata["license"],
         "tags": format_dependencies(metadata.get("tags", [])),
-        "depends": format_dependencies(metadata.get("depends", [])),
+        "depends": format_dependencies(
+            _compute_producer_depends(metadata) + list(metadata.get("depends") or [])
+        ),
         "recommends": format_dependencies(metadata.get("recommends", [])),
         "suggests": format_dependencies(metadata.get("suggests", [])),
         "provides": format_dependencies(metadata.get("provides", [])),
