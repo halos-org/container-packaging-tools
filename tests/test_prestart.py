@@ -23,7 +23,9 @@ class TestGetHomarrUrlExpression:
         assert result is not None
         assert "http://" in result
         assert "${APP_PORT:-3000}" in result
-        assert "${HOSTNAME}.local" in result
+        # Host comes from the inherited HALOS_DOMAIN, never a hardcoded .local
+        assert "${HALOS_DOMAIN}" in result
+        assert ".local" not in result
 
     def test_https_protocol(self):
         """Test URL expression with https protocol."""
@@ -119,9 +121,28 @@ class TestGeneratePrestartScript:
 
         script = generate_prestart_script(app_def)
 
-        # Should set HOMARR_URL
+        # Should set HOMARR_URL built from the inherited HALOS_DOMAIN
         assert "HOMARR_URL=" in script
-        assert "${HOSTNAME}.local" in script
+        assert "${HALOS_DOMAIN}" in script
+
+    def test_script_does_not_resolve_halos_domain(self):
+        """Generated prestart inherits HALOS_DOMAIN; it must not resolve or
+        write it, and must not hardcode .local anywhere."""
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+            "web_ui": {"enabled": True, "protocol": "http", "port": 3000},
+            "default_config": {"APP_PORT": "3000"},
+        }
+
+        script = generate_prestart_script(app_def)
+
+        # No self-resolution of HALOS_DOMAIN back into runtime.env (R3 feedback
+        # loop) and no .local hardcoding (R2).
+        assert 'HALOS_DOMAIN="${HOSTNAME}.local"' not in script
+        assert "HALOS_DOMAIN=" not in script
+        assert ".local" not in script
 
     def test_script_without_web_ui(self):
         """Test script when web_ui is not enabled."""
