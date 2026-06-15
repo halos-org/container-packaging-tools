@@ -121,7 +121,11 @@ class TestBuildContext:
         assert context["package"]["homepage"] == "https://example.com"
         assert context["package"]["upstream_version"] == "2.1.3"
         assert "longer description" in context["package"]["long_description"]
-        assert context["package"]["depends"] == "docker.io, python3"
+        # web_ui app: producer dependency is prepended to declared depends.
+        assert (
+            context["package"]["depends"]
+            == "halos-core-containers (>= 0.5.0), docker.io, python3"
+        )
         assert context["package"]["recommends"] == "nginx"
         assert context["package"]["suggests"] == "postgresql"
         assert context["package"]["tags"] == "role::container-app, field::marine"

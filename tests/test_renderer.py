@@ -409,3 +409,179 @@ class TestRenderAllTemplates:
         assert "/bin/chown" not in content, (
             "systemd service should not set ownership - this is handled by postinst"
         )
+
+
+class TestHalosDomainDistribution:
+    """Unit 2: routed/web_ui apps inherit HALOS_DOMAIN from the producer via an
+    EnvironmentFile, order against the producer service, and depend on the core
+    release that ships it. Non-routed apps stay independent."""
+
+    template_dir = (
+        Path(__file__).parent.parent
+        / "src"
+        / "generate_container_packages"
+        / "templates"
+    )
+
+    def _render(self, tmp_path, metadata, compose=None):
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose=compose or {},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
+        output_dir = tmp_path / "output"
+        render_all_templates(app_def, output_dir, self.template_dir)
+        return output_dir
+
+    def test_web_ui_unit_inherits_domain_and_orders_on_producer(self, tmp_path):
+        """A web_ui app's unit loads /run/halos/domain.env and orders against
+        halos-resolve-domain.service."""
+        metadata = {
+            "name": "Web App",
+            "package_name": "web-app-container",
+            "app_id": "web-app",
+            "version": "1.0.0",
+            "description": "App with web UI",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "web_ui": {"enabled": True, "port": 8080, "protocol": "http"},
+        }
+
+        output_dir = self._render(tmp_path, metadata)
+        content = (output_dir / "debian" / "web-app-container.service").read_text()
+
+        assert "After=halos-resolve-domain.service" in content
+        assert "Wants=halos-resolve-domain.service" in content
+        assert "EnvironmentFile=-/run/halos/domain.env" in content
+
+    def test_web_ui_domain_envfile_loaded_after_runtime_env(self, tmp_path):
+        """domain.env must be the last EnvironmentFile so it wins over a stale
+        HALOS_DOMAIN that an older runtime.env might still carry."""
+        metadata = {
+            "name": "Web App",
+            "package_name": "web-app-container",
+            "app_id": "web-app",
+            "version": "1.0.0",
+            "description": "App with web UI",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "web_ui": {"enabled": True, "port": 8080, "protocol": "http"},
+        }
+
+        output_dir = self._render(tmp_path, metadata)
+        content = (output_dir / "debian" / "web-app-container.service").read_text()
+
+        env_lines = [
+            line for line in content.splitlines() if line.startswith("EnvironmentFile=")
+        ]
+        # domain.env must be the final EnvironmentFile so its HALOS_DOMAIN wins.
+        assert env_lines[-1] == "EnvironmentFile=-/run/halos/domain.env"
+
+    def test_web_ui_control_depends_on_producer_release(self, tmp_path):
+        """A web_ui app's control depends on the core release shipping the
+        producer."""
+        metadata = {
+            "name": "Web App",
+            "package_name": "web-app-container",
+            "app_id": "web-app",
+            "version": "1.0.0",
+            "description": "App with web UI",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "web_ui": {"enabled": True, "port": 8080, "protocol": "http"},
+        }
+
+        output_dir = self._render(tmp_path, metadata)
+        content = (output_dir / "debian" / "control").read_text()
+
+        assert "halos-core-containers (>= 0.5.0)" in content
+
+    def test_non_routed_app_stays_independent_of_producer(self, tmp_path):
+        """A non-web_ui / non-routing app gains no producer coupling: no
+        ordering, no EnvironmentFile, no core dependency."""
+        metadata = {
+            "name": "Plain App",
+            "package_name": "plain-app-container",
+            "app_id": "plain-app",
+            "version": "1.0.0",
+            "description": "App with no web UI or routing",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+        }
+
+        output_dir = self._render(tmp_path, metadata)
+        service = (output_dir / "debian" / "plain-app-container.service").read_text()
+        control = (output_dir / "debian" / "control").read_text()
+
+        assert "halos-resolve-domain.service" not in service
+        assert "/run/halos/domain.env" not in service
+        assert "halos-core-containers" not in control
+
+    def test_oidc_app_orders_on_both_authelia_and_producer(self, tmp_path):
+        """An OIDC app (routing.auth.mode=oidc, the primary motivating case)
+        orders against both Authelia and the domain producer, loads domain.env,
+        and depends on the producer release."""
+        metadata = {
+            "name": "OIDC App",
+            "package_name": "oidc-app-container",
+            "app_id": "oidc-app",
+            "version": "1.0.0",
+            "description": "App with OIDC auth",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "routing": {"auth": {"mode": "oidc"}},
+        }
+
+        output_dir = self._render(tmp_path, metadata)
+        service = (output_dir / "debian" / "oidc-app-container.service").read_text()
+        control = (output_dir / "debian" / "control").read_text()
+
+        assert "After=halos-authelia-container.service" in service
+        assert "Wants=halos-authelia-container.service" in service
+        assert "After=halos-resolve-domain.service" in service
+        assert "Wants=halos-resolve-domain.service" in service
+        assert "EnvironmentFile=-/run/halos/domain.env" in service
+        assert "halos-core-containers (>= 0.5.0)" in control
+
+    def test_routed_app_without_web_ui_gets_producer_coupling(self, tmp_path):
+        """The routing-present / web_ui-absent branch of has_routing must gain
+        the same producer wiring as a web_ui app (it still needs HALOS_DOMAIN)."""
+        metadata = {
+            "name": "Routed App",
+            "package_name": "routed-app-container",
+            "app_id": "routed-app",
+            "version": "1.0.0",
+            "description": "Routed app with no web UI",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+            "routing": {"auth": {"mode": "forward_auth"}},
+        }
+
+        output_dir = self._render(tmp_path, metadata)
+        service = (output_dir / "debian" / "routed-app-container.service").read_text()
+        control = (output_dir / "debian" / "control").read_text()
+
+        assert "After=halos-resolve-domain.service" in service
+        assert "Wants=halos-resolve-domain.service" in service
+        assert "EnvironmentFile=-/run/halos/domain.env" in service
+        assert "halos-core-containers (>= 0.5.0)" in control

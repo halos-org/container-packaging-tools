@@ -28,6 +28,16 @@ HALOS_CORE_CONTAINERS_MIN_VERSION = "0.3.2"
 Older fork images reject the URL at the tRPC `app.create` validation
 boundary."""
 
+HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION = "0.5.0"
+"""First `halos-core-containers` release that ships the
+`halos-resolve-domain.service` producer, which publishes `HALOS_DOMAIN` to
+`/run/halos/domain.env`. Routed/web_ui apps generated here inherit that file as
+an `EnvironmentFile` and order against the producer, so they require core to be
+present at this version. A versioned `Depends` (not a soft Wants alone) is kept
+because the absence of the producer leaves `HALOS_DOMAIN` empty -> broken OIDC
+issuer/redirect URLs, which is not graceful degradation; see the workspace
+skip-apt-depends-pins policy doc for the 2-of-3-layers test this fails."""
+
 
 class VolumeOwnershipError(Exception):
     """Raised when volume ownership cannot be determined due to invalid user field."""
@@ -192,6 +202,29 @@ def _extract_volume_source(volume: dict[str, Any] | str) -> str | None:
     return None
 
 
+def _has_routing(metadata: dict[str, Any]) -> bool:
+    """Whether the app routes through Traefik / exposes a web UI, and therefore
+    needs `HALOS_DOMAIN`.
+
+    Single source of truth for the routing-eligibility predicate, shared by the
+    template context (`has_routing`, which drives the systemd ordering and the
+    `EnvironmentFile` in service.j2) and `_compute_producer_depends` (which drives
+    the producer dependency in control). Both must agree, or an app could gain the
+    unit-level domain wiring without the package dependency that guarantees the
+    producer is present (or vice versa). Mirrors the shared-predicate discipline
+    of `registry.emits_path_only_url`.
+
+    Args:
+        metadata: Parsed metadata.yaml contents
+
+    Returns:
+        True when `routing:` is configured or `web_ui.enabled` is set.
+    """
+    web_ui = metadata.get("web_ui") or {}
+    has_web_ui = bool(web_ui.get("enabled", False))
+    return metadata.get("routing") is not None or has_web_ui
+
+
 def build_context(app_def: AppDefinition) -> dict[str, Any]:
     """Build template context from app definition.
 
@@ -237,7 +270,7 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
             )
 
     # Check if routing.yml should be generated
-    has_routing = routing is not None or has_web_ui
+    has_routing = _has_routing(metadata)
 
     context = {
         "package": _build_package_context(metadata),
@@ -341,6 +374,29 @@ def _compute_homarr_stack_breaks(metadata: dict[str, Any]) -> list[str]:
     ]
 
 
+def _compute_producer_depends(metadata: dict[str, Any]) -> list[str]:
+    """Return the versioned `halos-core-containers` dependency required by apps
+    that consume the `HALOS_DOMAIN` producer, or an empty list when the app does
+    not route / expose a web UI.
+
+    Routed (`routing:` present) and web_ui apps inherit `HALOS_DOMAIN` from the
+    producer's `/run/halos/domain.env` via the generated unit's `EnvironmentFile`
+    and order against `halos-resolve-domain.service`. The producer lives in
+    `halos-core-containers`, so those apps must depend on a release that ships it.
+    Non-routed / non-web_ui apps never reference `HALOS_DOMAIN` and stay
+    independent of core.
+
+    Args:
+        metadata: Parsed metadata.yaml contents
+
+    Returns:
+        List of Debian relationship strings (empty when no dependency applies).
+    """
+    if not _has_routing(metadata):
+        return []
+    return [f"halos-core-containers (>= {HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION})"]
+
+
 def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
     """Build package-level context from metadata.
 
@@ -381,7 +437,9 @@ def _build_package_context(metadata: dict[str, Any]) -> dict[str, Any]:
         "maintainer": metadata["maintainer"],
         "license": metadata["license"],
         "tags": format_dependencies(metadata.get("tags", [])),
-        "depends": format_dependencies(metadata.get("depends", [])),
+        "depends": format_dependencies(
+            _compute_producer_depends(metadata) + list(metadata.get("depends") or [])
+        ),
         "recommends": format_dependencies(metadata.get("recommends", [])),
         "suggests": format_dependencies(metadata.get("suggests", [])),
         "provides": format_dependencies(metadata.get("provides", [])),

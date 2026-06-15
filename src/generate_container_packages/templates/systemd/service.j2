@@ -6,6 +6,10 @@ Requires=docker.service
 After=halos-authelia-container.service
 Wants=halos-authelia-container.service
 {% endif %}
+{% if has_routing %}
+After=halos-resolve-domain.service
+Wants=halos-resolve-domain.service
+{% endif %}
 
 [Service]
 Type=simple
@@ -22,6 +26,9 @@ EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
 EnvironmentFile=-{{ service.runtime_env_file }}
 {% if has_routing %}
+# HALOS_DOMAIN published once by halos-resolve-domain.service. Loaded last so it
+# wins over any stale HALOS_DOMAIN that an older runtime.env might still carry.
+EnvironmentFile=-/run/halos/domain.env
 # Apply routing labels from /run/halos/routing-labels/ if available
 ExecStart=/bin/sh -c '\
     OVERRIDE=""; \
