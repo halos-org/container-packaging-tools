@@ -24,10 +24,17 @@ my-app/
 ├── metadata.yaml          # Required: Package metadata
 ├── docker-compose.yml     # Required: Container orchestration
 ├── config.yml             # Required: User configuration schema
+├── prestart.sh            # Optional: app-specific startup hook (see below)
+├── default-data/          # Optional: static seed files (baked at build time)
 ├── icon.png               # Optional: Application icon (PNG or SVG)
 ├── screenshot1.png        # Optional: Screenshots for AppStream
 └── screenshot2.png
 ```
+
+A `prestart.sh` is **not** a replacement for the generated prestart — the generator installs it as
+`app-prestart.sh` and the framework script sources it after setting up `runtime.env`. Put only
+app-specific logic in it (secrets, config seeding), append to `$RUNTIME_ENV` with `>>`, and prefer
+`default-data/` for static seed files. See the Custom Prestart Hook contract in `AGENTS.md`.
 
 ### Basic Workflow
 

@@ -455,29 +455,31 @@ def _fix_restart_policy(compose: dict[str, Any]) -> dict[str, Any]:
 
 
 def generate_prestart_file(app_def: AppDefinition, source_dir: Path) -> None:
-    """Generate or copy prestart.sh script file.
+    """Generate the framework prestart.sh and, if present, the app-prestart.sh hook.
 
-    If a custom prestart.sh exists in the app's input directory, it will be
-    copied instead of generating the default script. This allows apps to
-    implement custom initialization logic (e.g., generating secrets).
+    The framework prestart.sh is always generated. When the app ships its own
+    prestart.sh, it is reinterpreted as the app-prestart.sh hook (sourced by the
+    framework script for app-specific logic such as generating secrets) rather
+    than replacing the framework scaffolding. The hook is placed alongside
+    docker-compose.yml so a hook that resolves its own directory (via BASH_SOURCE)
+    still finds the compose file.
 
     Args:
         app_def: Application definition
         source_dir: Destination directory
     """
+    # Always generate the framework prestart script.
     prestart_file = source_dir / "prestart.sh"
-    custom_prestart = app_def.input_dir / "prestart.sh"
-
-    if custom_prestart.exists():
-        # Use custom prestart script from app directory
-        shutil.copy2(custom_prestart, prestart_file)
-    else:
-        # Generate default prestart script
-        script_content = generate_prestart_script(app_def)
-        prestart_file.write_text(script_content, encoding="utf-8")
-
-    # Make executable
+    script_content = generate_prestart_script(app_def)
+    prestart_file.write_text(script_content, encoding="utf-8")
     prestart_file.chmod(0o755)
+
+    # A custom prestart.sh becomes the sourced app-prestart.sh hook.
+    custom_prestart = app_def.input_dir / "prestart.sh"
+    if custom_prestart.exists():
+        hook_file = source_dir / "app-prestart.sh"
+        shutil.copy2(custom_prestart, hook_file)
+        hook_file.chmod(0o755)
 
 
 def generate_registry_file(app_def: AppDefinition, source_dir: Path) -> None:

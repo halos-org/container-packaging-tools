@@ -88,9 +88,10 @@ class TestGeneratePrestartScript:
         assert "set -e" in script
         # Check runtime env directory
         assert "/run/container-apps/test-app-container" in script
-        # Check HOSTNAME is set
-        assert "HOSTNAME=" in script
-        assert "hostname -s" in script
+        # runtime.env is created mode 600 before any write
+        assert "install -m 600" in script
+        # HOSTNAME is no longer written into runtime.env / the container env
+        assert "HOSTNAME=" not in script
 
     def test_script_loads_env_files(self):
         """Test that script loads existing env files."""
@@ -155,10 +156,13 @@ class TestGeneratePrestartScript:
 
         script = generate_prestart_script(app_def)
 
-        # Should still set HOSTNAME
-        assert "HOSTNAME=" in script
-        # Should NOT set HOMARR_URL
+        # HOSTNAME is not written; HOMARR_URL absent when web_ui disabled
+        assert "HOSTNAME=" not in script
         assert "HOMARR_URL=" not in script
+        # runtime.env is still created 600, and the no-web_ui branch must never
+        # introduce a truncating write either.
+        assert "install -m 600 /dev/null" in script
+        assert '> "$RUNTIME_ENV"' not in script.replace('>> "$RUNTIME_ENV"', "")
 
     def test_script_without_web_ui_key(self):
         """Test script when web_ui key is missing."""
@@ -170,8 +174,8 @@ class TestGeneratePrestartScript:
 
         script = generate_prestart_script(app_def)
 
-        # Should still generate a valid script with HOSTNAME
-        assert "HOSTNAME=" in script
+        # No HOSTNAME write, no HOMARR_URL when web_ui key is absent
+        assert "HOSTNAME=" not in script
         assert "HOMARR_URL=" not in script
 
     def test_script_writes_to_runtime_env(self):
@@ -219,3 +223,44 @@ class TestGeneratePrestartScript:
         assert script.startswith("#!/bin/bash")
         # No unclosed quotes (basic check)
         assert script.count('"') % 2 == 0
+
+    def test_runtime_env_created_600_before_any_write(self):
+        """runtime.env is created mode 600 before the first content write, so the
+        mode predates any (possibly secret-bearing) content and survives appends."""
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+            "web_ui": {"enabled": True, "protocol": "http", "port": 8080},
+        }
+
+        script = generate_prestart_script(app_def)
+
+        # The 600 creation must appear, and precede any append to runtime.env
+        assert "install -m 600 /dev/null" in script
+        create_idx = script.index("install -m 600 /dev/null")
+        first_append_idx = script.index('>> "$RUNTIME_ENV"')
+        assert create_idx < first_append_idx
+        # Framework writes use append, never truncate
+        assert '> "$RUNTIME_ENV"' not in script.replace('>> "$RUNTIME_ENV"', "")
+
+    def test_sources_app_prestart_hook(self):
+        """Generated prestart sources an optional app-prestart.sh hook from the
+        package lib dir, guarded so absence is a no-op."""
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+            "web_ui": {"enabled": True, "protocol": "http", "port": 8080},
+        }
+
+        script = generate_prestart_script(app_def)
+
+        hook = "/var/lib/container-apps/test-app-container/app-prestart.sh"
+        # Guarded source: [ -f <hook> ] && . <hook>
+        assert hook in script
+        assert f'[ -f "{hook}" ]' in script
+        assert f'. "{hook}"' in script
+        # The hook is sourced after the LAST runtime.env write (not merely after
+        # the RUNTIME_ENV declaration), so framework scaffolding is fully in place.
+        assert script.rindex('>> "$RUNTIME_ENV"') < script.index(hook)

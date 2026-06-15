@@ -124,6 +124,95 @@ class TestRenderAllTemplates:
         assert (debian_dir / "simple-app-container.service").exists()
         assert (debian_dir / "simple-app-container.metainfo.xml").exists()
 
+        # No custom prestart.sh -> rules must not install an app-prestart.sh hook
+        rules_content = (debian_dir / "rules").read_text()
+        assert "app-prestart.sh" not in rules_content
+
+    def test_rules_installs_app_prestart_hook(self, tmp_path):
+        """When the app ships a prestart.sh, rules installs it as app-prestart.sh
+        beside docker-compose.yml in the package lib dir."""
+        (tmp_path / "prestart.sh").write_text("#!/bin/bash\necho hook\n")
+
+        metadata = {
+            "name": "Hook App",
+            "package_name": "hook-app-container",
+            "version": "1.0.0",
+            "description": "App with a custom prestart hook",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+        }
+
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=tmp_path,
+            icon_path=None,
+        )
+
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
+        output_dir = tmp_path / "output"
+
+        render_all_templates(app_def, output_dir, template_dir)
+
+        rules_content = (output_dir / "debian" / "rules").read_text()
+        assert "install -D -m 755 app-prestart.sh" in rules_content
+        assert (
+            "/var/lib/container-apps/hook-app-container/app-prestart.sh"
+            in rules_content
+        )
+
+    def test_hook_install_dir_matches_prestart_source_dir(self, tmp_path):
+        """The dir rules.j2 installs app-prestart.sh into must equal the dir the
+        generated prestart.sh sources it from. They are built from independent
+        literals (paths.lib vs prestart.py's lib_dir); if they ever drift the
+        package builds green but the hook is never found at boot. Pin them here."""
+        from generate_container_packages.prestart import generate_prestart_script
+        from generate_container_packages.template_context import build_context
+
+        (tmp_path / "prestart.sh").write_text("#!/bin/bash\necho hook\n")
+        metadata = {
+            "name": "Hook App",
+            "package_name": "hook-app-container",
+            "version": "1.0.0",
+            "description": "App with a custom prestart hook",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+        }
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=tmp_path,
+            icon_path=None,
+            screenshot_paths=[],
+        )
+
+        # Directory the prestart sources the hook from
+        script = generate_prestart_script(app_def)
+        source_line = next(
+            line for line in script.splitlines() if "app-prestart.sh" in line
+        )
+        source_dir = os.path.dirname(
+            source_line.split('"')[1]
+        )  # path inside [ -f "<path>" ]
+
+        # Directory rules.j2 installs the hook into (== paths.lib)
+        lib_dir = build_context(app_def)["paths"]["lib"]
+
+        assert source_dir == lib_dir
+
     def test_rendered_control_file_content(self, tmp_path):
         """Test that control file has correct content."""
         metadata = {
