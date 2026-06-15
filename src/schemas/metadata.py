@@ -91,6 +91,80 @@ class TraefikForwardAuth(BaseModel):
 # Generic, proxy-agnostic routing configuration models
 
 
+class OidcRedirect(BaseModel):
+    """OAuth2 redirect (callback) descriptor for a native-OIDC app.
+
+    `path` style emits `https://${HALOS_DOMAIN}<path>`; `port` style emits
+    `https://${HALOS_DOMAIN}:<external_port><path>`, where the external port is
+    resolved at runtime from the routing port registry.
+    """
+
+    style: Literal["path", "port"] = Field(
+        description="Redirect URL shape: path-based or external-port-based",
+    )
+    path: str = Field(
+        min_length=1,
+        description="Callback path (must start with /)",
+    )
+
+    @field_validator("path")
+    @classmethod
+    def validate_path_absolute(cls, v: str) -> str:
+        """Ensure the callback path is absolute."""
+        if not v.startswith("/"):
+            raise ValueError(f"redirect path must start with '/', got: '{v}'")
+        return v
+
+
+# Sources the generator can resolve into a container env var for an OIDC app.
+OidcEnvSource = Literal["secret", "issuer", "redirect", "external_port", "client_id"]
+
+
+class OidcConfig(BaseModel):
+    """Declarative OIDC client config for a native-OAuth app.
+
+    Present under `routing.auth.oidc` with `mode: oidc`. The generator turns this
+    into the Authelia client snippet, the client-secret provisioning, and the
+    container env vars the app consumes — no hand-written prestart needed.
+    """
+
+    client_id: str | None = Field(
+        default=None,
+        description="OIDC client id (defaults to the app_id when omitted)",
+    )
+    client_name: str = Field(
+        min_length=1,
+        description="Human-readable client name shown in consent screens",
+    )
+    scopes: list[str] = Field(
+        default=["openid", "profile", "email", "groups"],
+        min_length=1,
+        description="OAuth2 scopes to request",
+    )
+    consent_mode: Literal["implicit", "explicit", "pre-configured"] = Field(
+        default="implicit",
+        description="Authelia consent mode for this client",
+    )
+    token_endpoint_auth_method: Literal[
+        "client_secret_basic", "client_secret_post"
+    ] = Field(
+        default="client_secret_basic",
+        description="Token endpoint auth method the app's OIDC library uses",
+    )
+    redirect: OidcRedirect = Field(
+        description="OAuth2 callback descriptor",
+    )
+    env: dict[str, OidcEnvSource] = Field(
+        default_factory=dict,
+        description=(
+            "Map of container env var name -> resolved source. Sources: secret "
+            "(client secret value), issuer (Authelia issuer URL), redirect "
+            "(computed redirect URI), external_port (resolved routing port), "
+            "client_id."
+        ),
+    )
+
+
 class RoutingAuth(BaseModel):
     """Authentication configuration for routing.
 
@@ -107,6 +181,17 @@ class RoutingAuth(BaseModel):
         default=None,
         description="Custom forward auth configuration with header mappings",
     )
+    oidc: OidcConfig | None = Field(
+        default=None,
+        description="OIDC client config for native-OAuth apps (with mode: oidc)",
+    )
+
+    @model_validator(mode="after")
+    def validate_oidc_present_for_oidc_mode(self) -> "RoutingAuth":
+        """`mode: oidc` requires an `oidc` config block."""
+        if self.mode == "oidc" and self.oidc is None:
+            raise ValueError("routing.auth.oidc is required when mode='oidc'")
+        return self
 
 
 class RoutingConfig(BaseModel):
