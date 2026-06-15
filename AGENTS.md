@@ -69,6 +69,34 @@ Hook contract — available when `app-prestart.sh` runs:
 
 Prefer build-time `default-data/` for static seed config; reserve the hook for logic that genuinely needs runtime context.
 
+### Declarative OIDC (native-OAuth apps)
+
+An app that authenticates users via Authelia as its own OIDC client (native OAuth — e.g. Grafana, Signal K) declares it under `routing`, instead of hand-writing the lifecycle in a prestart:
+
+```yaml
+routing:
+  auth:
+    mode: oidc                       # no Traefik edge gate; wires the Authelia client scaffolding
+    oidc:
+      client_name: Grafana           # client_id defaults to app_id
+      scopes: [openid, profile, email, groups]
+      consent_mode: implicit
+      token_endpoint_auth_method: client_secret_basic   # or client_secret_post
+      redirect:
+        style: port                  # port → :${EXTERNAL_PORT}<path>; path → <path>
+        path: /login/generic_oauth
+      env:                           # container env var -> resolved source
+        GRAFANA_OIDC_CLIENT_SECRET: secret
+        HALOS_EXTERNAL_PORT: external_port
+```
+
+`mode: oidc` adds no edge gating (the app does its own OAuth) but makes `is_oidc_app` true, which drives the existing scaffolding: `postinst` provisions the client secret once (mode `600`), `service.j2` orders the unit `After=halos-authelia-container.service`, and `postrm` removes the snippet on purge. The generated prestart then resolves the external port (for `style: port`), appends the mapped `env` vars to `runtime.env`, and writes the Authelia client snippet to `/etc/halos/oidc-clients.d/<client_id>.yml`. `env` sources: `secret` (the client secret value), `issuer` (`https://${HALOS_DOMAIN}/sso`), `redirect` (computed redirect URI), `external_port`, `client_id`. App-specific extras (e.g. Signal K's `EXTERNALHOST`) stay in the `app-prestart.sh` hook.
+
+**Threat model:**
+- The client secret is generated once by `postinst` (root, mode `600`) and exposed to the container via `runtime.env` (mode `600`) — env-var delivery, as before.
+- `redirect_uris` carry the literal `${HALOS_DOMAIN}` token, which the core Authelia merger expands to one URI per DNS hostname in `/etc/halos/hostnames.conf`. **`hostnames.conf` is the redirect allow-list trust anchor**; the generator relies on the loader's hostname validation and emits no redirect outside `${HALOS_DOMAIN}`. The external port is integer-validated before it reaches the snippet.
+- The merger hardcodes `public: false` and `authorization_policy: one_factor` for every client; an app needing a different policy (public client, step-up auth) is not expressible via this declarative path.
+
 ## Git Workflow Policy
 
 **Branch Workflow:** Never push to main directly - always use feature branches and PRs.
