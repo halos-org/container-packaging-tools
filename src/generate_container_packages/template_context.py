@@ -202,6 +202,29 @@ def _extract_volume_source(volume: dict[str, Any] | str) -> str | None:
     return None
 
 
+def _has_routing(metadata: dict[str, Any]) -> bool:
+    """Whether the app routes through Traefik / exposes a web UI, and therefore
+    needs `HALOS_DOMAIN`.
+
+    Single source of truth for the routing-eligibility predicate, shared by the
+    template context (`has_routing`, which drives the systemd ordering and the
+    `EnvironmentFile` in service.j2) and `_compute_producer_depends` (which drives
+    the producer dependency in control). Both must agree, or an app could gain the
+    unit-level domain wiring without the package dependency that guarantees the
+    producer is present (or vice versa). Mirrors the shared-predicate discipline
+    of `registry.emits_path_only_url`.
+
+    Args:
+        metadata: Parsed metadata.yaml contents
+
+    Returns:
+        True when `routing:` is configured or `web_ui.enabled` is set.
+    """
+    web_ui = metadata.get("web_ui") or {}
+    has_web_ui = bool(web_ui.get("enabled", False))
+    return metadata.get("routing") is not None or has_web_ui
+
+
 def build_context(app_def: AppDefinition) -> dict[str, Any]:
     """Build template context from app definition.
 
@@ -247,7 +270,7 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
             )
 
     # Check if routing.yml should be generated
-    has_routing = routing is not None or has_web_ui
+    has_routing = _has_routing(metadata)
 
     context = {
         "package": _build_package_context(metadata),
@@ -369,10 +392,7 @@ def _compute_producer_depends(metadata: dict[str, Any]) -> list[str]:
     Returns:
         List of Debian relationship strings (empty when no dependency applies).
     """
-    web_ui = metadata.get("web_ui") or {}
-    has_web_ui = bool(web_ui.get("enabled", False))
-    has_routing = metadata.get("routing") is not None or has_web_ui
-    if not has_routing:
+    if not _has_routing(metadata):
         return []
     return [f"halos-core-containers (>= {HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION})"]
 

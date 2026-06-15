@@ -96,6 +96,20 @@ Both constants live in `src/generate_container_packages/template_context.py`. Bu
 
 App-declared `breaks:` entries in `metadata.yaml` are appended after the auto-injected ones; the two compose rather than overriding. The `breaks` field on `metadata.yaml` is a regular optional list of Debian relationship strings, peer with `depends`, `recommends`, `conflicts`, and `provides`.
 
+## HALOS_DOMAIN Producer Dependency Auto-Injection
+
+Routed / web_ui apps inherit `HALOS_DOMAIN` from `halos-resolve-domain.service` (in `halos-core-containers`), which resolves the canonical hostname once and publishes `/run/halos/domain.env`. The generator wires this on every routed/web_ui app's .deb:
+
+- `service.j2` adds `After=`/`Wants=halos-resolve-domain.service` and `EnvironmentFile=-/run/halos/domain.env` (loaded last, so it wins over a stale `HALOS_DOMAIN` in `runtime.env`).
+- `template_context._compute_producer_depends` injects `Depends: halos-core-containers (>= HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION)`.
+- The generated prestart no longer resolves `HALOS_DOMAIN` or hardcodes `.local`; it inherits the value.
+
+The trigger is the single predicate `template_context._has_routing(metadata)` (`routing:` present or `web_ui.enabled`), shared by the service-template context (`has_routing`) and `_compute_producer_depends`, so the unit wiring and the package dependency cannot drift.
+
+`HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION` lives in `src/generate_container_packages/template_context.py`. Bump it when the producer contract (`halos-resolve-domain.service`, the `/run/halos/domain.env` format) changes shape in a way that needs a newer `halos-core-containers`. Bump `_has_routing` if the set of apps that need `HALOS_DOMAIN` changes.
+
+`Depends` (not `Breaks`) is the deliberate choice here, unlike the Homarr-stack `Breaks` above: `halos-core-containers` is part of the minimum install on every device that ships routed/web_ui apps (Traefik/Authelia/Homarr are the web-management layer they route through), so the peer is always present. Per the [Breaks-over-Depends policy](https://github.com/halos-org/halos/blob/main/docs/solutions/best-practices/2026-05-13-prefer-breaks-over-depends-for-partial-upgrade-gating.md), `Depends` is correct for an always-present peer and documents the structural relationship. The producer-absent failure mode is empty `HALOS_DOMAIN` → broken OIDC, which is not graceful, so the constraint is kept rather than dropped under the [skip-pins policy](https://github.com/halos-org/halos/blob/main/docs/solutions/best-practices/2026-04-30-skip-apt-depends-pins-sibling-halos-packages.md).
+
 ## Project Status
 
 **Current Phase**: Planning & Initial Development
