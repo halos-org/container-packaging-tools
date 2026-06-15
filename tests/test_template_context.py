@@ -80,6 +80,37 @@ class TestBuildContext:
         assert context["has_icon"] is False
         assert context["icon_extension"] == ""
         assert context["has_screenshots"] is False
+        # No custom prestart.sh in the input dir -> no hook to install
+        assert context["has_app_prestart"] is False
+
+    def test_has_app_prestart_true_when_custom_prestart_present(self, tmp_path):
+        """has_app_prestart is True when the input dir ships a prestart.sh."""
+        (tmp_path / "prestart.sh").write_text("#!/bin/bash\necho hook\n")
+
+        metadata = {
+            "name": "Hook App",
+            "package_name": "hook-app-container",
+            "version": "1.0.0",
+            "description": "App with a custom prestart hook",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+        }
+
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=tmp_path,
+            icon_path=None,
+            screenshot_paths=[],
+        )
+
+        context = build_context(app_def)
+
+        assert context["has_app_prestart"] is True
 
     def test_full_app_context_with_icon(self):
         """Test context building with all optional fields."""

@@ -298,6 +298,8 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
             {"path": str(f.path), "executable": f.executable}
             for f in app_def.default_data_files
         ],
+        # App-specific prestart hook, sourced by the generated framework prestart
+        "has_app_prestart": (app_def.input_dir / "prestart.sh").exists(),
         # SSO configuration
         "is_oidc_app": is_oidc_app,
         "has_custom_forward_auth": has_custom_forward_auth,

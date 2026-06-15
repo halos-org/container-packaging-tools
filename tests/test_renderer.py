@@ -124,6 +124,52 @@ class TestRenderAllTemplates:
         assert (debian_dir / "simple-app-container.service").exists()
         assert (debian_dir / "simple-app-container.metainfo.xml").exists()
 
+        # No custom prestart.sh -> rules must not install an app-prestart.sh hook
+        rules_content = (debian_dir / "rules").read_text()
+        assert "app-prestart.sh" not in rules_content
+
+    def test_rules_installs_app_prestart_hook(self, tmp_path):
+        """When the app ships a prestart.sh, rules installs it as app-prestart.sh
+        beside docker-compose.yml in the package lib dir."""
+        (tmp_path / "prestart.sh").write_text("#!/bin/bash\necho hook\n")
+
+        metadata = {
+            "name": "Hook App",
+            "package_name": "hook-app-container",
+            "version": "1.0.0",
+            "description": "App with a custom prestart hook",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+        }
+
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=tmp_path,
+            icon_path=None,
+        )
+
+        template_dir = (
+            Path(__file__).parent.parent
+            / "src"
+            / "generate_container_packages"
+            / "templates"
+        )
+        output_dir = tmp_path / "output"
+
+        render_all_templates(app_def, output_dir, template_dir)
+
+        rules_content = (output_dir / "debian" / "rules").read_text()
+        assert "install -D -m 755 app-prestart.sh" in rules_content
+        assert (
+            "/var/lib/container-apps/hook-app-container/app-prestart.sh"
+            in rules_content
+        )
+
     def test_rendered_control_file_content(self, tmp_path):
         """Test that control file has correct content."""
         metadata = {
