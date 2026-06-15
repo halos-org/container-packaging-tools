@@ -674,3 +674,91 @@ class TestHalosDomainDistribution:
         assert "Wants=halos-resolve-domain.service" in service
         assert "EnvironmentFile=-/run/halos/domain.env" in service
         assert "halos-core-containers (>= 0.5.0)" in control
+
+
+class TestStartLimit:
+    """Generated units bound Restart=always with a start-rate limit so a
+    deterministically-failing prestart terminates in `failed` instead of
+    looping forever (issue #213)."""
+
+    template_dir = (
+        Path(__file__).parent.parent
+        / "src"
+        / "generate_container_packages"
+        / "templates"
+    )
+
+    def _render_service(self, tmp_path, metadata):
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
+        output_dir = tmp_path / "output"
+        render_all_templates(app_def, output_dir, self.template_dir)
+        pkg = metadata["package_name"]
+        return (output_dir / "debian" / f"{pkg}.service").read_text()
+
+    @staticmethod
+    def _plain_metadata():
+        return {
+            "name": "Plain App",
+            "package_name": "plain-app-container",
+            "app_id": "plain-app",
+            "version": "1.0.0",
+            "description": "App with no web UI or routing",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+        }
+
+    def test_unit_section_carries_start_limit(self, tmp_path):
+        """The [Unit] section sets both StartLimitIntervalSec and
+        StartLimitBurst so the restart rate is bounded."""
+        content = self._render_service(tmp_path, self._plain_metadata())
+
+        assert "StartLimitIntervalSec=600" in content
+        assert "StartLimitBurst=5" in content
+
+    def test_start_limit_terminates_deterministic_loop(self, tmp_path):
+        """With RestartSec=10, the burst must be reachable inside the interval
+        so a prestart that fails every restart trips the limit and the unit
+        enters `failed` (burst * RestartSec < interval)."""
+        content = self._render_service(tmp_path, self._plain_metadata())
+
+        interval = int(
+            next(
+                line.split("=", 1)[1]
+                for line in content.splitlines()
+                if line.startswith("StartLimitIntervalSec=")
+            )
+        )
+        burst = int(
+            next(
+                line.split("=", 1)[1]
+                for line in content.splitlines()
+                if line.startswith("StartLimitBurst=")
+            )
+        )
+        restart_sec = int(
+            next(
+                line.split("=", 1)[1]
+                for line in content.splitlines()
+                if line.startswith("RestartSec=")
+            )
+        )
+
+        assert burst * restart_sec < interval
+
+    def test_start_limit_directives_live_in_unit_section(self, tmp_path):
+        """StartLimit* are [Unit]-section directives; placing them under
+        [Service] makes systemd ignore them."""
+        content = self._render_service(tmp_path, self._plain_metadata())
+
+        unit_section = content.split("[Service]", 1)[0]
+        assert "StartLimitIntervalSec=600" in unit_section
+        assert "StartLimitBurst=5" in unit_section

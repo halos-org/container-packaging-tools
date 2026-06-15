@@ -499,6 +499,8 @@ Tag: {{ package.tags }}
 Description={{ service.description }}
 After=docker.service
 Requires=docker.service
+StartLimitIntervalSec=600
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -517,6 +519,8 @@ WantedBy=multi-user.target
 ```
 
 **Note**: Type=simple runs docker-compose in foreground mode, allowing systemd to properly manage the container lifecycle. Container logs are streamed to journal via stdout/stderr. Restart=always ensures the container restarts after both failures and clean exits (e.g., in-app restart requests), while `systemctl stop` still works correctly.
+
+**Note on StartLimit and recovery**: `Restart=always` alone makes a deterministically-failing `ExecStartPre` (the prestart, `configure-container-routing`, or an `app-prestart.sh` hook running under `set -e`) retry every `RestartSec` forever. `StartLimitIntervalSec=600` / `StartLimitBurst=5` bound this: 5 failed starts within 600s drive the unit to `failed` (~40s with `RestartSec=10`) instead of looping silently, while legitimate in-app restarts spaced further apart than `interval/burst` never accumulate. A unit that hits the start limit stays in `failed` and does **not** self-heal — recover with `systemctl reset-failed <package>.service && systemctl start <package>.service` after fixing the underlying cause. A package upgrade does not clear this state automatically (postinst reloads and enables but does not restart the unit).
 
 ## Path Conventions
 
