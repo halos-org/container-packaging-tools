@@ -14,6 +14,14 @@ case "$1" in
             cp "{{ paths.lib }}/env.user-template" "{{ paths.etc }}/env"
         fi
 
+        # Restrict env and env.defaults permissions: both may hold secrets
+        # (env: user-set API tokens; env.defaults: shipped default credentials).
+        # Applied unconditionally so existing world-readable installs are
+        # hardened on upgrade, not only on fresh installs. env.defaults is
+        # rewritten from the template every configure, so it must be re-hardened
+        # here each time.
+        chmod 600 "{{ paths.etc }}/env" "{{ paths.etc }}/env.defaults"
+
         # Source environment to resolve CONTAINER_DATA_ROOT
         . "{{ paths.etc }}/env.defaults"
 
