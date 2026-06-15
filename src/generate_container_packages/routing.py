@@ -72,23 +72,22 @@ def generate_routing_yml(
     if scheme != "http":
         backend_config["scheme"] = scheme
 
+    auth_config: dict[str, Any] = {"mode": auth_mode}
+    # Add forward_auth headers if present
+    if forward_auth_headers:
+        auth_config["forward_auth"] = {"headers": forward_auth_headers}
+
     routing_data: dict[str, Any] = {
         "app_id": app_id,
         "package_name": package_name,
         "routing": {
             "backend": backend_config,
         },
-        "auth": {
-            "mode": auth_mode,
-        },
+        "auth": auth_config,
         "network": {
             "join_proxy_network": not is_host_network,
         },
     }
-
-    # Add forward_auth headers if present
-    if forward_auth_headers:
-        routing_data["auth"]["forward_auth"] = {"headers": forward_auth_headers}
 
     # Generate YAML with header comment
     header = f"""# Generic routing declaration for {app_id}

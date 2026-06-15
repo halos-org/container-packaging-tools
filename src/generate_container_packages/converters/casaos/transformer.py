@@ -735,7 +735,7 @@ class MetadataTransformer:
                     # Transform host path
                     transformed_host = self._transform_path(volume.host, casaos_app.id)
 
-                    volume_def = {
+                    volume_def: dict[str, Any] = {
                         "type": "bind",
                         "source": transformed_host,
                         "target": volume.container,
