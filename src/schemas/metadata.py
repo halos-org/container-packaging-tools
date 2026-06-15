@@ -1,5 +1,6 @@
 """Pydantic models for validating metadata.yaml files."""
 
+import re
 import subprocess
 from typing import Literal
 
@@ -91,6 +92,112 @@ class TraefikForwardAuth(BaseModel):
 # Generic, proxy-agnostic routing configuration models
 
 
+class OidcRedirect(BaseModel):
+    """OAuth2 redirect (callback) descriptor for a native-OIDC app.
+
+    `path` style emits `https://${HALOS_DOMAIN}<path>`; `port` style emits
+    `https://${HALOS_DOMAIN}:<external_port><path>`, where the external port is
+    resolved at runtime from the routing port registry.
+    """
+
+    style: Literal["path", "port"] = Field(
+        description="Redirect URL shape: path-based or external-port-based",
+    )
+    # Constrained to a URL-path charset: the value is interpolated into the
+    # generated prestart's heredoc/echo lines, so shell/heredoc metacharacters
+    # (quotes, $, backticks, newlines) must not be expressible.
+    path: str = Field(
+        min_length=1,
+        pattern=r"^/[A-Za-z0-9._~/-]*$",
+        description="Callback path (absolute, URL-path characters only)",
+    )
+
+
+# Sources the generator can resolve into a container env var for an OIDC app.
+OidcEnvSource = Literal["secret", "issuer", "redirect", "external_port", "client_id"]
+
+
+class OidcConfig(BaseModel):
+    """Declarative OIDC client config for a native-OAuth app.
+
+    Present under `routing.auth.oidc` with `mode: oidc`. The generator turns this
+    into the Authelia client snippet, the client-secret provisioning, and the
+    container env vars the app consumes — no hand-written prestart needed.
+    """
+
+    # client_id flows into a file path and a grep pattern; client_name into a
+    # heredoc body. Both are interpolated into root-executed generated bash, so
+    # they are charset-constrained to block injection / path traversal.
+    client_id: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9][a-z0-9-]*$",
+        description="OIDC client id (defaults to the app_id when omitted)",
+    )
+    client_name: str = Field(
+        min_length=1,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9 ._-]*$",
+        description="Human-readable client name shown in consent screens",
+    )
+    scopes: list[str] = Field(
+        default=["openid", "profile", "email", "groups"],
+        min_length=1,
+        description="OAuth2 scopes to request",
+    )
+    consent_mode: Literal["implicit", "explicit", "pre-configured"] = Field(
+        default="implicit",
+        description="Authelia consent mode for this client",
+    )
+    token_endpoint_auth_method: Literal["client_secret_basic", "client_secret_post"] = (
+        Field(
+            default="client_secret_basic",
+            description="Token endpoint auth method the app's OIDC library uses",
+        )
+    )
+    redirect: OidcRedirect = Field(
+        description="OAuth2 callback descriptor",
+    )
+    env: dict[str, OidcEnvSource] = Field(
+        default_factory=dict,
+        description=(
+            "Map of container env var name -> resolved source. Sources: secret "
+            "(client secret value), issuer (Authelia issuer URL), redirect "
+            "(computed redirect URI), external_port (resolved routing port), "
+            "client_id."
+        ),
+    )
+
+    @field_validator("scopes")
+    @classmethod
+    def validate_scopes(cls, v: list[str]) -> list[str]:
+        """Scopes are interpolated into the snippet's scope list; keep them simple."""
+        for scope in v:
+            if not re.match(r"^[a-z0-9_]+$", scope):
+                raise ValueError(f"invalid OIDC scope: '{scope}'")
+        return v
+
+    @field_validator("env")
+    @classmethod
+    def validate_env_var_names(
+        cls, v: dict[str, OidcEnvSource]
+    ) -> dict[str, OidcEnvSource]:
+        """Env var names are echoed into runtime.env by generated bash; require
+        the POSIX env-name charset so they cannot break out of the echo line."""
+        for name in v:
+            if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
+                raise ValueError(f"invalid OIDC env var name: '{name}'")
+        return v
+
+    @model_validator(mode="after")
+    def validate_external_port_requires_port_style(self) -> "OidcConfig":
+        """An env mapping to external_port only resolves when the redirect is
+        port-based (the port is otherwise never assigned in the prestart)."""
+        if "external_port" in self.env.values() and self.redirect.style != "port":
+            raise ValueError(
+                "env source 'external_port' requires redirect.style 'port'"
+            )
+        return self
+
+
 class RoutingAuth(BaseModel):
     """Authentication configuration for routing.
 
@@ -107,6 +214,22 @@ class RoutingAuth(BaseModel):
         default=None,
         description="Custom forward auth configuration with header mappings",
     )
+    oidc: OidcConfig | None = Field(
+        default=None,
+        description="OIDC client config for native-OAuth apps (with mode: oidc)",
+    )
+
+    @model_validator(mode="after")
+    def validate_oidc_matches_mode(self) -> "RoutingAuth":
+        """`oidc` and `mode: oidc` must agree in both directions, so the prestart
+        OIDC section and the is_oidc_app scaffolding (postinst secret-gen, Authelia
+        ordering) can never diverge — an oidc block under another mode would write a
+        snippet whose secret is never provisioned."""
+        if self.mode == "oidc" and self.oidc is None:
+            raise ValueError("routing.auth.oidc is required when mode='oidc'")
+        if self.mode != "oidc" and self.oidc is not None:
+            raise ValueError("routing.auth.oidc is only valid with mode='oidc'")
+        return self
 
 
 class RoutingConfig(BaseModel):

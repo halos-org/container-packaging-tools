@@ -4,6 +4,8 @@ import pytest
 from pydantic import ValidationError
 
 from schemas.metadata import (
+    OidcConfig,
+    OidcRedirect,
     PackageMetadata,
     RoutingAuth,
     RoutingConfig,
@@ -19,10 +21,19 @@ class TestRoutingConfig:
         assert config.auth is None  # Default to None, will be forward_auth at runtime
 
     def test_auth_modes(self) -> None:
-        """All auth modes should be valid."""
-        for mode in ["forward_auth", "oidc", "none"]:
+        """forward_auth and none validate bare; oidc requires an oidc block."""
+        for mode in ["forward_auth", "none"]:
             auth = RoutingAuth(mode=mode)  # type: ignore[arg-type]
             assert auth.mode == mode
+
+        oidc_auth = RoutingAuth(
+            mode="oidc",
+            oidc=OidcConfig(
+                client_name="App",
+                redirect=OidcRedirect(style="path", path="/cb"),
+            ),
+        )
+        assert oidc_auth.mode == "oidc"
 
     def test_invalid_auth_mode(self) -> None:
         """Invalid auth mode should fail validation."""

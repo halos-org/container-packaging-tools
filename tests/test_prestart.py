@@ -1,6 +1,10 @@
 """Unit tests for prestart script generation."""
 
+import shutil
+import subprocess
 from unittest import mock
+
+import pytest
 
 from generate_container_packages.loader import AppDefinition
 from generate_container_packages.prestart import (
@@ -264,3 +268,67 @@ class TestGeneratePrestartScript:
         # The hook is sourced after the LAST runtime.env write (not merely after
         # the RUNTIME_ENV declaration), so framework scaffolding is fully in place.
         assert script.rindex('>> "$RUNTIME_ENV"') < script.index(hook)
+
+
+class TestOidcSectionWiring:
+    """generate_prestart_script emits the OIDC section only for mode: oidc apps."""
+
+    def _oidc_app(self, *, app_id="grafana", with_app_id=True):
+        app_def = mock.Mock(spec=AppDefinition)
+        meta = {
+            "package_name": "marine-grafana-container",
+            "name": "Grafana",
+            "web_ui": {"enabled": True, "protocol": "http", "port": 3000},
+            "routing": {
+                "auth": {
+                    "mode": "oidc",
+                    "oidc": {
+                        "client_name": "Grafana",
+                        "token_endpoint_auth_method": "client_secret_basic",
+                        "redirect": {"style": "port", "path": "/login/generic_oauth"},
+                        "env": {
+                            "GRAFANA_OIDC_CLIENT_SECRET": "secret",
+                            "HALOS_EXTERNAL_PORT": "external_port",
+                        },
+                    },
+                }
+            },
+        }
+        if with_app_id:
+            meta["app_id"] = app_id
+        app_def.metadata = meta
+        return app_def
+
+    def test_oidc_app_emits_section(self):
+        script = generate_prestart_script(self._oidc_app())
+        assert "# --- OIDC client registration" in script
+        assert "cat > /etc/halos/oidc-clients.d/grafana.yml << EOF" in script
+        # the port-registry lookup keys on app_id
+        assert 'grep "^grafana=" /etc/halos/port-registry' in script
+
+    def test_app_id_falls_back_to_package_name(self):
+        script = generate_prestart_script(self._oidc_app(with_app_id=False))
+        # no app_id -> port-registry key and client_id use package_name
+        assert 'grep "^marine-grafana-container=" /etc/halos/port-registry' in script
+
+    def test_forward_auth_app_has_no_oidc_section(self):
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {
+            "package_name": "test-app-container",
+            "name": "Test App",
+            "web_ui": {"enabled": True, "protocol": "http", "port": 8080},
+            "routing": {"auth": {"mode": "forward_auth"}},
+        }
+        script = generate_prestart_script(app_def)
+        assert "OIDC client registration" not in script
+        assert "oidc-clients.d" not in script
+
+    def test_generated_oidc_prestart_is_valid_bash(self):
+        """The assembled script (heredoc, case block, expansions) must parse."""
+        if shutil.which("bash") is None:
+            pytest.skip("bash not available")
+        script = generate_prestart_script(self._oidc_app())
+        result = subprocess.run(
+            ["bash", "-n"], input=script, text=True, capture_output=True
+        )
+        assert result.returncode == 0, result.stderr

@@ -362,10 +362,12 @@ class TestOIDCSystemdService:
 
 
 class TestOIDCRulesInstallation:
-    """Tests for debian/rules OIDC file installation."""
+    """Tests for debian/rules OIDC handling."""
 
-    def test_oidc_app_installs_snippet(self, tmp_path):
-        """OIDC app rules should install OIDC client snippet."""
+    def test_oidc_app_does_not_install_snippet_at_build_time(self, tmp_path):
+        """The Authelia snippet is written by the prestart at runtime (the port
+        for port-based redirects is only known then), so rules must NOT install a
+        build-time oidc-client.yml."""
         metadata = {
             "name": "OIDC App",
             "app_id": "oidc-app",
@@ -403,9 +405,8 @@ class TestOIDCRulesInstallation:
         rules = output_dir / "debian" / "rules"
         content = rules.read_text()
 
-        # Verify OIDC snippet installation
-        assert "oidc-client.yml" in content
-        assert "/etc/halos/oidc-clients.d/oidc-app.yml" in content
+        # No build-time snippet install — the prestart writes it at runtime.
+        assert "oidc-client.yml" not in content
 
     def test_middleware_app_installs_middleware(self, tmp_path):
         """Forward auth app with custom headers should install middleware."""

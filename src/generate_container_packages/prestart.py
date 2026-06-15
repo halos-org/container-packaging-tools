@@ -4,6 +4,7 @@ from typing import Any
 
 from generate_container_packages.labels import find_port_env_var
 from generate_container_packages.loader import AppDefinition
+from generate_container_packages.oidc_snippet import generate_oidc_section
 
 
 def get_homarr_url_expression(
@@ -107,6 +108,20 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
                 'echo "HOMARR_URL=$HOMARR_URL" >> "$RUNTIME_ENV"',
             ]
         )
+
+    # OIDC client registration for native-OAuth apps (routing.auth.mode: oidc).
+    # The client secret is provisioned once by postinst; this section reads it,
+    # resolves the external port (port-based redirects), appends the container's
+    # OIDC env vars, and writes the Authelia client snippet.
+    routing = metadata.get("routing") or {}
+    auth = routing.get("auth") if isinstance(routing, dict) else {}
+    auth = auth if isinstance(auth, dict) else {}
+    oidc = auth.get("oidc")
+    # Gate on mode == "oidc" to stay consistent with is_oidc_app, which drives the
+    # postinst secret provisioning and the Authelia unit ordering.
+    if auth.get("mode") == "oidc" and oidc:
+        app_id = metadata.get("app_id", package_name)
+        lines.extend(generate_oidc_section(oidc, app_id, package_name))
 
     # Source the optional app-specific hook last, with the framework scaffolding
     # (sourced env, $HALOS_DOMAIN, $RUNTIME_ENV) already in place. Absence is a
