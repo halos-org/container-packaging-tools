@@ -12,7 +12,6 @@ from generate_container_packages.init import inject_init
 from generate_container_packages.labels import generate_homarr_labels
 from generate_container_packages.loader import AppDefinition
 from generate_container_packages.middleware import generate_forwardauth_middleware
-from generate_container_packages.oidc_snippet import generate_oidc_snippet
 from generate_container_packages.prestart import generate_prestart_script
 from generate_container_packages.registry import generate_registry_toml
 from generate_container_packages.routing import generate_routing_yml
@@ -187,9 +186,6 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
     # Generate app registry file for homarr-container-adapter
     generate_registry_file(app_def, source_dir)
-
-    # Generate OIDC client snippet for Authelia (if OIDC app)
-    generate_oidc_snippet_file(app_def, source_dir)
 
     # Generate per-app ForwardAuth middleware (if custom headers)
     generate_middleware_file(app_def, source_dir)
@@ -509,28 +505,6 @@ def generate_registry_file(app_def: AppDefinition, source_dir: Path) -> None:
 
     registry_file = source_dir / "webapp-registry.toml"
     registry_file.write_text(registry_content, encoding="utf-8")
-
-
-def generate_oidc_snippet_file(app_def: AppDefinition, source_dir: Path) -> None:
-    """Generate OIDC client snippet file for Authelia.
-
-    The snippet file is installed to /etc/halos/oidc-clients.d/{app_id}.yml
-    and merged by Authelia's prestart script to register the OIDC client.
-
-    Args:
-        app_def: Application definition
-        source_dir: Destination directory
-
-    The file is only generated if traefik.auth is 'oidc' in metadata.
-    """
-    snippet_content = generate_oidc_snippet(app_def.metadata)
-
-    if snippet_content is None:
-        # Not an OIDC app, skip snippet generation
-        return
-
-    oidc_snippet_file = source_dir / "oidc-client.yml"
-    oidc_snippet_file.write_text(snippet_content, encoding="utf-8")
 
 
 def generate_middleware_file(app_def: AppDefinition, source_dir: Path) -> None:
