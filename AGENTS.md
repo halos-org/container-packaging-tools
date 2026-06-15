@@ -54,6 +54,20 @@ The validator enforces these conventions as **blocking errors**. Apps that don't
 
 See [halos#49](https://github.com/halos-org/halos/issues/49) for the full design rationale.
 
+### Custom Prestart Hook
+
+The generator always emits the framework `prestart.sh` (creates the runtime dir and `runtime.env`, sources the env files, writes `HOMARR_URL`). An app that needs app-specific startup logic ships a `prestart.sh` in its input directory; the generator installs it as `app-prestart.sh` beside `docker-compose.yml` and the framework script **sources it last**. App authors never re-implement the framework scaffolding — the hook holds only app-specific logic (generating secrets, seeding config, installing plugins).
+
+Hook contract — available when `app-prestart.sh` runs:
+
+- The env files are already sourced (`env.defaults`, `env`), so their values are in scope.
+- `$HALOS_DOMAIN` is inherited from the unit environment (routed/web_ui apps).
+- `$RUNTIME_ENV` points at the already-created `runtime.env` (mode `600`). **Append with `>>` only — never `>`/`cat >`**, which would truncate the framework-written values.
+- The hook resolves its own directory via `BASH_SOURCE`; it sits beside `docker-compose.yml`, so `"$(dirname "${BASH_SOURCE[0]}")"/docker-compose.yml` resolves.
+- The framework runs under `set -e`, so a failing hook command aborts unit start. Best-effort steps must guard themselves (e.g. `if ! cmd; then echo warn; fi`).
+
+Prefer build-time `default-data/` for static seed config; reserve the hook for logic that genuinely needs runtime context.
+
 ## Git Workflow Policy
 
 **Branch Workflow:** Never push to main directly - always use feature branches and PRs.
