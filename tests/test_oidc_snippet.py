@@ -103,3 +103,23 @@ class TestClientId:
         s = _script(oidc, "signalk-server")
         assert "client_id: signalk" in s
         assert "oidc-clients.d/signalk.yml" in s
+
+
+class TestEnvSources:
+    def test_client_id_env_source_resolves(self):
+        oidc = {
+            "client_name": "App",
+            "redirect": {"style": "path", "path": "/cb"},
+            "env": {"APP_CLIENT_ID": "client_id"},
+        }
+        s = _script(oidc, "my-app", "my-app-container")
+        assert 'echo "APP_CLIENT_ID=my-app" >> "$RUNTIME_ENV"' in s
+
+    def test_issuer_env_source_resolves(self):
+        oidc = {
+            "client_name": "App",
+            "redirect": {"style": "path", "path": "/cb"},
+            "env": {"APP_ISSUER": "issuer"},
+        }
+        s = _script(oidc, "my-app")
+        assert 'echo "APP_ISSUER=https://${HALOS_DOMAIN}/sso" >> "$RUNTIME_ENV"' in s

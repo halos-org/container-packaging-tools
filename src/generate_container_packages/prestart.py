@@ -114,9 +114,12 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
     # resolves the external port (port-based redirects), appends the container's
     # OIDC env vars, and writes the Authelia client snippet.
     routing = metadata.get("routing") or {}
-    auth = routing.get("auth") if isinstance(routing, dict) else None
-    oidc = auth.get("oidc") if isinstance(auth, dict) else None
-    if oidc:
+    auth = routing.get("auth") if isinstance(routing, dict) else {}
+    auth = auth if isinstance(auth, dict) else {}
+    oidc = auth.get("oidc")
+    # Gate on mode == "oidc" to stay consistent with is_oidc_app, which drives the
+    # postinst secret provisioning and the Authelia unit ordering.
+    if auth.get("mode") == "oidc" and oidc:
         app_id = metadata.get("app_id", package_name)
         lines.extend(generate_oidc_section(oidc, app_id, package_name))
 
