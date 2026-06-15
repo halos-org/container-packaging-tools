@@ -88,70 +88,7 @@ class TraefikForwardAuth(BaseModel):
     )
 
 
-class TraefikOIDC(BaseModel):
-    """OIDC configuration for apps with native OpenID Connect support.
-
-    When auth=oidc, the app handles authentication directly with Authelia
-    instead of using Forward Auth middleware.
-    """
-
-    client_name: str = Field(
-        min_length=1,
-        description="Human-readable client name shown in consent screens",
-    )
-    scopes: list[str] = Field(
-        default=["openid", "profile", "email"],
-        min_length=1,
-        description="OAuth2 scopes to request",
-    )
-    redirect_path: str = Field(
-        default="/callback",
-        description="OAuth2 callback path (relative to app root)",
-    )
-    consent_mode: Literal["implicit", "explicit", "pre-configured"] = Field(
-        default="implicit",
-        description="Authelia consent mode for this client",
-    )
-
-
-class TraefikConfig(BaseModel):
-    """Traefik routing and SSO configuration for container apps.
-
-    Controls how the app integrates with the Traefik reverse proxy and
-    Authelia authentication system.
-
-    Note: This is the legacy configuration key. New apps should use RoutingConfig
-    with the 'routing' key instead. Both are supported for backwards compatibility.
-    """
-
-    auth: Literal["forward_auth", "oidc", "none"] = Field(
-        default="forward_auth",
-        description="Authentication mode: forward_auth (default), oidc, or none",
-    )
-    forward_auth: TraefikForwardAuth | None = Field(
-        default=None,
-        description="Custom forward auth configuration (optional, uses default if not specified)",
-    )
-    oidc: TraefikOIDC | None = Field(
-        default=None,
-        description="OIDC client configuration (required if auth=oidc)",
-    )
-    host_port: int | None = Field(
-        default=None,
-        ge=1,
-        le=65535,
-        description="Port for host networking apps (Traefik routes to host.docker.internal:port)",
-    )
-
-    @model_validator(mode="after")
-    def validate_oidc_required(self) -> "TraefikConfig":
-        """Ensure oidc section is present when auth=oidc."""
-        if self.auth == "oidc" and self.oidc is None:
-            raise ValueError("oidc config required when auth='oidc'")
-        return self
-
-
-# New generic routing configuration models (proxy-agnostic)
+# Generic, proxy-agnostic routing configuration models
 
 
 class RoutingAuth(BaseModel):
@@ -179,8 +116,6 @@ class RoutingConfig(BaseModel):
     being tied to a specific reverse proxy implementation. At runtime,
     the reverse proxy (e.g., Traefik) reads this and generates its
     native configuration.
-
-    Prefer using this over TraefikConfig for new apps.
     """
 
     auth: RoutingAuth | None = Field(
