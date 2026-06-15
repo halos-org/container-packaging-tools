@@ -2,6 +2,15 @@
 Description={{ service.description }}
 After=docker.service
 Requires=docker.service
+# Bound Restart=always: a deterministically-failing ExecStartPre (prestart,
+# configure-container-routing, or an app-prestart.sh hook under set -e) must
+# terminate in `failed` instead of looping every RestartSec forever. With
+# RestartSec=10 a failing start trips the burst in ~40s, while a legitimate
+# in-app restart spaced further apart than interval/burst never accumulates.
+# A start-limit `failed` unit does not self-heal: after fixing the cause run
+# `systemctl reset-failed` then `systemctl start` (an upgrade will not clear it).
+StartLimitIntervalSec=600
+StartLimitBurst=5
 {% if is_oidc_app %}
 After=halos-authelia-container.service
 Wants=halos-authelia-container.service
