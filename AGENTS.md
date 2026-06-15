@@ -56,7 +56,7 @@ See [halos#49](https://github.com/halos-org/halos/issues/49) for the full design
 
 ### Custom Prestart Hook
 
-The generator always emits the framework `prestart.sh` (creates the runtime dir and `runtime.env`, sources the env files, writes `HOMARR_URL`). An app that needs app-specific startup logic ships a `prestart.sh` in its input directory; the generator installs it as `app-prestart.sh` beside `docker-compose.yml` and the framework script **sources it last**. App authors never re-implement the framework scaffolding — the hook holds only app-specific logic (generating secrets, seeding config, installing plugins).
+The generator always emits the framework `prestart.sh` (creates the runtime dir and `runtime.env`, sources the env files, and writes `HOMARR_URL` for web_ui apps). An app that needs app-specific startup logic ships a `prestart.sh` in its input directory; the generator installs it as `app-prestart.sh` beside `docker-compose.yml` and the framework script **sources it last**. App authors never re-implement the framework scaffolding — the hook holds only app-specific logic (generating secrets, seeding config, installing plugins).
 
 Hook contract — available when `app-prestart.sh` runs:
 
@@ -65,6 +65,7 @@ Hook contract — available when `app-prestart.sh` runs:
 - `$RUNTIME_ENV` points at the already-created `runtime.env` (mode `600`). **Append with `>>` only — never `>`/`cat >`**, which would truncate the framework-written values.
 - The hook resolves its own directory via `BASH_SOURCE`; it sits beside `docker-compose.yml`, so `"$(dirname "${BASH_SOURCE[0]}")"/docker-compose.yml` resolves.
 - The framework runs under `set -e`, so a failing hook command aborts unit start. Best-effort steps must guard themselves (e.g. `if ! cmd; then echo warn; fi`).
+- `runtime.env` lives in `/run` (tmpfs) and is **recreated on every start**, so it is not durable. A hook that generates a secret must persist it to a stable mode-`600` path under the app's `/var/lib/container-apps/<pkg>/data` dir with a generate-once guard (`[ -f "$f" ] || openssl rand ... > "$f"`), then echo it into `$RUNTIME_ENV` — otherwise the secret is regenerated each restart and diverges from anything that stored it.
 
 Prefer build-time `default-data/` for static seed config; reserve the hook for logic that genuinely needs runtime context.
 

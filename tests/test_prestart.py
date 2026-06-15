@@ -159,6 +159,10 @@ class TestGeneratePrestartScript:
         # HOSTNAME is not written; HOMARR_URL absent when web_ui disabled
         assert "HOSTNAME=" not in script
         assert "HOMARR_URL=" not in script
+        # runtime.env is still created 600, and the no-web_ui branch must never
+        # introduce a truncating write either.
+        assert "install -m 600 /dev/null" in script
+        assert '> "$RUNTIME_ENV"' not in script.replace('>> "$RUNTIME_ENV"', "")
 
     def test_script_without_web_ui_key(self):
         """Test script when web_ui key is missing."""
@@ -257,5 +261,6 @@ class TestGeneratePrestartScript:
         assert hook in script
         assert f'[ -f "{hook}" ]' in script
         assert f'. "{hook}"' in script
-        # The hook is sourced last, after the runtime.env writes
-        assert script.index(hook) > script.index('"$RUNTIME_ENV"')
+        # The hook is sourced after the LAST runtime.env write (not merely after
+        # the RUNTIME_ENV declaration), so framework scaffolding is fully in place.
+        assert script.rindex('>> "$RUNTIME_ENV"') < script.index(hook)
