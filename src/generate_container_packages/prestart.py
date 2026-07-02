@@ -129,8 +129,15 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
     lines.extend(
         [
             "",
-            "# Run app-specific prestart hook if present",
-            f'[ -f "{app_prestart}" ] && . "{app_prestart}"',
+            "# Run app-specific prestart hook if present. Use an if-block rather than",
+            "# `[ -f x ] && . x`: as the script's final command that test returns 1",
+            "# when the hook is absent, and under `set -e` that fails the systemd",
+            "# ExecStartPre so the container never starts. An if-block that takes no",
+            "# branch exits 0, while a sourced hook that itself fails still aborts",
+            "# via set -e.",
+            f'if [ -f "{app_prestart}" ]; then',
+            f'    . "{app_prestart}"',
+            "fi",
         ]
     )
 

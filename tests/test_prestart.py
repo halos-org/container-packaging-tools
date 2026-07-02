@@ -261,10 +261,15 @@ class TestGeneratePrestartScript:
         script = generate_prestart_script(app_def)
 
         hook = "/var/lib/container-apps/test-app-container/app-prestart.sh"
-        # Guarded source: [ -f <hook> ] && . <hook>
+        # Guarded source inside an if-block.
         assert hook in script
         assert f'[ -f "{hook}" ]' in script
         assert f'. "{hook}"' in script
+        # Regression: must NOT be the trailing `[ -f x ] && . x` one-liner. As the
+        # script's last command that returns 1 when the hook is absent, which under
+        # `set -e` fails ExecStartPre and the container never starts.
+        assert f'[ -f "{hook}" ] && . "{hook}"' not in script
+        assert f'if [ -f "{hook}" ]; then' in script
         # The hook is sourced after the LAST runtime.env write (not merely after
         # the RUNTIME_ENV declaration), so framework scaffolding is fully in place.
         assert script.rindex('>> "$RUNTIME_ENV"') < script.index(hook)
