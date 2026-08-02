@@ -279,7 +279,8 @@ output-directory/
 │   │   ├── changelog            # Debian changelog
 │   │   ├── copyright            # Copyright and license
 │   │   ├── compat               # Debhelper compatibility level
-│   │   └── <package>.service    # systemd service file
+│   │   ├── <package>.service    # systemd service file
+│   │   └── <package>-provision.service   # Only when the app ships provision.sh
 │   ├── docker-compose.yml       # Copied from input
 │   ├── config.yml               # Copied from input
 │   ├── metadata.yaml            # Copied from input
