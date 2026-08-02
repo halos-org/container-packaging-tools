@@ -126,11 +126,17 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
     # Source the optional app-specific hook last, with the framework scaffolding
     # (sourced env, $HALOS_DOMAIN, $RUNTIME_ENV) already in place. Absence is a
     # no-op; the hook must append to $RUNTIME_ENV, never truncate it.
+    # `if` rather than `[ -f x ] && . x`: as the script's last command, the latter
+    # makes a missing hook the exit status, so ExecStartPre fails and an app that
+    # ships no prestart.sh never starts. Keep it a statement, not an expression,
+    # so a failure raised *inside* the hook still propagates under set -e.
     lines.extend(
         [
             "",
             "# Run app-specific prestart hook if present",
-            f'[ -f "{app_prestart}" ] && . "{app_prestart}"',
+            f'if [ -f "{app_prestart}" ]; then',
+            f'    . "{app_prestart}"',
+            "fi",
         ]
     )
 
