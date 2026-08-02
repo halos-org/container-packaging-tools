@@ -261,13 +261,53 @@ class TestGeneratePrestartScript:
         script = generate_prestart_script(app_def)
 
         hook = "/var/lib/container-apps/test-app-container/app-prestart.sh"
-        # Guarded source: [ -f <hook> ] && . <hook>
         assert hook in script
-        assert f'[ -f "{hook}" ]' in script
         assert f'. "{hook}"' in script
         # The hook is sourced after the LAST runtime.env write (not merely after
         # the RUNTIME_ENV declaration), so framework scaffolding is fully in place.
         assert script.rindex('>> "$RUNTIME_ENV"') < script.index(hook)
+
+    def test_exits_zero_when_hook_absent(self, tmp_path):
+        """An app that ships no app-prestart.sh must still exit 0: the guard is
+        the script's final command, and a non-zero status fails the systemd
+        ExecStartPre so the container never starts."""
+        script = generate_prestart_script(_hook_app())
+
+        result = _run_prestart(script, tmp_path)
+
+        assert result.returncode == 0, result.stderr
+
+    def test_failing_hook_aborts(self, tmp_path):
+        """Absence being a no-op must not be bought with a blanket `|| true` or
+        trailing `exit 0`: a hook that fails still has to fail the unit."""
+        hook = tmp_path / "var/lib/container-apps/test-app-container/app-prestart.sh"
+        hook.parent.mkdir(parents=True)
+        hook.write_text("exit 1\n")
+        script = generate_prestart_script(_hook_app())
+
+        result = _run_prestart(script, tmp_path)
+
+        assert result.returncode != 0
+
+
+def _hook_app() -> AppDefinition:
+    """Minimal app definition whose prestart sources the optional hook."""
+    app_def = mock.Mock(spec=AppDefinition)
+    app_def.metadata = {
+        "package_name": "test-app-container",
+        "name": "Test App",
+        "web_ui": {"enabled": True, "protocol": "http", "port": 8080},
+    }
+    return app_def
+
+
+def _run_prestart(script: str, tmp_path) -> subprocess.CompletedProcess[str]:
+    """Execute a generated prestart with its absolute paths rebased under tmp_path."""
+    if shutil.which("bash") is None:
+        pytest.skip("bash not available")
+    script_path = tmp_path / "prestart.sh"
+    script_path.write_text(script.replace('"/', f'"{tmp_path}/'))
+    return subprocess.run(["bash", str(script_path)], text=True, capture_output=True)
 
 
 class TestOidcSectionWiring:
