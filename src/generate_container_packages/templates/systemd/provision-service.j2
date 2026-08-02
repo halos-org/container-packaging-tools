@@ -27,10 +27,11 @@ WorkingDirectory={{ service.working_directory }}
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
 # The hook must name any container it runs "$HALOS_PROVISION_CONTAINER" so the
-# cleanup below can reap it. A start timeout kills this unit's cgroup and takes
-# the hook's own cleanup with it, but a container started by dockerd outlives the
-# unit and keeps writing. ExecStopPost still runs on that path, and reads the
-# same variable so an EnvironmentFile override cannot make the two disagree.
+# cleanup below can reap it. A start timeout signals this unit's cgroup, so an
+# untrapped hook dies without running its own cleanup, while a container started
+# by dockerd outlives the unit and keeps writing. ExecStopPost still runs on that
+# path, and reads the same variable so an EnvironmentFile override cannot make
+# the two disagree.
 Environment=HALOS_PROVISION_CONTAINER={{ package.name }}-provision
 ExecStart={{ service.working_directory }}/provision.sh
 ExecStopPost=-docker rm -f ${HALOS_PROVISION_CONTAINER}

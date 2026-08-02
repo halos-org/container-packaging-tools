@@ -25,6 +25,8 @@ my-app/
 ├── docker-compose.yml     # Required: Container orchestration
 ├── config.yml             # Required: User configuration schema
 ├── prestart.sh            # Optional: app-specific startup hook (see below)
+├── provision.sh           # Optional: one-time setup hook, own unit (see below)
+├── assets/                # Optional: static payload installed to <lib>/assets/
 ├── default-data/          # Optional: static seed files (baked at build time)
 ├── icon.png               # Optional: Application icon (PNG or SVG)
 ├── screenshot1.png        # Optional: Screenshots for AppStream
@@ -35,6 +37,19 @@ A `prestart.sh` is **not** a replacement for the generated prestart — the gene
 `app-prestart.sh` and the framework script sources it after setting up `runtime.env`. Put only
 app-specific logic in it (secrets, config seeding), append to `$RUNTIME_ENV` with `>>`, and prefer
 `default-data/` for static seed files. See the Custom Prestart Hook contract in `AGENTS.md`.
+
+A `provision.sh` is for setup too slow to sit in the app's start path — installing plugins, fetching
+data. It gets its own `<package>-provision.service` that the app orders after, so a slow or failing
+run cannot drive the app unit into a permanent `failed` state. Two differences from `prestart.sh`
+matter: it is **executed, not sourced** (its own process, before the prestart runs), and it runs on
+**every** app start, so it must be idempotent and a fast no-op when there is nothing to do. See the
+Provisioning Hook contract in `AGENTS.md`.
+
+Static payload a hook reads at runtime (a package manifest, a template) belongs in `assets/`, which
+is installed to `/var/lib/container-apps/<package>/assets/`. A provisioning hook can reach it as
+plain `assets/<file>`, since its unit sets `WorkingDirectory` to the package lib dir. Do not leave
+such a file at the top level of the app directory: only the files listed above are packaged, so a
+stray one silently never ships.
 
 ### Basic Workflow
 

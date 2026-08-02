@@ -1,8 +1,8 @@
 """Tests for the provisioning hook and its generated one-shot unit.
 
 An app that ships `provision.sh` gets a `<package>-provision.service` that runs
-long setup work outside the app unit's start path. The hook contract is
-documented in AGENTS.md by #224; until then the unit template carries it.
+long setup work outside the app unit's start path. See the Provisioning Hook
+contract in AGENTS.md.
 
 Unit assertions parse directives into (section, key, value) rather than matching
 raw text. Substring matching passed even with `ExecStart=` commented out, because
