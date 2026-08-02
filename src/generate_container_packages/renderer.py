@@ -96,6 +96,12 @@ def render_all_templates(
     if context.get("has_file_watchers"):
         _render_file_watcher_templates(env, context, debian_dir)
 
+    # Render the provisioning unit if the app ships a provision.sh hook
+    if context.get("has_provision"):
+        provision_unit = debian_dir / f"{context['package']['name']}-provision.service"
+        rendered = env.get_template("systemd/provision-service.j2").render(context)
+        write_rendered_file(rendered, provision_unit)
+
     # Copy static files (compat)
     _copy_static_files(template_dir, debian_dir)
 
