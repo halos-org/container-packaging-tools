@@ -126,11 +126,16 @@ def generate_prestart_script(app_def: AppDefinition) -> str:
     # Source the optional app-specific hook last, with the framework scaffolding
     # (sourced env, $HALOS_DOMAIN, $RUNTIME_ENV) already in place. Absence is a
     # no-op; the hook must append to $RUNTIME_ENV, never truncate it.
+    # An if-block, not `[ -f x ] && . x`: as the script's final command that test
+    # returns 1 when the hook is absent, failing the systemd ExecStartPre. A
+    # branch not taken exits 0, while a hook that fails still aborts via set -e.
     lines.extend(
         [
             "",
             "# Run app-specific prestart hook if present",
-            f'[ -f "{app_prestart}" ] && . "{app_prestart}"',
+            f'if [ -f "{app_prestart}" ]; then',
+            f'    . "{app_prestart}"',
+            "fi",
         ]
     )
 
