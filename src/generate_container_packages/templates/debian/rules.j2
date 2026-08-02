@@ -83,8 +83,8 @@ override_dh_auto_install:
 	# Install systemd service file
 	install -D -m 644 debian/{{ package.name }}.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service
-
 {% if has_provision %}
+
 	# Install the provisioning unit (pulled in by the app unit's Wants=, so not enabled)
 	install -D -m 644 debian/{{ package.name }}-provision.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}-provision.service
@@ -106,3 +106,11 @@ override_dh_auto_install:
 
 override_dh_auto_test:
 	# Skip tests - validated by generate-container-packages
+
+override_dh_installsystemd:
+	# debhelper's own start call blocks dpkg: deb-systemd-invoke runs
+	# `systemctl start` without --no-block, so it waits for the unit's whole
+	# start transaction. For an app with a provisioning one-shot ordered ahead
+	# of it that can be many minutes, all while dpkg holds its lock. postinst
+	# starts the service itself with --no-block instead.
+	dh_installsystemd --no-start

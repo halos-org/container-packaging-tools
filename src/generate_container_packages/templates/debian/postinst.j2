@@ -88,9 +88,16 @@ case "$1" in
             # Reload systemd to recognize new service
             systemctl daemon-reload
 
-            # Enable service (but don't start automatically - let user configure first)
-            # Users can start with: systemctl start {{ package.name }}.service
             systemctl enable {{ package.name }}.service || true
+
+            # Start the service ourselves because debhelper's start is suppressed
+            # (see override_dh_installsystemd in rules). --no-block returns as soon
+            # as the job is queued instead of waiting for the whole start
+            # transaction, so a slow ExecStartPre or an ordered-ahead provisioning
+            # one-shot cannot hold the dpkg lock for the length of its run.
+            # `restart` covers both cases debhelper distinguished: it starts an
+            # inactive unit on first install and reloads a running one on upgrade.
+            systemctl restart --no-block {{ package.name }}.service || true
 {% if has_file_watchers %}
 
             # Enable and start file watcher path units

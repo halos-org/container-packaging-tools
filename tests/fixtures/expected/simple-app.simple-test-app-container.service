@@ -1,0 +1,49 @@
+[Unit]
+Description=Simple Test App Container
+After=docker.service
+Requires=docker.service
+# Bound Restart=always: a deterministically-failing ExecStartPre (prestart,
+# configure-container-routing, or an app-prestart.sh hook under set -e) must
+# terminate in `failed` instead of looping every RestartSec forever. With
+# RestartSec=10 a failing start trips the burst in ~40s, while a legitimate
+# in-app restart spaced further apart than interval/burst never accumulates.
+# A start-limit `failed` unit does not self-heal: after fixing the cause run
+# `systemctl reset-failed` then `systemctl start` (an upgrade will not clear it).
+StartLimitIntervalSec=600
+StartLimitBurst=5
+After=halos-resolve-domain.service
+Wants=halos-resolve-domain.service
+
+[Service]
+Type=simple
+WorkingDirectory=/var/lib/container-apps/simple-test-app-container
+# Sentinel variable to prevent direct docker compose usage (must use systemctl)
+Environment=HALOS_SYSTEMD_STARTED=1
+# Assign port and generate routing config before prestart, so prestart.sh
+# can read the port registry (e.g., for OIDC redirect URI construction)
+ExecStartPre=/usr/bin/configure-container-routing simple-test-app
+ExecStartPre=/var/lib/container-apps/simple-test-app-container/prestart.sh
+EnvironmentFile=-/etc/container-apps/simple-test-app-container/env.defaults
+EnvironmentFile=-/etc/container-apps/simple-test-app-container/env
+EnvironmentFile=-/run/container-apps/simple-test-app-container/runtime.env
+# HALOS_DOMAIN published once by halos-resolve-domain.service. Loaded last so it
+# wins over any stale HALOS_DOMAIN that an older runtime.env might still carry.
+EnvironmentFile=-/run/halos/domain.env
+# Apply routing labels from /run/halos/routing-labels/ if available
+ExecStart=/bin/sh -c '\
+    OVERRIDE=""; \
+    [ -f /run/halos/routing-labels/simple-test-app.yml ] && \
+    OVERRIDE="-f /run/halos/routing-labels/simple-test-app.yml"; \
+    docker compose -f docker-compose.yml $$OVERRIDE up'
+ExecStop=/bin/sh -c '\
+    OVERRIDE=""; \
+    [ -f /run/halos/routing-labels/simple-test-app.yml ] && \
+    OVERRIDE="-f /run/halos/routing-labels/simple-test-app.yml"; \
+    docker compose -f docker-compose.yml $$OVERRIDE down'
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

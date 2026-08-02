@@ -81,6 +81,12 @@ def render_all_templates(
         / f"{context['package']['name']}.metainfo.xml",
     }
 
+    # Provisioning unit, only for apps that ship a provision.sh hook
+    if context.get("has_provision"):
+        templates["systemd/provision-service.j2"] = (
+            debian_dir / f"{context['package']['name']}-provision.service"
+        )
+
     # Render each template
     for template_path, output_path in templates.items():
         try:
@@ -95,12 +101,6 @@ def render_all_templates(
     # Render file watcher systemd units if configured
     if context.get("has_file_watchers"):
         _render_file_watcher_templates(env, context, debian_dir)
-
-    # Render the provisioning unit if the app ships a provision.sh hook
-    if context.get("has_provision"):
-        provision_unit = debian_dir / f"{context['package']['name']}-provision.service"
-        rendered = env.get_template("systemd/provision-service.j2").render(context)
-        write_rendered_file(rendered, provision_unit)
 
     # Copy static files (compat)
     _copy_static_files(template_dir, debian_dir)

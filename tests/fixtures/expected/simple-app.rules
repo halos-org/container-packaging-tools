@@ -1,0 +1,58 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Nothing to build - container app
+
+override_dh_auto_install:
+	# Install application files to /var/lib/container-apps/
+	install -D -m 644 docker-compose.yml \
+		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/docker-compose.yml
+	install -D -m 644 metadata.yaml \
+		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/metadata.yaml
+	install -D -m 644 config.yml \
+		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/config.yml
+	install -D -m 644 env.template \
+		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/env.template
+	install -D -m 644 env.user-template \
+		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/env.user-template
+	install -D -m 755 prestart.sh \
+		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/prestart.sh
+
+	# Install icon
+	install -D -m 644 icon.png \
+		debian/simple-test-app-container//usr/share/pixmaps/simple-test-app-container.png
+
+
+
+	# Install app registry file for homarr-container-adapter
+	install -D -m 644 webapp-registry.toml \
+		debian/simple-test-app-container/etc/halos/webapps.d/simple-test-app-container.toml
+
+
+	# Install generic routing declaration for reverse proxy
+	install -D -m 644 routing.yml \
+		debian/simple-test-app-container/etc/halos/routing.d/simple-test-app.yml
+
+
+	# Install systemd service file
+	install -D -m 644 debian/simple-test-app-container.service \
+		debian/simple-test-app-container//etc/systemd/system/simple-test-app-container.service
+
+
+	# Install AppStream metadata
+	install -D -m 644 debian/simple-test-app-container.metainfo.xml \
+		debian/simple-test-app-container//usr/share/metainfo/simple-test-app-container.metainfo.xml
+
+override_dh_auto_test:
+	# Skip tests - validated by generate-container-packages
+
+override_dh_installsystemd:
+	# debhelper's own start call blocks dpkg: deb-systemd-invoke runs
+	# `systemctl start` without --no-block, so it waits for the unit's whole
+	# start transaction. For an app with a provisioning one-shot ordered ahead
+	# of it that can be many minutes, all while dpkg holds its lock. postinst
+	# starts the service itself with --no-block instead.
+	dh_installsystemd --no-start

@@ -300,9 +300,9 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         ],
         # App-specific prestart hook, sourced by the generated framework prestart
         "has_app_prestart": (app_def.input_dir / "prestart.sh").exists(),
-        # One-time provisioning hook, executed by its own decoupled unit before
-        # the app starts. Presence is the whole declaration: provisioning has no
-        # parameters, unlike file_watchers, which needs a schema for path/type/action.
+        # Provisioning hook, executed by its own unit before the app starts and
+        # re-run on every app start. Presence is the whole declaration: unlike
+        # file_watchers, provisioning has no path/type/action to configure.
         "has_provision": (app_def.input_dir / "provision.sh").exists(),
         # SSO configuration
         "is_oidc_app": is_oidc_app,
