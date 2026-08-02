@@ -4,8 +4,10 @@ Tests the BatchConverter class for converting multiple CasaOS apps
 in parallel with proper error handling and progress tracking.
 """
 
+import threading
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -224,46 +226,54 @@ class TestBatchConverter:
         # Should have elapsed time
         assert result.elapsed_seconds >= 0
 
-    def test_parallel_execution_faster_than_sequential(self, tmp_path: Path) -> None:
-        """Test that parallel execution is faster than sequential for multiple apps."""
-        import shutil
+    @pytest.mark.parametrize("max_workers", [1, 2])
+    def test_conversions_run_max_workers_at_a_time(
+        self, tmp_path: Path, max_workers: int
+    ) -> None:
+        """Peak concurrent conversions equals max_workers.
 
+        Comparing elapsed time between a 1-worker and a 2-worker run measures
+        machine load rather than scheduling: converting these fixtures is short
+        enough that thread-pool startup dominates. Observing how many conversions
+        are in flight at once pins both directions -- workers do run concurrently,
+        and never more than max_workers of them.
+        """
         batch_dir = tmp_path / "apps"
         batch_dir.mkdir()
-
-        # Create several apps
         for i in range(4):
-            shutil.copytree(FIXTURES_DIR / "simple-app", batch_dir / f"app{i}")
+            app_dir = batch_dir / f"app{i}"
+            app_dir.mkdir()
+            (app_dir / "docker-compose.yml").write_text(f"name: app{i}")
 
-        output_dir_seq = tmp_path / "output_seq"
-        output_dir_par = tmp_path / "output_par"
+        active = 0
+        peak = 0
+        lock = threading.Lock()
 
-        # Sequential conversion
-        converter_seq = BatchConverter(max_workers=1)
-        start = time.time()
-        result_seq = converter_seq.convert_batch(
-            source_dir=batch_dir,
-            output_dir=output_dir_seq,
-            download_assets=False,
-        )
-        seq_time = time.time() - start
+        def stubbed_convert(*args, **kwargs):
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(0.05)
+            with lock:
+                active -= 1
+            return {"success": True, "error": None, "warnings": []}
 
-        # Parallel conversion
-        converter_par = BatchConverter(max_workers=2)
-        start = time.time()
-        result_par = converter_par.convert_batch(
-            source_dir=batch_dir,
-            output_dir=output_dir_par,
-            download_assets=False,
-        )
-        par_time = time.time() - start
+        converter = BatchConverter(max_workers=max_workers)
+        with patch.object(
+            converter,
+            "_convert_single_app",
+            autospec=True,
+            side_effect=stubbed_convert,
+        ):
+            result = converter.convert_batch(
+                source_dir=batch_dir,
+                output_dir=tmp_path / "output",
+                download_assets=False,
+            )
 
-        # Both should complete successfully
-        assert result_seq.total == result_par.total
-
-        # Parallel should be faster (or at least not significantly slower)
-        # Allow some margin for overhead
-        assert par_time <= seq_time * 1.2
+        assert result.success_count == 4
+        assert peak == max_workers
 
     def test_thread_safety_with_errors(self, tmp_path: Path) -> None:
         """Test that error collection is thread-safe with parallel execution."""
