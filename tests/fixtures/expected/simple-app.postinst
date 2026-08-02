@@ -1,0 +1,59 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create configuration directory if it doesn't exist
+        mkdir -p "/etc/container-apps/simple-test-app-container"
+
+        # Always update env.defaults from template (contains system defaults)
+        cp "/var/lib/container-apps/simple-test-app-container/env.template" "/etc/container-apps/simple-test-app-container/env.defaults"
+
+        # Create env for user overrides if it doesn't exist (with commented defaults)
+        if [ ! -f "/etc/container-apps/simple-test-app-container/env" ]; then
+            cp "/var/lib/container-apps/simple-test-app-container/env.user-template" "/etc/container-apps/simple-test-app-container/env"
+        fi
+
+        # Restrict env and env.defaults permissions: both may hold secrets
+        # (env: user-set API tokens; env.defaults: shipped default credentials).
+        # Applied unconditionally so existing world-readable installs are
+        # hardened on upgrade, not only on fresh installs. env.defaults is
+        # rewritten from the template every configure, so it must be re-hardened
+        # here each time.
+        chmod 600 "/etc/container-apps/simple-test-app-container/env" "/etc/container-apps/simple-test-app-container/env.defaults"
+
+        # Source environment to resolve CONTAINER_DATA_ROOT
+        . "/etc/container-apps/simple-test-app-container/env.defaults"
+
+        # Create data directories with proper ownership for non-root containers
+        # Only set ownership on newly created directories to avoid overwriting user changes
+        # Resolve any environment variables in path using shell-native expansion
+        eval VOL_PATH=\"/var/lib/container-apps/simple-test-app-container/data\"
+        if [ ! -d "$VOL_PATH" ]; then
+            mkdir -p "$VOL_PATH"
+        fi
+
+
+
+        # Only interact with systemd if it's running (not in containers or minimal envs)
+        if [ -d /run/systemd/system ]; then
+            # Reload systemd to recognize new service
+            systemctl daemon-reload
+
+            systemctl enable simple-test-app-container.service || true
+
+            # Start the service ourselves because debhelper's start is suppressed
+            # (see override_dh_installsystemd in rules). --no-block returns as soon
+            # as the job is queued instead of waiting for the whole start
+            # transaction, so a slow ExecStartPre or an ordered-ahead provisioning
+            # one-shot cannot hold the dpkg lock for the length of its run.
+            # `restart` covers both cases debhelper distinguished: it starts an
+            # inactive unit on first install and reloads a running one on upgrade.
+            systemctl restart --no-block simple-test-app-container.service || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

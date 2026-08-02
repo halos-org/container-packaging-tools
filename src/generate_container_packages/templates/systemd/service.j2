@@ -19,6 +19,22 @@ Wants=halos-authelia-container.service
 After=halos-resolve-domain.service
 Wants=halos-resolve-domain.service
 {% endif %}
+{% if has_provision %}
+# Provisioning runs to completion before this unit starts, so whatever it
+# installs is present when the app first reads it. Wants=, never Requires=:
+# provisioning that fails or is skipped must not stop the app from starting.
+#
+# Accepted consequence: waiting on that one-shot inflates each start attempt from
+# ~RestartSec to provision-duration + RestartSec. Once provisioning routinely
+# exceeds ~120s, five attempts no longer fit in StartLimitIntervalSec above, the
+# burst stops tripping, and a deterministically-failing ExecStartPre restarts
+# indefinitely instead of terminating in `failed`. Scaling the interval to match
+# would make legitimate spaced-out restarts accumulate toward the burst, so the
+# limit is left as-is for provisioned apps and the weaker guarantee is documented
+# in docs/DESIGN.md.
+Wants={{ package.name }}-provision.service
+After={{ package.name }}-provision.service
+{% endif %}
 
 [Service]
 Type=simple

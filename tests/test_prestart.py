@@ -261,13 +261,57 @@ class TestGeneratePrestartScript:
         script = generate_prestart_script(app_def)
 
         hook = "/var/lib/container-apps/test-app-container/app-prestart.sh"
-        # Guarded source: [ -f <hook> ] && . <hook>
+        # Guarded source, as a statement rather than an `&&` expression -- see
+        # TestPrestartExitStatus for why the distinction matters.
         assert hook in script
-        assert f'[ -f "{hook}" ]' in script
+        assert f'if [ -f "{hook}" ]; then' in script
         assert f'. "{hook}"' in script
         # The hook is sourced after the LAST runtime.env write (not merely after
         # the RUNTIME_ENV declaration), so framework scaffolding is fully in place.
         assert script.rindex('>> "$RUNTIME_ENV"') < script.index(hook)
+
+
+class TestPrestartExitStatus:
+    """The generated script runs as ExecStartPre, so its exit status gates the app.
+
+    These tests execute the script instead of inspecting its text. A previous
+    version ended with `[ -f <hook> ] && . <hook>`, which made a missing hook the
+    script's exit status: every app that shipped no prestart.sh failed
+    ExecStartPre and never started. Text assertions could not see that.
+    """
+
+    def _run(self, tmp_path, hook_body: str | None) -> subprocess.CompletedProcess:
+        app_def = mock.Mock(spec=AppDefinition)
+        app_def.metadata = {"package_name": "test-app-container", "name": "Test App"}
+        script = generate_prestart_script(app_def)
+
+        # Redirect the framework's absolute paths into the sandbox.
+        script = script.replace("/run/container-apps", f"{tmp_path}/run")
+        script = script.replace("/etc/container-apps", f"{tmp_path}/etc")
+        script = script.replace("/var/lib/container-apps", f"{tmp_path}/lib")
+
+        hook_path = tmp_path / "lib/test-app-container/app-prestart.sh"
+        if hook_body is not None:
+            hook_path.parent.mkdir(parents=True, exist_ok=True)
+            hook_path.write_text(hook_body)
+
+        script_path = tmp_path / "prestart.sh"
+        script_path.write_text(script)
+        script_path.chmod(0o755)
+        return subprocess.run(
+            ["bash", str(script_path)], capture_output=True, text=True
+        )
+
+    def test_succeeds_when_no_hook_is_present(self, tmp_path):
+        """An app that ships no prestart.sh must still start."""
+        assert self._run(tmp_path, None).returncode == 0
+
+    def test_succeeds_when_hook_is_present(self, tmp_path):
+        assert self._run(tmp_path, "#!/bin/bash\ntrue\n").returncode == 0
+
+    def test_hook_failure_still_propagates(self, tmp_path):
+        """Absence is a no-op, but a hook that fails must fail the start."""
+        assert self._run(tmp_path, "#!/bin/bash\nexit 3\n").returncode != 0
 
 
 class TestOidcSectionWiring:

@@ -1,0 +1,4 @@
+# Payload the provisioning hook reads at runtime.
+# Present so packaging tests can assert that assets/ and provision.sh
+# land in the same .deb.
+example-package

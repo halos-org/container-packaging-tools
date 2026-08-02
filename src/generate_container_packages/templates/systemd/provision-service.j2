@@ -1,0 +1,41 @@
+[Unit]
+Description=Provisioning for {{ package.human_name }}
+# Separate unit so neither provisioning's runtime nor its failures count against
+# {{ package.name }}.service's start limit.
+After=docker.service
+Requires=docker.service
+# docker.service being active says nothing about DNS or a default route, so
+# without this a device with working internet can lose the boot race and be
+# indistinguishable from an offline one.
+Wants=network-online.target
+After=network-online.target
+# Stopping the app stops an in-flight run; without this the hook keeps writing to
+# the app's data directory after the operator sees the app as stopped.
+PartOf={{ package.name }}.service
+# Nothing here restarts, so there is nothing to rate-limit. The systemd default
+# would let a crash-looping app exhaust this unit's start limit, after which
+# starts are refused silently, because the app only Wants= this unit.
+StartLimitIntervalSec=0
+
+[Service]
+# No Restart= and no RemainAfterExit=: the retry is the next app start, and
+# returning to inactive on completion is what lets that happen. The hook runs on
+# every app start and must be idempotent.
+Type=oneshot
+WorkingDirectory={{ service.working_directory }}
+# The app's prestart has not run yet, so runtime.env does not exist.
+EnvironmentFile=-{{ service.env_defaults_file }}
+EnvironmentFile=-{{ service.env_file }}
+# The hook must name any container it runs "$HALOS_PROVISION_CONTAINER" so the
+# cleanup below can reap it. A start timeout kills this unit's cgroup and takes
+# the hook's own cleanup with it, but a container started by dockerd outlives the
+# unit and keeps writing. ExecStopPost still runs on that path, and reads the
+# same variable so an EnvironmentFile override cannot make the two disagree.
+Environment=HALOS_PROVISION_CONTAINER={{ package.name }}-provision
+ExecStart={{ service.working_directory }}/provision.sh
+ExecStopPost=-docker rm -f ${HALOS_PROVISION_CONTAINER}
+# Outer stop-loss only; the hook enforces its own wall-clock budget. Bounds how
+# long a hung hook delays the app, whose start job waits on this unit.
+TimeoutStartSec=1800
+StandardOutput=journal
+StandardError=journal
