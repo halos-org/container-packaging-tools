@@ -310,8 +310,18 @@ class TestPrestartExitStatus:
         assert self._run(tmp_path, "#!/bin/bash\ntrue\n").returncode == 0
 
     def test_hook_failure_still_propagates(self, tmp_path):
-        """Absence is a no-op, but a hook that fails must fail the start."""
-        assert self._run(tmp_path, "#!/bin/bash\nexit 3\n").returncode != 0
+        """Absence is a no-op, but a hook that fails must fail the start.
+
+        The hook fails without calling `exit`: `exit` inside a sourced file
+        terminates the parent shell regardless of how the source is guarded, so
+        it cannot tell `. <hook>` apart from `. <hook> || true`. A bare `false`
+        can -- under `||` bash suspends errexit for the whole sourced file, so
+        the hook would run to completion and the script would exit 0.
+        """
+        result = self._run(tmp_path, "#!/bin/bash\nfalse\necho reached\n")
+
+        assert result.returncode != 0
+        assert "reached" not in result.stdout
 
 
 class TestOidcSectionWiring:
