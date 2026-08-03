@@ -138,19 +138,31 @@ class TestProvisionUnitSemantics:
         assert not has_key(content, "RemainAfterExit")
 
     def test_no_restart(self, tmp_path):
-        """The retry is the next app start, not a restart loop."""
+        """A restart job against this unit propagates through the app's Requires=
+        and stops the running app, so retrying here would tear down the thing
+        provisioning exists to bring up. The hook retries internally instead."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert not has_key(content, "Restart")
+        assert not has_key(content, "RestartSec")
+
+    def test_does_not_reach_into_the_app(self, tmp_path):
+        """Starting the app from here would override a deliberate `systemctl
+        disable` and, with a `-` prefix, swallow a refused start."""
+        content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
+        assert not has_key(content, "ExecStartPost")
 
     def test_start_rate_limiting_disabled(self, tmp_path):
-        """Inheriting systemd's default would let a crash-looping app exhaust this
-        unit's start limit, after which starts are refused silently."""
+        """The app pulls this unit in on every start attempt, so a crash-looping
+        app would otherwise exhaust the default start limit here and have its
+        starts refused silently."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert values(content, "Unit", "StartLimitIntervalSec") == ["0"]
 
-    def test_generous_start_timeout_backstop(self, tmp_path):
+    def test_no_start_timeout(self, tmp_path):
+        """The app is gated on this unit, so a timeout would kill the hook and
+        leave the app permanently down with nothing left to retry."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
-        assert values(content, "Service", "TimeoutStartSec") == ["1800"]
+        assert values(content, "Service", "TimeoutStartSec") == ["infinity"]
 
     def test_stopping_the_app_stops_provisioning(self, tmp_path):
         """Without PartOf= the hook keeps writing to the app's data directory
@@ -209,7 +221,7 @@ class TestProvisionUnitSemantics:
         assert values(content, "Service", "WorkingDirectory") == [LIB_DIR]
 
     def test_has_no_install_section(self, tmp_path):
-        """Pulled in by the app unit's Wants=; there is nothing to enable."""
+        """Pulled in by the app unit's Requires=; there is nothing to enable."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert not any(section == "Install" for section, _, _ in parse_unit(content))
 
@@ -217,15 +229,13 @@ class TestProvisionUnitSemantics:
 class TestAppUnitOrdering:
     """The app declares the ordering; the provision unit stays standalone."""
 
-    def test_app_unit_wants_and_orders_after_provision(self, tmp_path):
+    def test_app_requires_provisioning(self, tmp_path):
+        """An app that ships a hook needs what the hook installs, so a failed run
+        withholds the app rather than leaving it randomly degraded."""
         content = render_file(PROVISION_APP, tmp_path, f"{PKG}.service")
-        assert PROVISION_UNIT in values(content, "Unit", "Wants")
+        assert PROVISION_UNIT in values(content, "Unit", "Requires")
         assert PROVISION_UNIT in values(content, "Unit", "After")
-
-    def test_wants_not_requires(self, tmp_path):
-        """A failed provision must never prevent the app from starting."""
-        content = render_file(PROVISION_APP, tmp_path, f"{PKG}.service")
-        assert PROVISION_UNIT not in values(content, "Unit", "Requires")
+        assert PROVISION_UNIT not in values(content, "Unit", "Wants")
 
     def test_app_unit_unchanged_without_hook(self, tmp_path):
         content = render_file(SIMPLE_APP, tmp_path, "simple-test-app-container.service")

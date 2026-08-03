@@ -85,7 +85,7 @@ override_dh_auto_install:
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}.service
 {% if has_provision %}
 
-	# Install the provisioning unit (pulled in by the app unit's Wants=, so not enabled)
+	# Install the provisioning unit (pulled in by the app unit's Requires=, so not enabled)
 	install -D -m 644 debian/{{ package.name }}-provision.service \
 		debian/{{ package.name }}/{{ paths.systemd }}/{{ package.name }}-provision.service
 {% endif %}
