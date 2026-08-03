@@ -137,14 +137,16 @@ class TestProvisionUnitSemantics:
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert not has_key(content, "RemainAfterExit")
 
-    def test_no_restart(self, tmp_path):
-        """The retry is the next app start, not a restart loop."""
+    def test_retries_on_failure(self, tmp_path):
+        """A hook exits non-zero to say "not finished". On a device that boots
+        without connectivity there may never be another app start to retry on."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
-        assert not has_key(content, "Restart")
+        assert values(content, "Service", "Restart") == ["on-failure"]
+        assert values(content, "Service", "RestartSec") == ["10"]
 
-    def test_start_rate_limiting_disabled(self, tmp_path):
-        """Inheriting systemd's default would let a crash-looping app exhaust this
-        unit's start limit, after which starts are refused silently."""
+    def test_retries_are_not_rate_limited(self, tmp_path):
+        """The condition the hook waits for can arrive arbitrarily late, so a
+        start limit would stop the retries before it does."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert values(content, "Unit", "StartLimitIntervalSec") == ["0"]
 
@@ -217,19 +219,34 @@ class TestProvisionUnitSemantics:
 class TestAppUnitOrdering:
     """The app declares the ordering; the provision unit stays standalone."""
 
-    def test_app_unit_wants_and_orders_after_provision(self, tmp_path):
+    def test_app_requires_provisioning(self, tmp_path):
+        """An app that ships a hook needs what the hook installs, so a failed run
+        withholds the app rather than leaving it randomly degraded."""
         content = render_file(PROVISION_APP, tmp_path, f"{PKG}.service")
-        assert PROVISION_UNIT in values(content, "Unit", "Wants")
+        assert PROVISION_UNIT in values(content, "Unit", "Requires")
         assert PROVISION_UNIT in values(content, "Unit", "After")
-
-    def test_wants_not_requires(self, tmp_path):
-        """A failed provision must never prevent the app from starting."""
-        content = render_file(PROVISION_APP, tmp_path, f"{PKG}.service")
-        assert PROVISION_UNIT not in values(content, "Unit", "Requires")
+        assert PROVISION_UNIT not in values(content, "Unit", "Wants")
 
     def test_app_unit_unchanged_without_hook(self, tmp_path):
         content = render_file(SIMPLE_APP, tmp_path, "simple-test-app-container.service")
         assert not any("-provision.service" in v for _, _, v in parse_unit(content))
+
+
+class TestProvisioningStartsTheApp:
+    """A Requires= dependency failure leaves the app with no start job."""
+
+    def test_provisioning_starts_the_app_on_success(self, tmp_path):
+        """Without this the retry succeeds and the app stays down until a reboot."""
+        content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
+        assert values(content, "Service", "ExecStartPost") == [
+            f"-/bin/systemctl start --no-block {PKG}.service"
+        ]
+
+    def test_start_on_success_does_not_block(self, tmp_path):
+        """The app orders after this unit, so a blocking start would wait on the
+        unit issuing it."""
+        content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
+        assert "--no-block" in values(content, "Service", "ExecStartPost")[0]
 
 
 class TestInstallTimeStart:
