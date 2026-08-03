@@ -137,22 +137,32 @@ class TestProvisionUnitSemantics:
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert not has_key(content, "RemainAfterExit")
 
-    def test_retries_on_failure(self, tmp_path):
-        """A hook exits non-zero to say "not finished". On a device that boots
-        without connectivity there may never be another app start to retry on."""
+    def test_no_restart(self, tmp_path):
+        """A restart job against this unit propagates through the app's Requires=
+        and stops the running app, so retrying here would tear down the thing
+        provisioning exists to bring up. The hook retries internally instead."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
-        assert values(content, "Service", "Restart") == ["on-failure"]
-        assert values(content, "Service", "RestartSec") == ["10"]
+        assert not has_key(content, "Restart")
+        assert not has_key(content, "RestartSec")
 
-    def test_retries_are_not_rate_limited(self, tmp_path):
-        """The condition the hook waits for can arrive arbitrarily late, so a
-        start limit would stop the retries before it does."""
+    def test_does_not_reach_into_the_app(self, tmp_path):
+        """Starting the app from here would override a deliberate `systemctl
+        disable` and, with a `-` prefix, swallow a refused start."""
+        content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
+        assert not has_key(content, "ExecStartPost")
+
+    def test_start_rate_limiting_disabled(self, tmp_path):
+        """The app pulls this unit in on every start attempt, so a crash-looping
+        app would otherwise exhaust the default start limit here and have its
+        starts refused silently."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert values(content, "Unit", "StartLimitIntervalSec") == ["0"]
 
-    def test_generous_start_timeout_backstop(self, tmp_path):
+    def test_no_start_timeout(self, tmp_path):
+        """The app is gated on this unit, so a timeout would kill the hook and
+        leave the app permanently down with nothing left to retry."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
-        assert values(content, "Service", "TimeoutStartSec") == ["1800"]
+        assert values(content, "Service", "TimeoutStartSec") == ["infinity"]
 
     def test_stopping_the_app_stops_provisioning(self, tmp_path):
         """Without PartOf= the hook keeps writing to the app's data directory
@@ -211,7 +221,7 @@ class TestProvisionUnitSemantics:
         assert values(content, "Service", "WorkingDirectory") == [LIB_DIR]
 
     def test_has_no_install_section(self, tmp_path):
-        """Pulled in by the app unit's Wants=; there is nothing to enable."""
+        """Pulled in by the app unit's Requires=; there is nothing to enable."""
         content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
         assert not any(section == "Install" for section, _, _ in parse_unit(content))
 
@@ -230,23 +240,6 @@ class TestAppUnitOrdering:
     def test_app_unit_unchanged_without_hook(self, tmp_path):
         content = render_file(SIMPLE_APP, tmp_path, "simple-test-app-container.service")
         assert not any("-provision.service" in v for _, _, v in parse_unit(content))
-
-
-class TestProvisioningStartsTheApp:
-    """A Requires= dependency failure leaves the app with no start job."""
-
-    def test_provisioning_starts_the_app_on_success(self, tmp_path):
-        """Without this the retry succeeds and the app stays down until a reboot."""
-        content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
-        assert values(content, "Service", "ExecStartPost") == [
-            f"-/bin/systemctl start --no-block {PKG}.service"
-        ]
-
-    def test_start_on_success_does_not_block(self, tmp_path):
-        """The app orders after this unit, so a blocking start would wait on the
-        unit issuing it."""
-        content = render_file(PROVISION_APP, tmp_path, PROVISION_UNIT)
-        assert "--no-block" in values(content, "Service", "ExecStartPost")[0]
 
 
 class TestInstallTimeStart:

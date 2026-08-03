@@ -38,11 +38,13 @@ A `prestart.sh` is **not** a replacement for the generated prestart — the gene
 app-specific logic in it (secrets, config seeding), append to `$RUNTIME_ENV` with `>>`, and prefer
 `default-data/` for static seed files. See the Custom Prestart Hook contract in `AGENTS.md`.
 
-A `provision.sh` is for setup too slow to sit in the app's start path — installing plugins, fetching
-data. It gets its own `<package>-provision.service` that the app orders after, so a slow or failing
-run cannot drive the app unit into a permanent `failed` state. Two differences from `prestart.sh`
-matter: it is **executed, not sourced** (its own process, before the prestart runs), and it runs on
-**every** app start, so it must be idempotent and a fast no-op when there is nothing to do. See the
+A `provision.sh` is for setup the app cannot run without — installing plugins, fetching data. It gets
+its own `<package>-provision.service` which the app `Requires=`, so **the app does not start until the
+hook succeeds**: a half-provisioned application is worse than one that is plainly down. Nothing
+outside the hook retries it, so the hook retries internally and exits non-zero only when waiting
+cannot help. Two differences from `prestart.sh` matter: it is **executed, not sourced** (its own
+process, before the prestart runs), and it runs on **every** app start, so it must be idempotent and
+a fast no-op when there is nothing to do. Anything genuinely optional does not belong here. See the
 Provisioning Hook contract in `AGENTS.md`.
 
 Static payload a hook reads at runtime (a package manifest, a template) belongs in `assets/`, which
