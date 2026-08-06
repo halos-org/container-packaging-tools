@@ -300,9 +300,6 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         ],
         # App-specific prestart hook, sourced by the generated framework prestart
         "has_app_prestart": (app_def.input_dir / "prestart.sh").exists(),
-        # Provisioning hook, executed by its own unit before the app starts and
-        # re-run on every app start. Presence of the file is what enables it.
-        "has_provision": (app_def.input_dir / "provision.sh").exists(),
         # SSO configuration
         "is_oidc_app": is_oidc_app,
         "has_custom_forward_auth": has_custom_forward_auth,

@@ -184,9 +184,6 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
     # Generate prestart.sh script
     generate_prestart_file(app_def, source_dir)
 
-    # Copy the optional provisioning hook
-    copy_provision_hook(app_def, source_dir)
-
     # Generate app registry file for homarr-container-adapter
     generate_registry_file(app_def, source_dir)
 
@@ -479,28 +476,6 @@ def generate_prestart_file(app_def: AppDefinition, source_dir: Path) -> None:
         hook_file = source_dir / "app-prestart.sh"
         shutil.copy2(custom_prestart, hook_file)
         hook_file.chmod(0o755)
-
-
-def copy_provision_hook(app_def: AppDefinition, source_dir: Path) -> None:
-    """Copy the app's provisioning hook, if it ships one.
-
-    Unlike prestart.sh -- which is reinterpreted as the app-prestart.sh hook
-    because the framework generates a prestart.sh of its own -- provision.sh
-    keeps its source name: nothing generated collides with it. It is executed
-    by the generated <package>-provision.service, not sourced, so the mode is
-    set here rather than inherited from the git executable bit.
-
-    Args:
-        app_def: Application definition
-        source_dir: Destination directory
-    """
-    hook = app_def.input_dir / "provision.sh"
-    if not hook.exists():
-        return
-
-    dst = source_dir / "provision.sh"
-    shutil.copy2(hook, dst)
-    dst.chmod(0o755)
 
 
 def generate_registry_file(app_def: AppDefinition, source_dir: Path) -> None:

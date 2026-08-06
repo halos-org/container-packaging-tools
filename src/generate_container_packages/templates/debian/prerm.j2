@@ -13,10 +13,6 @@ case "$1" in
             systemctl disable {{ package.name }}-watcher-{{ watcher.name }}.path || true
 {% endfor %}
 {% endif %}
-{% if has_provision %}
-            # Stop provisioning first so it cannot restart work mid-removal
-            systemctl stop {{ package.name }}-provision.service || true
-{% endif %}
             # Stop the service before removal
             systemctl stop {{ package.name }}.service || true
             systemctl disable {{ package.name }}.service || true
