@@ -10,7 +10,7 @@ This repository should be used as part of the halos workspace for AI-assisted de
 # Clone workspace and all repos
 git clone https://github.com/halos-org/halos.git
 cd halos
-./run repos:clone
+./run clone-repos
 ```
 
 See `halos/docs/` for development workflows and guidance.
@@ -105,7 +105,7 @@ routing:
 ```bash
 # Code quality checks
 ./run lint              # Linter must pass
-./run format:check      # Formatting must pass
+./run check-format      # Formatting must pass
 uvx ty check src/       # Type checker must pass
 
 # Test checks (matching CI)
@@ -253,31 +253,31 @@ The `./run` script provides convenient commands for common development tasks.
 
 First, build the development container:
 ```bash
-./run docker:build   # Build the Debian Trixie development container
+./run build-docker   # Build the Debian Trixie development container
 ```
 
 Then use Docker-based commands for all development tasks:
 ```bash
 # Testing
 ./run test           # Run all tests in Docker
-./run test:coverage  # Run tests with coverage report (80% required)
-./run test:unit      # Run unit tests only
-./run test:integration  # Run integration tests only
+./run test-coverage  # Run tests with coverage report (80% required)
+./run unit-test      # Run unit tests only
+./run integration-test  # Run integration tests only
 
 # Code Quality
 ./run check          # Run all quality checks (lint, format, typecheck)
 ./run lint           # Run ruff linter
-./run lint:fix       # Run linter with auto-fix
+./run lint-fix       # Run linter with auto-fix
 ./run format         # Format code with ruff
-./run format:check   # Check formatting without changes
+./run check-format   # Check formatting without changes
 ./run typecheck      # Run ty type checker
 
 # Building
 ./run build          # Build Debian package in Docker
 
 # Docker Management
-./run docker:shell   # Open interactive shell in container
-./run docker:clean   # Remove Docker containers and images
+./run docker-shell   # Open interactive shell in container
+./run docker-clean   # Remove Docker containers and images
 
 # Utilities
 ./run help           # Show all available commands

@@ -12,7 +12,9 @@ from generate_container_packages.renderer import render_all_templates
 
 VALID_FIXTURES = Path("tests/fixtures/valid")
 SIMPLE_APP = VALID_FIXTURES / "simple-app"
+WATCHER_APP = VALID_FIXTURES / "watcher-app"
 PKG = "simple-test-app-container"
+WATCHER_PKG = "watcher-test-app-container"
 
 
 def render_file(fixture_dir: Path, tmp_path: Path, name: str) -> str:
@@ -68,3 +70,27 @@ class TestOutputGolden:
 
     def test_service_unit_unchanged(self, tmp_path):
         self._assert_matches_golden(tmp_path, f"{PKG}.service")
+
+
+class TestWatcherAppGolden:
+    """Golden comparison for an app whose file-watcher blocks are active.
+
+    The simple app leaves `has_file_watchers` false, so its goldens only ever
+    prove that a conditional's *inactive* neighbours are undisturbed. In both
+    debian/rules and debian/prerm the watcher blocks sit directly against other
+    conditionals, which is where a Jinja edit shifts whitespace without any
+    substring assertion noticing.
+    """
+
+    GOLDEN_DIR = VALID_FIXTURES.parent / "expected"
+
+    def _assert_matches_golden(self, tmp_path: Path, name: str) -> None:
+        rendered = render_file(WATCHER_APP, tmp_path, name)
+        expected = (self.GOLDEN_DIR / f"watcher-app.{name}").read_text()
+        assert rendered == expected
+
+    def test_rules_unchanged(self, tmp_path):
+        self._assert_matches_golden(tmp_path, "rules")
+
+    def test_prerm_unchanged(self, tmp_path):
+        self._assert_matches_golden(tmp_path, "prerm")
