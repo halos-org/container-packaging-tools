@@ -81,12 +81,6 @@ def render_all_templates(
         / f"{context['package']['name']}.metainfo.xml",
     }
 
-    # Provisioning unit, only for apps that ship a provision.sh hook
-    if context.get("has_provision"):
-        templates["systemd/provision-service.j2"] = (
-            debian_dir / f"{context['package']['name']}-provision.service"
-        )
-
     # Render each template
     for template_path, output_path in templates.items():
         try:

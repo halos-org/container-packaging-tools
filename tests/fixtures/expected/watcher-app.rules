@@ -1,0 +1,71 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Nothing to build - container app
+
+override_dh_auto_install:
+	# Install application files to /var/lib/container-apps/
+	install -D -m 644 docker-compose.yml \
+		debian/watcher-test-app-container//var/lib/container-apps/watcher-test-app-container/docker-compose.yml
+	install -D -m 644 metadata.yaml \
+		debian/watcher-test-app-container//var/lib/container-apps/watcher-test-app-container/metadata.yaml
+	install -D -m 644 config.yml \
+		debian/watcher-test-app-container//var/lib/container-apps/watcher-test-app-container/config.yml
+	install -D -m 644 env.template \
+		debian/watcher-test-app-container//var/lib/container-apps/watcher-test-app-container/env.template
+	install -D -m 644 env.user-template \
+		debian/watcher-test-app-container//var/lib/container-apps/watcher-test-app-container/env.user-template
+	install -D -m 755 prestart.sh \
+		debian/watcher-test-app-container//var/lib/container-apps/watcher-test-app-container/prestart.sh
+
+	# Install icon
+	install -D -m 644 icon.png \
+		debian/watcher-test-app-container//usr/share/pixmaps/watcher-test-app-container.png
+
+
+
+	# Install app registry file for homarr-container-adapter
+	install -D -m 644 webapp-registry.toml \
+		debian/watcher-test-app-container/etc/halos/webapps.d/watcher-test-app-container.toml
+
+
+	# Install generic routing declaration for reverse proxy
+	install -D -m 644 routing.yml \
+		debian/watcher-test-app-container/etc/halos/routing.d/watcher-test-app.yml
+
+
+	# Install systemd service file
+	install -D -m 644 debian/watcher-test-app-container.service \
+		debian/watcher-test-app-container//etc/systemd/system/watcher-test-app-container.service
+
+	# Install file watcher systemd units
+	install -D -m 644 debian/watcher-test-app-container-watcher-config-reload.path \
+		debian/watcher-test-app-container//etc/systemd/system/watcher-test-app-container-watcher-config-reload.path
+	install -D -m 644 debian/watcher-test-app-container-watcher-config-reload.service \
+		debian/watcher-test-app-container//etc/systemd/system/watcher-test-app-container-watcher-config-reload.service
+	install -D -m 644 debian/watcher-test-app-container-watcher-oidc-clients.path \
+		debian/watcher-test-app-container//etc/systemd/system/watcher-test-app-container-watcher-oidc-clients.path
+	install -D -m 644 debian/watcher-test-app-container-watcher-oidc-clients.service \
+		debian/watcher-test-app-container//etc/systemd/system/watcher-test-app-container-watcher-oidc-clients.service
+	install -D -m 644 debian/watcher-test-app-container-watcher-combined-watcher.path \
+		debian/watcher-test-app-container//etc/systemd/system/watcher-test-app-container-watcher-combined-watcher.path
+	install -D -m 644 debian/watcher-test-app-container-watcher-combined-watcher.service \
+		debian/watcher-test-app-container//etc/systemd/system/watcher-test-app-container-watcher-combined-watcher.service
+
+	# Install AppStream metadata
+	install -D -m 644 debian/watcher-test-app-container.metainfo.xml \
+		debian/watcher-test-app-container//usr/share/metainfo/watcher-test-app-container.metainfo.xml
+
+override_dh_auto_test:
+	# Skip tests - validated by generate-container-packages
+
+override_dh_installsystemd:
+	# debhelper's own start call blocks dpkg: deb-systemd-invoke runs
+	# `systemctl start` without --no-block, so it waits for the unit's whole
+	# start transaction. For an app with a slow ExecStartPre that can be many
+	# minutes, all while dpkg holds its lock. postinst starts the service
+	# itself with --no-block instead.
+	dh_installsystemd --no-start

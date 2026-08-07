@@ -93,8 +93,8 @@ case "$1" in
             # Start the service ourselves because debhelper's start is suppressed
             # (see override_dh_installsystemd in rules). --no-block returns as soon
             # as the job is queued instead of waiting for the whole start
-            # transaction, so a slow ExecStartPre or an ordered-ahead provisioning
-            # one-shot cannot hold the dpkg lock for the length of its run.
+            # transaction, so a slow ExecStartPre cannot hold the dpkg lock for
+            # the length of its run.
             # `restart` covers both cases debhelper distinguished: it starts an
             # inactive unit on first install and reloads a running one on upgrade.
             systemctl restart --no-block {{ package.name }}.service || true

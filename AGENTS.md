@@ -10,7 +10,7 @@ This repository should be used as part of the halos workspace for AI-assisted de
 # Clone workspace and all repos
 git clone https://github.com/halos-org/halos.git
 cd halos
-./run repos:clone
+./run clone-repos
 ```
 
 See `halos/docs/` for development workflows and guidance.
@@ -69,36 +69,6 @@ Hook contract — available when `app-prestart.sh` runs:
 
 Prefer build-time `default-data/` for static seed config; reserve the hook for logic that genuinely needs runtime context.
 
-### Provisioning Hook
-
-An app that needs long, one-time setup before its container starts (installing plugins, fetching a dataset) ships a `provision.sh`. The generator emits `<package>-provision.service` (`Type=oneshot`) and orders the app unit `Requires=` + `After=` it, so the app starts only once provisioning has succeeded.
-
-Use this rather than `app-prestart.sh` for anything slow. The prestart hook runs inside the app unit's blocking `ExecStartPre`, where exceeding `TimeoutStartSec` kills the work mid-flight and five such failures drive the unit to a permanent `failed` state. The provisioning unit is not bounded by that budget, and its failures never count against the app's start limit.
-
-Presence of the file is the whole declaration. There is no metadata field, because provisioning has no parameters to configure (contrast `file_watchers`, which needs a path, type, and action). Unlike `prestart.sh`, the hook keeps its source name (`provision.sh`; nothing generated collides with it) and is **executed, not sourced**: it runs as its own unit's `ExecStart`, in its own process, before the app's prestart has run at all.
-
-Hook contract — what `provision.sh` may rely on, and what it owes:
-
-- **It runs on every app start**, not once per install. That includes every `Restart=always` auto-restart and every file-watcher-triggered restart. The hook must be idempotent and a fast no-op when there is nothing to do, so check for what you would install before installing it.
-- **It owns every bound, including retries.** The unit sets `TimeoutStartSec=infinity` and no `Restart=`, so nothing outside the hook limits or re-runs it. Retry inside the script: sleep and try again for conditions that can resolve by waiting (no route, DNS failure, a 5xx or a rate limit from a registry). The unit stays `activating` and the app waits, which is the accurate description of what is happening. Per-operation timeouts are still the hook's job — an operation that hangs forever hangs the app with it.
-- **Exit 0 means finished; non-zero means gave up.** Only exit non-zero for a condition that waiting cannot fix, such as an artefact the upstream returns 404 for. That surfaces as a `failed` unit naming the cause and a `degraded` system, which is the signal an operator can act on; the app stays down either way, so an indefinite silent wait would be strictly worse. Never exit non-zero for something transient — nothing re-runs the hook, so it would strand the app.
-- **It must create and own any directory it writes to.** Nothing upstream guarantees one exists with the right ownership. `postinst` derives volume ownership from the compose service's `user:` field, so an app that declares none gets a **root-owned** data directory, and the app's prestart, which is where a blanket `chown` usually lives, has not run yet.
-- **Name any container it runs `"$HALOS_PROVISION_CONTAINER"`**, and force-remove a stale one at hook start. The unit exports that name and reaps it in `ExecStopPost`. That is the cleanup which survives the hook being killed: stopping the app signals this unit's cgroup, so an untrapped hook dies mid-run without its own cleanup, while a container started by dockerd outlives the unit and keeps writing to the data volume.
-- **Not available**: `runtime.env`, `$HALOS_DOMAIN`, and the routing port registry. Each has a different producer, and this unit orders after none of them: `runtime.env` is written by the app's prestart; `$HALOS_DOMAIN` is published by `halos-resolve-domain.service` into `/run/halos/domain.env`, which only the app unit loads; the port registry is written by `configure-container-routing`, an `ExecStartPre` of the app unit. Only `env.defaults` and `env` are loaded here.
-
-**Threat model:**
-- The hook runs as **root** with no `User=`, and `Requires=docker.service`, where docker socket access is root-equivalent. An app definition is trusted, reviewed, first-party input: dropping a `provision.sh` into an app directory grants root execution on every boot with no further opt-in.
-- `env` and `env.defaults` are loaded via `EnvironmentFile=` and are mode `600` because they may hold shipped default credentials. The unit's output goes to the journal, which operators read through Cockpit, so a hook must not run under `set -x` or echo its environment.
-- Whatever the hook installs at runtime is outside the package manager. A hook that fetches third-party artifacts inherits that supply chain's trust, executes it as whatever user it installs for, and leaves no dpkg record. Decide deliberately whether that is acceptable for the app in question.
-
-**The app does not start until provisioning succeeds.** The app unit `Requires=` the provision unit, so a failed run withholds the app rather than leaving a randomly degraded installation. The provision unit retries every 10s and starts the app itself once it succeeds — a `Requires=` dependency failure leaves no start job for the app's own `Restart=` to act on.
-
-The consequence is worth stating plainly: whatever the hook installs is load-bearing, so one unusable item takes the app down on every device rather than degrading one feature. Validate that input in CI, and put anything genuinely optional somewhere other than a provisioning hook.
-
-**Operational notes:**
-- `PartOf=<app>.service` means stopping the app stops an in-flight run. The hook receives `SIGTERM` mid-work, so the unit ends `failed` and `systemctl is-system-running` reports `degraded`. Both clear themselves on the next successful run; no `reset-failed` is needed.
-- For an app with a provisioning hook, the app unit's `StartLimitBurst` stops being a reliable "this is broken" signal. See the StartLimit note in `docs/DESIGN.md`. Treat a repeating restart loop, rather than a `failed` unit, as the symptom.
-
 ### Declarative OIDC (native-OAuth apps)
 
 An app that authenticates users via Authelia as its own OIDC client (native OAuth — e.g. Grafana, Signal K) declares it under `routing`, instead of hand-writing the lifecycle in a prestart:
@@ -135,7 +105,7 @@ routing:
 ```bash
 # Code quality checks
 ./run lint              # Linter must pass
-./run format:check      # Formatting must pass
+./run check-format      # Formatting must pass
 uvx ty check src/       # Type checker must pass
 
 # Test checks (matching CI)
@@ -283,31 +253,31 @@ The `./run` script provides convenient commands for common development tasks.
 
 First, build the development container:
 ```bash
-./run docker:build   # Build the Debian Trixie development container
+./run build-docker   # Build the Debian Trixie development container
 ```
 
 Then use Docker-based commands for all development tasks:
 ```bash
 # Testing
 ./run test           # Run all tests in Docker
-./run test:coverage  # Run tests with coverage report (80% required)
-./run test:unit      # Run unit tests only
-./run test:integration  # Run integration tests only
+./run test-coverage  # Run tests with coverage report (80% required)
+./run unit-test      # Run unit tests only
+./run integration-test  # Run integration tests only
 
 # Code Quality
 ./run check          # Run all quality checks (lint, format, typecheck)
 ./run lint           # Run ruff linter
-./run lint:fix       # Run linter with auto-fix
+./run lint-fix       # Run linter with auto-fix
 ./run format         # Format code with ruff
-./run format:check   # Check formatting without changes
+./run check-format   # Check formatting without changes
 ./run typecheck      # Run ty type checker
 
 # Building
 ./run build          # Build Debian package in Docker
 
 # Docker Management
-./run docker:shell   # Open interactive shell in container
-./run docker:clean   # Remove Docker containers and images
+./run docker-shell   # Open interactive shell in container
+./run docker-clean   # Remove Docker containers and images
 
 # Utilities
 ./run help           # Show all available commands

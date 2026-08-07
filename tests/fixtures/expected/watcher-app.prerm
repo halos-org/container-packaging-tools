@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove|deconfigure)
+        # Only interact with systemd if it's running (not in containers or minimal envs)
+        if [ -d /run/systemd/system ]; then
+            # Stop file watcher units first
+            systemctl stop watcher-test-app-container-watcher-config-reload.path || true
+            systemctl stop watcher-test-app-container-watcher-config-reload.service || true
+            systemctl disable watcher-test-app-container-watcher-config-reload.path || true
+            systemctl stop watcher-test-app-container-watcher-oidc-clients.path || true
+            systemctl stop watcher-test-app-container-watcher-oidc-clients.service || true
+            systemctl disable watcher-test-app-container-watcher-oidc-clients.path || true
+            systemctl stop watcher-test-app-container-watcher-combined-watcher.path || true
+            systemctl stop watcher-test-app-container-watcher-combined-watcher.service || true
+            systemctl disable watcher-test-app-container-watcher-combined-watcher.path || true
+            # Stop the service before removal
+            systemctl stop watcher-test-app-container.service || true
+            systemctl disable watcher-test-app-container.service || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
