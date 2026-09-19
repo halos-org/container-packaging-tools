@@ -306,6 +306,10 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         # Routing configuration
         "routing": routing,
         "has_routing": has_routing,
+        # mDNS: the avahi service file is written at runtime by the routing
+        # configurator (the port is only assigned then), so only its removal
+        # is the package's business.
+        "has_mdns": bool((metadata.get("routing") or {}).get("mdns")),
         # System binaries to install to /usr/bin/
         "system_bin": metadata.get("system_bin", []) or [],
         "has_system_bin": bool(metadata.get("system_bin")),

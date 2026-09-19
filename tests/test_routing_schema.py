@@ -157,3 +157,18 @@ class TestPackageMetadataWithRouting:
             metadata.routing.auth.forward_auth.headers["Remote-User"]
             == "X-WEBAUTH-USER"
         )
+
+    def test_mdns_service_types(self, base_metadata: dict) -> None:
+        """DNS-SD service types are accepted."""
+        base_metadata["web_ui"] = {"enabled": True, "port": 3000}
+        base_metadata["routing"] = {"mdns": ["_signalk-wss._tcp"]}
+        metadata = PackageMetadata(**base_metadata)
+        assert metadata.routing is not None
+        assert metadata.routing.mdns == ["_signalk-wss._tcp"]
+
+    def test_mdns_rejects_malformed_service_type(self, base_metadata: dict) -> None:
+        """A service type that is not _name._proto is rejected."""
+        base_metadata["web_ui"] = {"enabled": True, "port": 3000}
+        base_metadata["routing"] = {"mdns": ["signalk-wss"]}
+        with pytest.raises(ValidationError):
+            PackageMetadata(**base_metadata)

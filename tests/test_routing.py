@@ -577,3 +577,28 @@ class TestBackendScheme:
         routing = yaml.safe_load(result)
         assert routing["routing"]["backend"]["scheme"] == "https"
         assert routing["routing"]["backend"]["port"] == 8443
+
+    def test_mdns_services_emitted(self) -> None:
+        """routing.mdns is copied into the routing declaration."""
+        metadata = {
+            "app_id": "signalk-server",
+            "web_ui": {"enabled": True, "port": 3000},
+            "routing": {"host_port": 3000, "mdns": ["_signalk-wss._tcp"]},
+        }
+        compose: dict = {"services": {"sk": {"network_mode": "host"}}}
+        result = generate_routing_yml(metadata, compose, "marine-signalk-container")
+
+        routing = yaml.safe_load(result)
+        assert routing["mdns"] == ["_signalk-wss._tcp"]
+
+    def test_no_mdns_key_when_not_declared(self) -> None:
+        """Apps that declare no mdns services get no mdns key."""
+        metadata = {
+            "app_id": "myapp",
+            "web_ui": {"enabled": True, "port": 8080},
+        }
+        compose: dict = {"services": {"app": {}}}
+        result = generate_routing_yml(metadata, compose, "myapp-container")
+
+        routing = yaml.safe_load(result)
+        assert "mdns" not in routing

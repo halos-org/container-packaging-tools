@@ -21,6 +21,11 @@ case "$1" in
         rm -f "/etc/halos/routing.d/{{ package.app_id }}.yml"
 {% endif %}
 
+{% if has_mdns %}
+        # Remove the mDNS service file written by configure-container-routing
+        rm -f "/etc/avahi/services/halos-{{ package.app_id }}.service"
+{% endif %}
+
         # Only interact with systemd if it's running (not in containers or minimal envs)
         if [ -d /run/systemd/system ]; then
             # Reload systemd (service file removed automatically by dpkg)

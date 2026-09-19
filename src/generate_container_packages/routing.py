@@ -89,6 +89,10 @@ def generate_routing_yml(
         },
     }
 
+    # DNS-SD service types to advertise on the runtime-assigned external port.
+    if routing_config and routing_config.get("mdns"):
+        routing_data["mdns"] = list(routing_config["mdns"])
+
     # Generate YAML with header comment
     header = f"""# Generic routing declaration for {app_id}
 # Installed to /etc/halos/routing.d/{app_id}.yml

@@ -260,6 +260,29 @@ class RoutingConfig(BaseModel):
             "docker-compose. Use when the main web UI port differs from exposed ports."
         ),
     )
+    mdns: list[str] | None = Field(
+        default=None,
+        description=(
+            "DNS-SD service types to advertise over mDNS on the app's external "
+            "TLS port, e.g. ['_signalk-wss._tcp']. The port is assigned at "
+            "runtime, so the record is written by the reverse proxy's routing "
+            "configurator rather than shipped as a static file."
+        ),
+    )
+
+    @field_validator("mdns")
+    @classmethod
+    def validate_mdns_service_types(cls, v: list[str] | None) -> list[str] | None:
+        """Ensure each entry is a DNS-SD service type of the form _name._proto."""
+        if v is None:
+            return v
+        for service_type in v:
+            if not re.fullmatch(r"_[A-Za-z0-9][A-Za-z0-9-]*\._(tcp|udp)", service_type):
+                raise ValueError(
+                    f"mdns service type must look like _name._tcp or _name._udp, "
+                    f"got: '{service_type}'"
+                )
+        return v
 
 
 class FileWatcherAction(BaseModel):
