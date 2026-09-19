@@ -1,0 +1,37 @@
+# A metadata.yaml whose routing block carries a key the tool does not know.
+# "mdsn" is "mdns" transposed: the shape a stale field name or an app built
+# against a newer schema produces. It must fail the build, not be dropped.
+name: Unknown Routing Key App
+app_id: unknown-routing-key
+version: 1.0.0
+upstream_version: 1.0.0
+description: A simple test application for validation
+long_description: |
+  This is a simple test application used for validating the container
+  packaging tools. It contains only the minimum required fields.
+homepage: https://example.com/simple-app
+maintainer: Test Developer <test@example.com>
+license: MIT
+tags:
+  - role::container-app
+  - implemented-in::docker
+debian_section: net
+architecture: all
+
+# Web UI configuration
+web_ui:
+  enabled: true
+  path: /
+  port: 8080
+  protocol: http
+
+# Default configuration
+default_config:
+  APP_PORT: "8080"
+  LOG_LEVEL: "info"
+
+routing:
+  auth:
+    mode: none
+  mdsn:
+    - type: _signalk-wss._tcp

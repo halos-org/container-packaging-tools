@@ -1,11 +1,29 @@
 """Unit tests for Pydantic schema models."""
 
+import typing
+from typing import Any
+
 import pytest
 from pydantic import BaseModel, ValidationError
 
 import schemas.metadata
 from schemas.config import ConfigField, ConfigGroup, ConfigSchema
 from schemas.metadata import Layout, PackageMetadata, WebUI
+
+
+def _nested_models(annotation: Any) -> list[type[BaseModel]]:
+    """Every BaseModel subclass inside a field annotation.
+
+    Unwraps the wrappers the schema actually uses -- optionals, lists and
+    dicts -- so a model nested in any of them is still discovered.
+    """
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return [annotation]
+    return [
+        model
+        for arg in typing.get_args(annotation)
+        for model in _nested_models(arg)
+    ]
 
 
 class TestWebUI:
@@ -736,27 +754,51 @@ class TestConfigSchema:
 
 
 class TestExtraKeyPolicy:
-    """Every metadata model rejects keys it does not know."""
+    """Every model a metadata.yaml can reach rejects keys it does not know."""
 
     # SourceMetadata carries whatever an upstream catalogue (CasaOS, Runtipi)
     # puts in it, so it allows extras on purpose.
     ALLOWS_EXTRAS = {"SourceMetadata"}
 
-    def _metadata_models(self) -> list[tuple[str, type[BaseModel]]]:
-        return [
-            (name, obj)
-            for name, obj in vars(schemas.metadata).items()
-            if isinstance(obj, type)
-            and issubclass(obj, BaseModel)
-            and obj is not BaseModel
-            and obj.__module__ == schemas.metadata.__name__
-        ]
+    # Reachable from PackageMetadata today. Asserted as an exact set: adding,
+    # moving or removing a model must be a deliberate edit here, because for
+    # most of these the sweep below is the only test of the policy.
+    REACHABLE = {
+        "PackageMetadata",
+        "WebUI",
+        "Layout",
+        "TraefikForwardAuth",
+        "OidcRedirect",
+        "OidcConfig",
+        "RoutingAuth",
+        "RoutingConfig",
+        "MdnsService",
+        "FileWatcher",
+        "FileWatcherAction",
+        "SourceMetadata",
+    }
 
-    def test_every_model_is_covered(self) -> None:
-        """The sweep below is worthless if it finds nothing."""
-        names = {name for name, _ in self._metadata_models()}
-        assert len(names) > 5
-        assert self.ALLOWS_EXTRAS <= names
+    def _reachable_models(self) -> dict[str, type[BaseModel]]:
+        """Walk the model graph from PackageMetadata.
+
+        Reachability, not module membership, is what the policy is about. A
+        model split into its own file and imported back stays covered.
+        """
+        found: dict[str, type[BaseModel]] = {}
+        queue: list[type[BaseModel]] = [PackageMetadata]
+        while queue:
+            model = queue.pop()
+            if model.__name__ in found:
+                continue
+            found[model.__name__] = model
+            for field in model.model_fields.values():
+                for candidate in _nested_models(field.annotation):
+                    queue.append(candidate)
+        return found
+
+    def test_the_walk_finds_every_model(self) -> None:
+        """An exact set, so a model cannot leave coverage unnoticed."""
+        assert set(self._reachable_models()) == self.REACHABLE
 
     def test_models_forbid_unknown_keys(self) -> None:
         """A model added without extra="forbid" reopens the silent drop.
@@ -767,12 +809,28 @@ class TestExtraKeyPolicy:
         """
         offenders = sorted(
             name
-            for name, model in self._metadata_models()
+            for name, model in self._reachable_models().items()
             if name not in self.ALLOWS_EXTRAS
             and model.model_config.get("extra") != "forbid"
         )
         assert offenders == []
 
-    def test_source_metadata_still_allows_extras(self) -> None:
-        """Upstream catalogue fields must keep flowing through untouched."""
-        assert schemas.metadata.SourceMetadata.model_config["extra"] == "allow"
+    def test_source_metadata_extras_survive_a_round_trip(self) -> None:
+        """Upstream catalogue fields must reach the model and stay reachable.
+
+        Asserting model_config["extra"] would only restate the source line. The
+        CasaOS transformer writes version_source and docker_image into
+        source_metadata and reads them back, so the behaviour is the contract.
+        """
+        source = schemas.metadata.SourceMetadata.model_validate(
+            {
+                "type": "casaos",
+                "app_id": "sonarr",
+                "source_url": "https://example.invalid/sonarr",
+                "upstream_hash": "0" * 40,
+                "conversion_timestamp": "2026-09-19T00:00:00Z",
+                "docker_image": "linuxserver/sonarr",
+            }
+        )
+        assert source.docker_image == "linuxserver/sonarr"
+        assert source.model_dump()["docker_image"] == "linuxserver/sonarr"

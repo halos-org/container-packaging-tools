@@ -401,6 +401,19 @@ class TestIntegration:
                     f"Fixture {fixture_dir.name} failed validation: {result.errors}"
                 )
 
+    def test_unknown_metadata_key_names_itself(self):
+        """The build fails and the message says which key to delete.
+
+        The model-level tests prove rejection. This pins the artifact the
+        author actually sees: before this was an error, a stale or misspelled
+        key was dropped and the build reported success.
+        """
+        result = validate_input_directory(INVALID_FIXTURES / "unknown-routing-key")
+        assert result.success is False
+        assert any("routing -> mdsn" in error for error in result.errors), (
+            f"no error named the offending key path: {result.errors}"
+        )
+
     def test_all_invalid_fixtures_fail(self):
         """Test that all invalid fixtures fail validation."""
         for fixture_dir in INVALID_FIXTURES.iterdir():

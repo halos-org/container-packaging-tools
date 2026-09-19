@@ -72,8 +72,11 @@ class TestRoutingConfig:
         halos-imported-containers still carries it, so naming it at build time
         costs nothing and tells the author which line to delete.
         """
-        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        with pytest.raises(ValidationError) as excinfo:
             RoutingConfig.model_validate({"subdomain": "grafana", "host_port": 3000})
+        error = excinfo.value.errors()[0]
+        assert error["type"] == "extra_forbidden"
+        assert error["loc"] == ("subdomain",)
 
     def test_unknown_routing_key_is_rejected(self) -> None:
         """An unrecognised routing key fails the build and names itself.
@@ -83,9 +86,13 @@ class TestRoutingConfig:
         routing.mdns records, installed cleanly and advertised nothing. The
         mismatch was visible only by diffing two builds of one commit.
         """
-        with pytest.raises(ValidationError, match="mdsn") as excinfo:
+        # "mdsn" is "mdns" transposed on purpose: mdns itself is a real field,
+        # so it cannot stand in for an unknown key.
+        with pytest.raises(ValidationError) as excinfo:
             RoutingConfig.model_validate({"mdsn": [{"type": "_signalk-wss._tcp"}]})
-        assert excinfo.value.errors()[0]["type"] == "extra_forbidden"
+        error = excinfo.value.errors()[0]
+        assert error["type"] == "extra_forbidden"
+        assert error["loc"] == ("mdsn",)
 
 
 class TestRoutingAuth:

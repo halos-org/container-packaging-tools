@@ -57,3 +57,25 @@ default_config:
   MAX_UPLOAD_SIZE: "100"
   BACKUP_ENABLED: "true"
   BACKUP_SCHEDULE: "0 2 * * *"
+
+# Exercises the nested routing models end to end. Every one of these rejects
+# unknown keys, so a future over-tightening breaks a build test here rather
+# than only a unit test.
+routing:
+  auth:
+    mode: oidc
+    oidc:
+      client_name: Full App
+      redirect:
+        style: path
+        path: /oauth/callback
+  port: 8080
+  mdns:
+    - type: _https._tcp
+    - type: _nmea-0183._tcp
+      port: 10110
+
+layout:
+  priority: 40
+  width: 2
+  height: 1
