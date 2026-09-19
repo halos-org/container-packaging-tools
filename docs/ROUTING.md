@@ -21,11 +21,6 @@ package_name: marine-grafana-container
 version: 12.1.4
 
 routing:
-  # Backend type (optional, default: "container")
-  # Use "host" for apps using host networking
-  backend:
-    type: container
-
   # Authentication configuration (required)
   auth:
     mode: forward_auth  # Options: "forward_auth", "oidc", "none"
@@ -41,10 +36,13 @@ routing:
 
 ### Auto-Derived Values
 
-The following values are **automatically derived** and should NOT be specified in metadata.yaml:
+The following values are **automatically derived** and must NOT be written in metadata.yaml. `routing` has no `backend` key at all; the whole block below is generator output.
 
+- **`backend.type`** - `host` when a service in `docker-compose.yml` sets `network_mode: host`, otherwise `container`
 - **`backend.service`** - Derived from the first service in `docker-compose.yml`
 - **`backend.port`** - Derived from docker-compose port mappings (container port) or `web_ui.port`
+
+Writing `backend` in metadata.yaml fails the build with `routing -> backend: Extra inputs are not permitted`.
 
 ### Generated routing.yml
 
@@ -119,17 +117,24 @@ routing:
 
 ## Host Networking
 
-Some applications require host networking (e.g., to access hardware devices). Use `backend.type: "host"` for these:
+Some applications require host networking, for example to reach hardware devices. Declare that in `docker-compose.yml`, not in metadata.yaml:
 
 ```yaml
+# docker-compose.yml
+services:
+  myapp:
+    network_mode: host
+```
+
+The generator detects `network_mode: host` and writes `backend.type: host` into the generated routing.yml, which points the Traefik backend at `host.docker.internal` instead of the container name. A host-networked app has no port mapping to derive a port from, so give the port in metadata.yaml:
+
+```yaml
+# metadata.yaml
 routing:
-  backend:
-    type: host
+  host_port: 3000
   auth:
     mode: none
 ```
-
-This generates a Traefik backend URL pointing to `host.docker.internal` instead of the container name.
 
 ## mDNS Service Advertising
 

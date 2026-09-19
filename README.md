@@ -267,6 +267,24 @@ Each application definition directory must contain:
 | `icon.png` or `icon.svg` | No | Application icon |
 | `screenshot*.png` | No | Screenshots for AppStream metadata |
 
+### Unknown keys are rejected
+
+Every key in `metadata.yaml` must be one the tool knows. An unrecognised key fails the build and names itself:
+
+```
+ERROR: Validation failed
+  - Validation errors in metadata.yaml:
+  - routing -> mdsn: Extra inputs are not permitted
+```
+
+The usual cause is a `container-packaging-tools` pin older than the field you declared. Raise the pin (`CONTAINER_TOOLS_REF` in the consumer repo's `tools/build-all.sh`) to a release that carries the field. The other cause is a typo or a retired key, and the message says which line to delete.
+
+This applies from 0.13.0 onward. An older tool does not know the rule, so it drops the key and reports success: that is the failure this rule exists to prevent, and it is why the pin matters. See [halos-marine-containers issue 253](https://github.com/halos-org/halos-marine-containers/issues/253).
+
+`source_metadata` is the deliberate exception. It carries whatever an upstream catalogue such as CasaOS puts in it, so extra keys there are kept, not rejected.
+
+The rule covers `metadata.yaml` only. Unknown keys in `config.yml` are still dropped silently; that gap is tracked in [container-packaging-tools issue 253](https://github.com/halos-org/container-packaging-tools/issues/253).
+
 ## Output Structure
 
 The tool generates a complete Debian package structure:

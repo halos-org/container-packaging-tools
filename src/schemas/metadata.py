@@ -1,10 +1,14 @@
 """Pydantic models for validating metadata.yaml files.
 
-Every model here sets extra="forbid", so a key the tool does not know fails
-the build instead of being dropped. A tool older than a field an app declares
-used to produce a package with that field missing and report success; see
-halos-marine-containers#253. SourceMetadata is the exception: it carries
-whatever an upstream catalogue puts in it.
+These models set extra="forbid", so a key the tool does not know fails the
+build instead of being dropped. A tool older than a field an app declares used
+to produce a package with that field missing and report success; see
+https://github.com/halos-org/halos-marine-containers/issues/253.
+
+A model that carries arbitrary upstream catalogue fields opts out with
+extra="allow" and says why at the class. The config.yml and store.yaml schemas
+are not covered yet:
+https://github.com/halos-org/container-packaging-tools/issues/253.
 """
 
 import re
@@ -422,7 +426,8 @@ class SourceMetadata(BaseModel):
         description="ISO 8601 timestamp of when conversion was performed"
     )
 
-    # Allow source-specific extra fields
+    # Opts out of the module-wide forbid: an upstream catalogue puts its own
+    # fields here, and the CasaOS transformer reads them back.
     model_config = ConfigDict(extra="allow")
 
 
