@@ -1,4 +1,15 @@
-"""Pydantic models for validating metadata.yaml files."""
+"""Pydantic models for validating metadata.yaml files.
+
+These models set extra="forbid", so a key the tool does not know fails the
+build instead of being dropped. A tool older than a field an app declares used
+to produce a package with that field missing and report success; see
+https://github.com/halos-org/halos-marine-containers/issues/253.
+
+A model that carries arbitrary upstream catalogue fields opts out with
+extra="allow" and says why at the class. The config.yml and store.yaml schemas
+are not covered yet:
+https://github.com/halos-org/container-packaging-tools/issues/253.
+"""
 
 import re
 import subprocess
@@ -20,6 +31,8 @@ WatchType = Literal["directory_modified", "path_changed", "path_exists"]
 class WebUI(BaseModel):
     """Web UI configuration for the container application."""
 
+    model_config = ConfigDict(extra="forbid")
+
     enabled: bool = Field(description="Whether web UI is available")
     path: str | None = Field(None, description="URL path to access the web UI")
     port: int | None = Field(
@@ -39,6 +52,8 @@ class Layout(BaseModel):
     Controls how the app card appears on the Homarr dashboard including
     placement priority, size, and optional explicit positioning.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     priority: int = Field(
         default=50,
@@ -80,6 +95,8 @@ class TraefikForwardAuth(BaseModel):
     Authelia response headers to custom header names expected by the app.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     headers: dict[str, str] = Field(
         default_factory=dict,
         description=(
@@ -99,6 +116,8 @@ class OidcRedirect(BaseModel):
     `https://${HALOS_DOMAIN}:<external_port><path>`, where the external port is
     resolved at runtime from the routing port registry.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     style: Literal["path", "port"] = Field(
         description="Redirect URL shape: path-based or external-port-based",
@@ -124,6 +143,8 @@ class OidcConfig(BaseModel):
     into the Authelia client snippet, the client-secret provisioning, and the
     container env vars the app consumes — no hand-written prestart needed.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     # client_id flows into a file path and a grep pattern; client_name into a
     # heredoc body. Both are interpolated into root-executed generated bash, so
@@ -206,6 +227,8 @@ class RoutingAuth(BaseModel):
     nginx, or other reverse proxy configurations at runtime.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     mode: Literal["forward_auth", "oidc", "none"] = Field(
         default="forward_auth",
         description="Authentication mode: forward_auth (default), oidc, or none",
@@ -274,6 +297,8 @@ class RoutingConfig(BaseModel):
     native configuration.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     auth: RoutingAuth | None = Field(
         default=None,
         description="Authentication configuration",
@@ -311,6 +336,8 @@ class FileWatcherAction(BaseModel):
     At least one of restart_service or script must be specified.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     restart_service: bool = Field(
         default=False,
         description="Restart the main container service when path changes",
@@ -344,6 +371,8 @@ class FileWatcher(BaseModel):
     Defines a file or directory to watch and the action to take when it changes.
     Each watcher generates a .path unit and corresponding .service unit.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     name: str = Field(
         min_length=1,
@@ -397,7 +426,8 @@ class SourceMetadata(BaseModel):
         description="ISO 8601 timestamp of when conversion was performed"
     )
 
-    # Allow source-specific extra fields
+    # Opts out of the module-wide forbid: an upstream catalogue puts its own
+    # fields here, and the CasaOS transformer reads them back.
     model_config = ConfigDict(extra="allow")
 
 

@@ -62,20 +62,37 @@ class TestRoutingConfig:
         with pytest.raises(ValidationError):
             RoutingConfig(host_port=-1)
 
-    def test_legacy_subdomain_field_silently_ignored(self) -> None:
-        """RoutingConfig drops a leftover 'subdomain' key without raising.
+    def test_retired_subdomain_field_is_rejected(self) -> None:
+        """A leftover 'routing.subdomain' key now fails instead of vanishing.
 
-        Old metadata.yaml files may still carry 'routing.subdomain' from before
-        subdomain routing was retired. RoutingConfig has no explicit
-        model_config, so Pydantic's default extra='ignore' silently drops the
-        field. This test pins that backward-compat contract — a future
-        maintainer who adds extra='forbid' would break old files.
+        This replaces a test that pinned the opposite contract. Subdomain
+        routing was retired, and extra="ignore" let the dead key sit in a
+        metadata.yaml forever without a word. No metadata.yaml in
+        halos-marine-containers, halos-core-containers or
+        halos-imported-containers still carries it, so naming it at build time
+        costs nothing and tells the author which line to delete.
         """
-        config = RoutingConfig.model_validate(
-            {"subdomain": "grafana", "host_port": 3000}
-        )
-        assert config.host_port == 3000
-        assert not hasattr(config, "subdomain")
+        with pytest.raises(ValidationError) as excinfo:
+            RoutingConfig.model_validate({"subdomain": "grafana", "host_port": 3000})
+        error = excinfo.value.errors()[0]
+        assert error["type"] == "extra_forbidden"
+        assert error["loc"] == ("subdomain",)
+
+    def test_unknown_routing_key_is_rejected(self) -> None:
+        """An unrecognised routing key fails the build and names itself.
+
+        A pin older than the field an app declares used to drop that field and
+        still build: marine-signalk-server-container shipped without its
+        routing.mdns records, installed cleanly and advertised nothing. The
+        mismatch was visible only by diffing two builds of one commit.
+        """
+        # "mdsn" is "mdns" transposed on purpose: mdns itself is a real field,
+        # so it cannot stand in for an unknown key.
+        with pytest.raises(ValidationError) as excinfo:
+            RoutingConfig.model_validate({"mdsn": [{"type": "_signalk-wss._tcp"}]})
+        error = excinfo.value.errors()[0]
+        assert error["type"] == "extra_forbidden"
+        assert error["loc"] == ("mdsn",)
 
 
 class TestRoutingAuth:
