@@ -49,6 +49,12 @@ ExecStop=/bin/sh -c '\
     [ -f /run/halos/routing-labels/{{ package.app_id }}.yml ] && \
     OVERRIDE="-f /run/halos/routing-labels/{{ package.app_id }}.yml"; \
     docker compose -f docker-compose.yml $$OVERRIDE down'
+{% if has_mdns %}
+# Withdraw the mDNS record with the app. Advertising a port nothing serves is
+# worse than advertising nothing: clients connect, fail and retry rather than
+# reporting no server. Leading `-` so a withdrawal failure cannot fail the stop.
+ExecStopPost=-/usr/bin/configure-container-routing --mdns-withdraw {{ package.app_id }}
+{% endif %}
 {% else %}
 ExecStart=docker compose up
 ExecStop=docker compose down

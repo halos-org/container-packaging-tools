@@ -159,16 +159,42 @@ class TestPackageMetadataWithRouting:
         )
 
     def test_mdns_service_types(self, base_metadata: dict) -> None:
-        """DNS-SD service types are accepted."""
+        """DNS-SD services are accepted, with and without a fixed port."""
         base_metadata["web_ui"] = {"enabled": True, "port": 3000}
-        base_metadata["routing"] = {"mdns": ["_signalk-wss._tcp"]}
+        base_metadata["routing"] = {
+            "mdns": [
+                {"type": "_signalk-wss._tcp"},
+                {"type": "_nmea-0183._tcp", "port": 10110},
+            ]
+        }
         metadata = PackageMetadata(**base_metadata)
         assert metadata.routing is not None
-        assert metadata.routing.mdns == ["_signalk-wss._tcp"]
+        assert metadata.routing.mdns is not None
+        assert metadata.routing.mdns[0].type == "_signalk-wss._tcp"
+        assert metadata.routing.mdns[0].port is None
+        assert metadata.routing.mdns[1].port == 10110
 
     def test_mdns_rejects_malformed_service_type(self, base_metadata: dict) -> None:
         """A service type that is not _name._proto is rejected."""
         base_metadata["web_ui"] = {"enabled": True, "port": 3000}
-        base_metadata["routing"] = {"mdns": ["signalk-wss"]}
+        base_metadata["routing"] = {"mdns": [{"type": "signalk-wss"}]}
+        with pytest.raises(ValidationError):
+            PackageMetadata(**base_metadata)
+
+    def test_mdns_rejects_xml_metacharacters(self, base_metadata: dict) -> None:
+        """A type that would break out of the generated XML element is rejected."""
+        base_metadata["web_ui"] = {"enabled": True, "port": 3000}
+        base_metadata["routing"] = {
+            "mdns": [{"type": "_x._tcp</type><port>22</port></service><service><type>_y._tcp"}]
+        }
+        with pytest.raises(ValidationError):
+            PackageMetadata(**base_metadata)
+
+    def test_mdns_rejects_unknown_entry_key(self, base_metadata: dict) -> None:
+        """A misspelled key fails the build rather than being silently dropped."""
+        base_metadata["web_ui"] = {"enabled": True, "port": 3000}
+        base_metadata["routing"] = {
+            "mdns": [{"type": "_signalk-wss._tcp", "prot": 10110}]
+        }
         with pytest.raises(ValidationError):
             PackageMetadata(**base_metadata)

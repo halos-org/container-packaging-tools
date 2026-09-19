@@ -583,13 +583,22 @@ class TestBackendScheme:
         metadata = {
             "app_id": "signalk-server",
             "web_ui": {"enabled": True, "port": 3000},
-            "routing": {"host_port": 3000, "mdns": ["_signalk-wss._tcp"]},
+            "routing": {
+                "host_port": 3000,
+                "mdns": [
+                    {"type": "_signalk-wss._tcp"},
+                    {"type": "_nmea-0183._tcp", "port": 10110},
+                ],
+            },
         }
         compose: dict = {"services": {"sk": {"network_mode": "host"}}}
         result = generate_routing_yml(metadata, compose, "marine-signalk-container")
 
         routing = yaml.safe_load(result)
-        assert routing["mdns"] == ["_signalk-wss._tcp"]
+        assert routing["mdns"] == [
+            {"type": "_signalk-wss._tcp"},
+            {"type": "_nmea-0183._tcp", "port": 10110},
+        ]
 
     def test_no_mdns_key_when_not_declared(self) -> None:
         """Apps that declare no mdns services get no mdns key."""
