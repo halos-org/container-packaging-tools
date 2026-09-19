@@ -1,8 +1,9 @@
 """Unit tests for Pydantic schema models."""
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
+import schemas.metadata
 from schemas.config import ConfigField, ConfigGroup, ConfigSchema
 from schemas.metadata import Layout, PackageMetadata, WebUI
 
@@ -732,3 +733,46 @@ class TestConfigSchema:
         schema = ConfigSchema(**valid_config_schema)  # type: ignore[arg-type]
         assert schema.groups == []
         assert schema.version == "1.0"
+
+
+class TestExtraKeyPolicy:
+    """Every metadata model rejects keys it does not know."""
+
+    # SourceMetadata carries whatever an upstream catalogue (CasaOS, Runtipi)
+    # puts in it, so it allows extras on purpose.
+    ALLOWS_EXTRAS = {"SourceMetadata"}
+
+    def _metadata_models(self) -> list[tuple[str, type[BaseModel]]]:
+        return [
+            (name, obj)
+            for name, obj in vars(schemas.metadata).items()
+            if isinstance(obj, type)
+            and issubclass(obj, BaseModel)
+            and obj is not BaseModel
+            and obj.__module__ == schemas.metadata.__name__
+        ]
+
+    def test_every_model_is_covered(self) -> None:
+        """The sweep below is worthless if it finds nothing."""
+        names = {name for name, _ in self._metadata_models()}
+        assert len(names) > 5
+        assert self.ALLOWS_EXTRAS <= names
+
+    def test_models_forbid_unknown_keys(self) -> None:
+        """A model added without extra="forbid" reopens the silent drop.
+
+        An unknown key used to be dropped and the build still succeeded, which
+        is how marine-signalk-server-container shipped without the
+        routing.mdns records it declared.
+        """
+        offenders = sorted(
+            name
+            for name, model in self._metadata_models()
+            if name not in self.ALLOWS_EXTRAS
+            and model.model_config.get("extra") != "forbid"
+        )
+        assert offenders == []
+
+    def test_source_metadata_still_allows_extras(self) -> None:
+        """Upstream catalogue fields must keep flowing through untouched."""
+        assert schemas.metadata.SourceMetadata.model_config["extra"] == "allow"

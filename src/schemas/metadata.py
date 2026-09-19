@@ -20,6 +20,11 @@ WatchType = Literal["directory_modified", "path_changed", "path_exists"]
 class WebUI(BaseModel):
     """Web UI configuration for the container application."""
 
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
+
     enabled: bool = Field(description="Whether web UI is available")
     path: str | None = Field(None, description="URL path to access the web UI")
     port: int | None = Field(
@@ -39,6 +44,11 @@ class Layout(BaseModel):
     Controls how the app card appears on the Homarr dashboard including
     placement priority, size, and optional explicit positioning.
     """
+
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
 
     priority: int = Field(
         default=50,
@@ -80,6 +90,11 @@ class TraefikForwardAuth(BaseModel):
     Authelia response headers to custom header names expected by the app.
     """
 
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
+
     headers: dict[str, str] = Field(
         default_factory=dict,
         description=(
@@ -99,6 +114,11 @@ class OidcRedirect(BaseModel):
     `https://${HALOS_DOMAIN}:<external_port><path>`, where the external port is
     resolved at runtime from the routing port registry.
     """
+
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
 
     style: Literal["path", "port"] = Field(
         description="Redirect URL shape: path-based or external-port-based",
@@ -124,6 +144,11 @@ class OidcConfig(BaseModel):
     into the Authelia client snippet, the client-secret provisioning, and the
     container env vars the app consumes — no hand-written prestart needed.
     """
+
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
 
     # client_id flows into a file path and a grep pattern; client_name into a
     # heredoc body. Both are interpolated into root-executed generated bash, so
@@ -206,6 +231,11 @@ class RoutingAuth(BaseModel):
     nginx, or other reverse proxy configurations at runtime.
     """
 
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
+
     mode: Literal["forward_auth", "oidc", "none"] = Field(
         default="forward_auth",
         description="Authentication mode: forward_auth (default), oidc, or none",
@@ -274,6 +304,11 @@ class RoutingConfig(BaseModel):
     native configuration.
     """
 
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
+
     auth: RoutingAuth | None = Field(
         default=None,
         description="Authentication configuration",
@@ -311,6 +346,11 @@ class FileWatcherAction(BaseModel):
     At least one of restart_service or script must be specified.
     """
 
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
+
     restart_service: bool = Field(
         default=False,
         description="Restart the main container service when path changes",
@@ -344,6 +384,11 @@ class FileWatcher(BaseModel):
     Defines a file or directory to watch and the action to take when it changes.
     Each watcher generates a .path unit and corresponding .service unit.
     """
+
+    # Unknown keys are an error, not something to drop. A tool older than the
+    # field an app declares used to build a package with the field missing and
+    # report success; see halos-marine-containers#253.
+    model_config = ConfigDict(extra="forbid")
 
     name: str = Field(
         min_length=1,
