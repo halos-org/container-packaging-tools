@@ -20,6 +20,16 @@ case "$1" in
         # Remove routing declaration
         rm -f "/etc/halos/routing.d/{{ package.app_id }}.yml"
 {% endif %}
+{% if has_mdns %}
+        # A stale mDNS record is worse than none: it answers for a port nothing
+        # serves, so clients connect and retry instead of reporting no server.
+        # Written at container start, so a reinstall recreates it.
+        rm -f "/etc/avahi/services/halos-{{ package.app_id }}.service"
+        if [ -d /run/systemd/system ]; then
+            systemctl reload avahi-daemon 2>/dev/null || true
+        fi
+{% endif %}
+
 
         # Only interact with systemd if it's running (not in containers or minimal envs)
         if [ -d /run/systemd/system ]; then
@@ -29,6 +39,15 @@ case "$1" in
         ;;
 
     remove)
+{% if has_mdns %}
+        # A stale mDNS record is worse than none: it answers for a port nothing
+        # serves, so clients connect and retry instead of reporting no server.
+        # Written at container start, so a reinstall recreates it.
+        rm -f "/etc/avahi/services/halos-{{ package.app_id }}.service"
+        if [ -d /run/systemd/system ]; then
+            systemctl reload avahi-daemon 2>/dev/null || true
+        fi
+{% endif %}
         # On remove (not purge), keep config but remove application files
         # Application files in /var/lib/ are already removed by dpkg
         # Service file is kept for potential reinstall

@@ -28,6 +28,14 @@ HALOS_CORE_CONTAINERS_MIN_VERSION = "0.3.2"
 Older fork images reject the URL at the tRPC `app.create` validation
 boundary."""
 
+HALOS_CORE_CONTAINERS_MDNS_MIN_VERSION = "0.8.0"
+"""First `halos-core-containers` release whose `configure-container-routing`
+understands the `mdns:` key in `/etc/halos/routing.d/<app_id>.yml`. An older
+release parses the file, ignores the key, and writes no avahi service file, so
+the app installs and runs while advertising nothing -- a silent half-upgrade
+with every package reporting success. Only apps that declare `routing.mdns`
+carry this floor."""
+
 HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION = "0.5.0"
 """First `halos-core-containers` release that ships the
 `halos-resolve-domain.service` producer, which publishes `HALOS_DOMAIN` to
@@ -306,6 +314,10 @@ def build_context(app_def: AppDefinition) -> dict[str, Any]:
         # Routing configuration
         "routing": routing,
         "has_routing": has_routing,
+        # mDNS: the avahi service file is written at runtime by the routing
+        # configurator (the port is only assigned then), so only its removal
+        # is the package's business.
+        "has_mdns": bool((routing or {}).get("mdns")),
         # System binaries to install to /usr/bin/
         "system_bin": metadata.get("system_bin", []) or [],
         "has_system_bin": bool(metadata.get("system_bin")),
@@ -396,6 +408,8 @@ def _compute_producer_depends(metadata: dict[str, Any]) -> list[str]:
     """
     if not _has_routing(metadata):
         return []
+    if (metadata.get("routing") or {}).get("mdns"):
+        return [f"halos-core-containers (>= {HALOS_CORE_CONTAINERS_MDNS_MIN_VERSION})"]
     return [f"halos-core-containers (>= {HALOS_CORE_CONTAINERS_PRODUCER_MIN_VERSION})"]
 
 

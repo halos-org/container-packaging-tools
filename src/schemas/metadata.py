@@ -232,6 +232,39 @@ class RoutingAuth(BaseModel):
         return self
 
 
+class MdnsService(BaseModel):
+    """One DNS-SD service record to advertise for an app.
+
+    The value is interpolated into XML written by a root-run script, so the
+    type is charset-constrained here as well as at runtime.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str = Field(
+        description="DNS-SD service type, e.g. _signalk-wss._tcp",
+    )
+    port: int | None = Field(
+        default=None,
+        ge=1,
+        le=65535,
+        description=(
+            "Fixed host port, for a service the reverse proxy does not front. "
+            "Omit to use the app's runtime-assigned external TLS port."
+        ),
+    )
+
+    @field_validator("type")
+    @classmethod
+    def validate_service_type(cls, v: str) -> str:
+        """Ensure the type has the DNS-SD _name._proto shape."""
+        if not re.fullmatch(r"_[A-Za-z0-9][A-Za-z0-9-]*\._(tcp|udp)", v):
+            raise ValueError(
+                f"mdns type must look like _name._tcp or _name._udp, got: '{v}'"
+            )
+        return v
+
+
 class RoutingConfig(BaseModel):
     """Generic, proxy-agnostic routing configuration.
 
@@ -258,6 +291,16 @@ class RoutingConfig(BaseModel):
         description=(
             "Backend port for routing. Overrides automatic port detection from "
             "docker-compose. Use when the main web UI port differs from exposed ports."
+        ),
+    )
+    mdns: list[MdnsService] | None = Field(
+        default=None,
+        description=(
+            "DNS-SD services to advertise over mDNS, e.g. "
+            "[{type: _signalk-wss._tcp}]. An entry without a port takes the "
+            "app's external TLS port, which is assigned at runtime, so the "
+            "record is written by the reverse proxy's routing configurator "
+            "rather than shipped as a static file."
         ),
     )
 

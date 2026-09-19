@@ -131,6 +131,34 @@ routing:
 
 This generates a Traefik backend URL pointing to `host.docker.internal` instead of the container name.
 
+## mDNS Service Advertising
+
+An app can advertise itself over mDNS with DNS-SD service records, so that clients on the local network discover it without a configured address:
+
+```yaml
+routing:
+  mdns:
+    - type: _signalk-wss._tcp
+    - type: _nmea-0183._tcp
+      port: 10110
+```
+
+An entry without a `port` takes the app's external TLS port, which Traefik assigns at runtime. Give a `port` for a service the proxy does not front, such as a plain TCP stream on a fixed host port.
+
+`configure-container-routing` writes the avahi service file when the container starts, and withdraws it when the container stops or the package is removed. The app must not run its own mDNS responder: `avahi-daemon` owns UDP 5353 on the host, and a second responder under host networking answers nothing.
+
+An app that declares `routing.mdns` gets `Depends: halos-core-containers (>= 0.8.0)`. An older release parses `routing.d`, ignores the `mdns` key, and writes no record, so without the floor a partial upgrade advertises nothing while every package reports success.
+
+The generated declaration carries the services at the top level:
+
+```yaml
+# Generated /etc/halos/routing.d/signalk-server.yml
+mdns:
+- type: _signalk-wss._tcp
+- type: _nmea-0183._tcp
+  port: 10110
+```
+
 ## Generated Files
 
 When a package is installed, the routing configuration generates:
@@ -141,6 +169,7 @@ When a package is installed, the routing configuration generates:
 At container start time:
 
 3. Traefik configuration is generated from routing declarations by `configure-container-routing`
+4. **`/etc/avahi/services/halos-{app_id}.service`** - mDNS service records (only if `routing.mdns` is set), removed again when the app stops or is removed
 
 ## HTTP to HTTPS Redirect
 

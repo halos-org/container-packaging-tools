@@ -89,6 +89,14 @@ def generate_routing_yml(
         },
     }
 
+    # DNS-SD services to advertise. An entry without a port takes the external
+    # TLS port, which only the routing configurator knows.
+    if routing_config and routing_config.get("mdns"):
+        routing_data["mdns"] = [
+            {"type": entry["type"], **({"port": entry["port"]} if entry.get("port") else {})}
+            for entry in routing_config["mdns"]
+        ]
+
     # Generate YAML with header comment
     header = f"""# Generic routing declaration for {app_id}
 # Installed to /etc/halos/routing.d/{app_id}.yml
