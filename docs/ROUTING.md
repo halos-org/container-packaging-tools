@@ -150,7 +150,9 @@ routing:
 
 An entry without a `port` takes the app's external TLS port, which Traefik assigns at runtime. Give a `port` for a service the proxy does not front, such as a plain TCP stream on a fixed host port.
 
-`configure-container-routing` writes the avahi service file when the container starts, and withdraws it when the container stops or the package is removed. Turn the app's own mDNS responder off. A second responder under host networking does answer: it and `avahi-daemon` both bind UDP 5353, so every service type the app declares here is advertised twice, once from avahi and once collision-renamed, and only one of the two carries the app's TXT records. Turning it off is the app package's job, and on an app whose setting lives in a data volume that means a prestart migration as well as a seeded default, because a seeded file reaches new installs only.
+`configure-container-routing` writes the avahi service file when the container starts, and withdraws it when the container stops or the package is removed.
+
+Do not declare `routing.mdns` for an app that already advertises itself. A second responder under host networking does answer: it and `avahi-daemon` both bind UDP 5353, so every type declared here is then advertised twice, once collision-renamed, and only the app's own copy carries its TXT records. Check what the app publishes before adding a declaration, and check it under the environment the app runs in -- Signal K, for example, switches between `_signalk-ws` and `_signalk-wss` depending on a variable the prestart hook sets, so probing the wrong name reports silence from a responder that is working (halos-org/halos-marine-containers#258).
 
 An app that declares `routing.mdns` gets `Depends: halos-core-containers (>= 0.8.0)`. An older release parses `routing.d`, ignores the `mdns` key, and writes no record, so without the floor a partial upgrade advertises nothing while every package reports success.
 
