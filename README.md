@@ -191,6 +191,39 @@ sudo systemctl restart my-app-container
 
 For more examples and detailed documentation, see [EXAMPLES.md](EXAMPLES.md).
 
+### Overriding Compose Settings with compose.d
+
+Do not edit an installed app's `docker-compose.yml`: the next package upgrade overwrites it. To change the compose project on a device, put a Compose file in `/var/lib/container-apps/<package>/compose.d/`. Files ending in `.yml` or `.yaml` are applied, in byte order of filename (C locale), after `docker-compose.yml` and, for routed apps, after the generated routing-labels file. A fragment can therefore override anything, including the Traefik labels and `network_mode`.
+
+Fragments merge by Compose's [multi-file merge rules](https://docs.docker.com/reference/compose-file/merge/). Lists such as `group_add` append to the earlier files' entries. To clear an attribute use `!reset`, and to replace it use `!override`; both need Compose 2.24 or later, and HaLOS devices ship 2.26. For example, `/var/lib/container-apps/<package>/compose.d/10-groups.yml` adding a supplementary group to the `signalk-server` service:
+
+```yaml
+services:
+  signalk-server:
+    group_add:
+      - "114"
+```
+
+Relative paths inside a fragment resolve against the app directory, `/var/lib/container-apps/<package>/`, not against `compose.d/`. Do not set a top-level `name:` in a fragment: the unit passes the project name with `-p`, which takes precedence, so `name:` has no effect.
+
+Changes apply on the next restart. Check the fragments first, then restart:
+
+```bash
+sudo /var/lib/container-apps/<package>/compose check
+sudo systemctl restart <package>
+```
+
+`compose check` validates the project with the environment the unit uses and lists the active fragments. It needs root because `runtime.env` is mode `600`.
+
+A fragment that makes the project invalid fails the start; the app does not run with the fragment ignored. `journalctl -u <package>` shows a `compose.d fragments: ...` line with the active fragments and Compose's error, which names the service or the YAML line, not the file. To recover, fix or remove the fragment, then:
+
+```bash
+sudo systemctl reset-failed <package>
+sudo systemctl start <package>
+```
+
+Package upgrades leave `compose.d/` untouched. `apt purge` leaves the fragments in place too, as it does `data/`.
+
 ## CasaOS Converter
 
 The CasaOS converter allows you to import applications from the CasaOS app store format and convert them to the container-packaging-tools format. This is useful for leveraging the large CasaOS app ecosystem.

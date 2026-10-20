@@ -373,6 +373,8 @@ Package changes and checksums
 ```
 /var/lib/container-apps/<package>/
 ├── docker-compose.yml
+├── compose (wrapper the unit runs compose through; `check` validates)
+├── compose.d/ (admin Compose fragments, applied last; see README)
 ├── metadata.yaml
 ├── config.yml
 └── env.template
