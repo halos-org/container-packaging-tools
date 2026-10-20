@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from generate_container_packages.compose_wrapper import generate_compose_wrapper
 from generate_container_packages.init import inject_init
 from generate_container_packages.labels import generate_homarr_labels
 from generate_container_packages.loader import AppDefinition
@@ -16,6 +17,7 @@ from generate_container_packages.prestart import generate_prestart_script
 from generate_container_packages.registry import generate_registry_toml
 from generate_container_packages.routing import generate_routing_yml
 from generate_container_packages.systemd_check import inject_systemd_check
+from generate_container_packages.template_context import build_context
 from generate_container_packages.traefik import inject_traefik_network
 
 
@@ -183,6 +185,9 @@ def copy_source_files(app_def: AppDefinition, source_dir: Path) -> None:
 
     # Generate prestart.sh script
     generate_prestart_file(app_def, source_dir)
+
+    # Generate the compose wrapper that the unit runs compose through
+    generate_compose_wrapper_file(app_def, source_dir)
 
     # Generate app registry file for homarr-container-adapter
     generate_registry_file(app_def, source_dir)
@@ -476,6 +481,20 @@ def generate_prestart_file(app_def: AppDefinition, source_dir: Path) -> None:
         hook_file = source_dir / "app-prestart.sh"
         shutil.copy2(custom_prestart, hook_file)
         hook_file.chmod(0o755)
+
+
+def generate_compose_wrapper_file(app_def: AppDefinition, source_dir: Path) -> None:
+    """Generate the executable compose wrapper.
+
+    Args:
+        app_def: Application definition
+        source_dir: Build source directory to write compose into
+    """
+    wrapper_file = source_dir / "compose"
+    wrapper_file.write_text(
+        generate_compose_wrapper(build_context(app_def)), encoding="utf-8"
+    )
+    wrapper_file.chmod(0o755)
 
 
 def generate_registry_file(app_def: AppDefinition, source_dir: Path) -> None:

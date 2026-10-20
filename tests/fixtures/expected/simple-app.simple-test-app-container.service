@@ -29,17 +29,10 @@ EnvironmentFile=-/run/container-apps/simple-test-app-container/runtime.env
 # HALOS_DOMAIN published once by halos-resolve-domain.service. Loaded last so it
 # wins over any stale HALOS_DOMAIN that an older runtime.env might still carry.
 EnvironmentFile=-/run/halos/domain.env
-# Apply routing labels from /run/halos/routing-labels/ if available
-ExecStart=/bin/sh -c '\
-    OVERRIDE=""; \
-    [ -f /run/halos/routing-labels/simple-test-app.yml ] && \
-    OVERRIDE="-f /run/halos/routing-labels/simple-test-app.yml"; \
-    docker compose -f docker-compose.yml $$OVERRIDE up'
-ExecStop=/bin/sh -c '\
-    OVERRIDE=""; \
-    [ -f /run/halos/routing-labels/simple-test-app.yml ] && \
-    OVERRIDE="-f /run/halos/routing-labels/simple-test-app.yml"; \
-    docker compose -f docker-compose.yml $$OVERRIDE down'
+ExecStart=/var/lib/container-apps/simple-test-app-container/compose up
+# Tear down by project name so a compose.d/ fragment edited, broken or deleted
+# while the app runs cannot fail the stop or leave its containers behind.
+ExecStop=docker compose -p simple-test-app-container down --remove-orphans
 Restart=always
 RestartSec=10
 StandardOutput=journal

@@ -20,6 +20,10 @@ override_dh_auto_install:
 		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/env.user-template
 	install -D -m 755 prestart.sh \
 		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/prestart.sh
+	install -D -m 755 compose \
+		debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/compose
+	# Empty, so admins find it; dpkg leaves it in place while it holds their files
+	install -d debian/simple-test-app-container//var/lib/container-apps/simple-test-app-container/compose.d
 
 	# Install icon
 	install -D -m 644 icon.png \

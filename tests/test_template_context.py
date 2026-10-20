@@ -8,6 +8,7 @@ from generate_container_packages.loader import AppDefinition
 from generate_container_packages.template_context import (
     HALOS_CORE_CONTAINERS_MIN_VERSION,
     HOMARR_ADAPTER_MIN_VERSION,
+    _compose_project_name,
     _compute_homarr_stack_breaks,
     _extract_volume_directories,
     _is_bindable_path,
@@ -1049,3 +1050,18 @@ class TestVolumeInfo:
         assert vol.path == "/data/app"
         assert vol.uid is None
         assert vol.gid is None
+
+
+class TestComposeProjectName:
+    """The stop command's -p must equal the name Compose derives from the app
+    directory, or the stop reaches no containers."""
+
+    def test_debian_package_name_is_unchanged(self):
+        assert _compose_project_name("signalk-server-container") == (
+            "signalk-server-container"
+        )
+
+    def test_normalised_like_compose(self):
+        """Compose lowercases, drops characters outside [a-z0-9_-] and strips
+        leading separators; checked against Compose v2.40."""
+        assert _compose_project_name("_My.App+x-container") == "myappx-container"
