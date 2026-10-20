@@ -31,6 +31,9 @@ Environment=HALOS_SYSTEMD_STARTED=1
 ExecStartPre=/usr/bin/configure-container-routing {{ package.app_id }}
 {% endif %}
 ExecStartPre={{ service.working_directory }}/prestart.sh
+# Fail the start on an invalid project, such as a broken compose.d/ fragment,
+# rather than run without it. After prestart.sh: needs runtime.env and labels.
+ExecStartPre={{ service.compose_wrapper }} config --quiet
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
 EnvironmentFile=-{{ service.runtime_env_file }}

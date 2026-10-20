@@ -822,6 +822,21 @@ class TestComposeWrapperWiring:
         ]
         assert "sh -c" not in service
 
+    @pytest.mark.parametrize("routed", [True, False])
+    def test_validation_runs_last_before_start(self, tmp_path, routed):
+        """Validation needs the labels file and runtime.env, so it follows
+        configure-container-routing and prestart.sh, and checks the same file
+        set that ExecStart will run."""
+        service = (
+            self._render(tmp_path, routed=routed) / "demo-app-container.service"
+        ).read_text()
+
+        start_wrapper = self._directives(service, "ExecStart")[0].split()[0]
+        expected = [f"{self.LIB}/prestart.sh", f"{start_wrapper} config --quiet"]
+        if routed:
+            expected.insert(0, "/usr/bin/configure-container-routing demo-app")
+        assert self._directives(service, "ExecStartPre") == expected
+
     def test_rules_install_wrapper_and_empty_compose_d(self, tmp_path):
         rules = (self._render(tmp_path, routed=False) / "rules").read_text()
 

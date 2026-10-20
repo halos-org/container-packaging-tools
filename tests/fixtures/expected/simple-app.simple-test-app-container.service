@@ -23,6 +23,9 @@ Environment=HALOS_SYSTEMD_STARTED=1
 # can read the port registry (e.g., for OIDC redirect URI construction)
 ExecStartPre=/usr/bin/configure-container-routing simple-test-app
 ExecStartPre=/var/lib/container-apps/simple-test-app-container/prestart.sh
+# Fail the start on an invalid project, such as a broken compose.d/ fragment,
+# rather than run without it. After prestart.sh: needs runtime.env and labels.
+ExecStartPre=/var/lib/container-apps/simple-test-app-container/compose config --quiet
 EnvironmentFile=-/etc/container-apps/simple-test-app-container/env.defaults
 EnvironmentFile=-/etc/container-apps/simple-test-app-container/env
 EnvironmentFile=-/run/container-apps/simple-test-app-container/runtime.env
