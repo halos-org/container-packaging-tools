@@ -1053,15 +1053,23 @@ class TestVolumeInfo:
 
 
 class TestComposeProjectName:
-    """The stop command's -p must equal the name Compose derives from the app
-    directory, or the stop reaches no containers."""
+    """-p must equal the project a pre-wrapper `docker compose up` ran under,
+    or the stop after an upgrade reaches no containers."""
 
     def test_debian_package_name_is_unchanged(self):
-        assert _compose_project_name("signalk-server-container") == (
+        assert _compose_project_name("signalk-server-container", {}) == (
             "signalk-server-container"
         )
 
     def test_normalised_like_compose(self):
         """Compose lowercases, drops characters outside [a-z0-9_-] and strips
         leading separators; checked against Compose v2.40."""
-        assert _compose_project_name("_My.App+x-container") == "myappx-container"
+        assert _compose_project_name("_My.App+x-container", {}) == "myappx-container"
+
+    def test_shipped_name_wins_over_package_name(self):
+        """Compose prefers a top-level name: to the directory name, and every
+        CasaOS-converted app sets one."""
+        compose = {"name": "syncthing", "services": {}}
+        assert (
+            _compose_project_name("casaos-syncthing-container", compose) == "syncthing"
+        )

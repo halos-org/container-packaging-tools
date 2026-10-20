@@ -776,7 +776,7 @@ class TestComposeWrapperWiring:
     )
     LIB = "/var/lib/container-apps/demo-app-container"
 
-    def _render(self, tmp_path, *, routed: bool) -> Path:
+    def _render(self, tmp_path, *, routed: bool, compose: dict | None = None) -> Path:
         metadata = {
             "name": "Demo App",
             "package_name": "demo-app-container",
@@ -793,7 +793,7 @@ class TestComposeWrapperWiring:
             metadata["web_ui"] = {"enabled": True, "port": 8080, "protocol": "http"}
         app_def = AppDefinition(
             metadata=metadata,
-            compose={},
+            compose=compose or {},
             config={},
             input_dir=Path("/test/dir"),
             icon_path=None,
@@ -821,6 +821,20 @@ class TestComposeWrapperWiring:
             "docker compose -p demo-app-container down --remove-orphans"
         ]
         assert "sh -c" not in service
+
+    def test_stop_targets_shipped_project_name(self, tmp_path):
+        """CasaOS-converted apps set a top-level name:, which a pre-wrapper
+        unit's `up` ran under; the stop after an upgrade must reach it."""
+        service = (
+            self._render(
+                tmp_path, routed=False, compose={"name": "syncthing", "services": {}}
+            )
+            / "demo-app-container.service"
+        ).read_text()
+
+        assert self._directives(service, "ExecStop") == [
+            "docker compose -p syncthing down --remove-orphans"
+        ]
 
     @pytest.mark.parametrize("routed", [True, False])
     def test_validation_runs_last_before_start(self, tmp_path, routed):
