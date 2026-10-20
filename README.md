@@ -45,7 +45,7 @@ git clone https://github.com/halos-org/halos.git
 cd halos
 
 # Get all sub-repositories including container-packaging-tools
-./run repos:clone
+./run clone-repos
 
 # Work from workspace root for AI-assisted development
 # Claude Code gets full context across all repos
