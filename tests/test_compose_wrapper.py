@@ -256,6 +256,10 @@ class TestCheck:
     def test_check_validates_with_unit_environment(self, tmp_path, shell):
         box = Sandbox(tmp_path, shell, routed=True)
         self._env_files(box)
+        # domain.env must win over a stale HALOS_DOMAIN in an older runtime.env.
+        box.write(
+            box.run_dir / "runtime.env", "C=runtime\nHALOS_DOMAIN=stale.example\n"
+        )
         box.write(box.domain_env, "HALOS_DOMAIN=boat.example\n")
         box.write(box.labels, "services: {}\n")
         box.fragment("10-a.yml")
