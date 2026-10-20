@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from generate_container_packages.systemd_check import SYSTEMD_CHECK_VAR
+
 ROUTING_LABELS_DIR = "/run/halos/routing-labels"
 
 
@@ -50,7 +52,7 @@ def generate_compose_wrapper(context: dict[str, Any]) -> str:
     lines.extend(
         [
             "    set +a",
-            "    export HALOS_SYSTEMD_STARTED=1",
+            f"    export {SYSTEMD_CHECK_VAR}=1",
             "    set -- config --quiet",
             "fi",
             "",
