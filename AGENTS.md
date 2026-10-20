@@ -77,7 +77,7 @@ Contract for app authors and agents:
 
 - `compose.d/` belongs to the admin. Ship app configuration in `docker-compose.yml`, never as a fragment, and never tell users to edit the installed `docker-compose.yml`; point them at `compose.d/` instead.
 - Service names in `docker-compose.yml` are part of the app's interface: fragments refer to them, and renaming a service makes a fragment that names it fail the start.
-- The wrapper derives the project name from the package name and passes it with `-p`; a top-level `name:` in any compose file has no effect.
+- The project name is the shipped `docker-compose.yml`'s top-level `name:` when it has one (every CasaOS-converted app does), otherwise the package name, normalised as Compose does. This is the project a `docker compose up` without `-p` used, so the stop after an upgrade reaches containers the previous unit started. The wrapper passes it with `-p`, so a `name:` in a fragment has no effect.
 - `<wrapper> check` (as root) validates with the unit's env files. Any other subcommand passes through without the systemd sentinel, so `<wrapper> up` by hand still fails.
 
 User-facing details (merge rules, recovery after a failed start) are in the README section "Overriding Compose Settings with compose.d".
