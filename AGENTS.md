@@ -69,6 +69,19 @@ Hook contract — available when `app-prestart.sh` runs:
 
 Prefer build-time `default-data/` for static seed config; reserve the hook for logic that genuinely needs runtime context.
 
+### compose.d Fragments
+
+Every generated package ships an executable `compose` wrapper and an empty `compose.d/` in `/var/lib/container-apps/<pkg>/`. The unit runs compose only through the wrapper (`ExecStartPre=<wrapper> config --quiet`, `ExecStart=<wrapper> up`), which passes `-p <project> -f docker-compose.yml`, then the routing-labels file for routed apps, then every `compose.d/*.yml` and `*.yaml` in C-locale byte order. `ExecStop` is `docker compose -p <project> down --remove-orphans` with no `-f`, so stopping never depends on the fragments.
+
+Contract for app authors and agents:
+
+- `compose.d/` belongs to the admin. Ship app configuration in `docker-compose.yml`, never as a fragment, and never tell users to edit the installed `docker-compose.yml`; point them at `compose.d/` instead.
+- Service names in `docker-compose.yml` are part of the app's interface: fragments refer to them, and renaming a service makes a fragment that names it fail the start.
+- The project name is the shipped `docker-compose.yml`'s top-level `name:` when it has one (every CasaOS-converted app does), otherwise the package name, normalised as Compose does. This is the project a `docker compose up` without `-p` used, so the stop after an upgrade reaches containers the previous unit started. The wrapper passes it with `-p`, so a `name:` in a fragment has no effect.
+- `<wrapper> check` (as root) validates with the unit's env files. Any other subcommand passes through without the systemd sentinel, so `<wrapper> up` by hand still fails.
+
+User-facing details (merge rules, recovery after a failed start) are in the README section "Overriding Compose Settings with compose.d".
+
 ### Declarative OIDC (native-OAuth apps)
 
 An app that authenticates users via Authelia as its own OIDC client (native OAuth — e.g. Grafana, Signal K) declares it under `routing`, instead of hand-writing the lifecycle in a prestart:

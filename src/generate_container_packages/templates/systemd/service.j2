@@ -31,33 +31,26 @@ Environment=HALOS_SYSTEMD_STARTED=1
 ExecStartPre=/usr/bin/configure-container-routing {{ package.app_id }}
 {% endif %}
 ExecStartPre={{ service.working_directory }}/prestart.sh
+# Fail the start on an invalid project, such as a broken compose.d/ fragment,
+# rather than run without it. After prestart.sh: needs runtime.env and labels.
+ExecStartPre={{ service.compose_wrapper }} config --quiet
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
 EnvironmentFile=-{{ service.runtime_env_file }}
 {% if has_routing %}
 # HALOS_DOMAIN published once by halos-resolve-domain.service. Loaded last so it
 # wins over any stale HALOS_DOMAIN that an older runtime.env might still carry.
-EnvironmentFile=-/run/halos/domain.env
-# Apply routing labels from /run/halos/routing-labels/ if available
-ExecStart=/bin/sh -c '\
-    OVERRIDE=""; \
-    [ -f /run/halos/routing-labels/{{ package.app_id }}.yml ] && \
-    OVERRIDE="-f /run/halos/routing-labels/{{ package.app_id }}.yml"; \
-    docker compose -f docker-compose.yml $$OVERRIDE up'
-ExecStop=/bin/sh -c '\
-    OVERRIDE=""; \
-    [ -f /run/halos/routing-labels/{{ package.app_id }}.yml ] && \
-    OVERRIDE="-f /run/halos/routing-labels/{{ package.app_id }}.yml"; \
-    docker compose -f docker-compose.yml $$OVERRIDE down'
+EnvironmentFile=-{{ service.domain_env_file }}
+{% endif %}
+ExecStart={{ service.compose_wrapper }} up
+# Tear down by project name so a compose.d/ fragment edited, broken or deleted
+# while the app runs cannot fail the stop or leave its containers behind.
+ExecStop=docker compose -p {{ service.compose_project }} down --remove-orphans
 {% if has_mdns %}
 # Withdraw the mDNS record with the app. Advertising a port nothing serves is
 # worse than advertising nothing: clients connect, fail and retry rather than
 # reporting no server. Leading `-` so a withdrawal failure cannot fail the stop.
 ExecStopPost=-/usr/bin/configure-container-routing --mdns-withdraw {{ package.app_id }}
-{% endif %}
-{% else %}
-ExecStart=docker compose up
-ExecStop=docker compose down
 {% endif %}
 Restart=always
 RestartSec=10

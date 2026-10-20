@@ -190,6 +190,18 @@ class TestCopySourceFiles:
         assert (dest_dir / "config.yml").exists()
         assert (dest_dir / "env.template").exists()
 
+    def test_generates_executable_compose_wrapper(self, tmp_path):
+        """rules installs the wrapper from the source dir; the unit execs it."""
+        app_def = load_input_files(VALID_FIXTURES / "simple-app")
+        dest_dir = tmp_path / "dest"
+        dest_dir.mkdir()
+
+        copy_source_files(app_def, dest_dir)
+
+        wrapper = dest_dir / "compose"
+        assert wrapper.read_text().startswith("#!/bin/sh\n")
+        assert wrapper.stat().st_mode & 0o777 == 0o755
+
     def test_copy_with_icon(self, tmp_path):
         """Test copying with icon file."""
         app_def = load_input_files(VALID_FIXTURES / "full-app")

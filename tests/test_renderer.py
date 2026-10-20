@@ -762,3 +762,100 @@ class TestStartLimit:
         unit_section = content.split("[Service]", 1)[0]
         assert "StartLimitIntervalSec=600" in unit_section
         assert "StartLimitBurst=5" in unit_section
+
+
+class TestComposeWrapperWiring:
+    """The unit runs compose through the generated wrapper, stops by project
+    name, and the package ships the wrapper and an empty compose.d/."""
+
+    template_dir = (
+        Path(__file__).parent.parent
+        / "src"
+        / "generate_container_packages"
+        / "templates"
+    )
+    LIB = "/var/lib/container-apps/demo-app-container"
+
+    def _render(self, tmp_path, *, routed: bool, compose: dict | None = None) -> Path:
+        metadata = {
+            "name": "Demo App",
+            "package_name": "demo-app-container",
+            "app_id": "demo-app",
+            "version": "1.0.0",
+            "description": "Demo app",
+            "maintainer": "Test <test@example.com>",
+            "license": "MIT",
+            "tags": ["role::container-app"],
+            "debian_section": "net",
+            "architecture": "all",
+        }
+        if routed:
+            metadata["web_ui"] = {"enabled": True, "port": 8080, "protocol": "http"}
+        app_def = AppDefinition(
+            metadata=metadata,
+            compose=compose or {},
+            config={},
+            input_dir=Path("/test/dir"),
+            icon_path=None,
+        )
+        output_dir = tmp_path / "output"
+        render_all_templates(app_def, output_dir, self.template_dir)
+        return output_dir / "debian"
+
+    @staticmethod
+    def _directives(service: str, key: str) -> list[str]:
+        return [
+            line.split("=", 1)[1]
+            for line in service.splitlines()
+            if line.startswith(f"{key}=")
+        ]
+
+    @pytest.mark.parametrize("routed", [True, False])
+    def test_start_and_stop_commands(self, tmp_path, routed):
+        service = (
+            self._render(tmp_path, routed=routed) / "demo-app-container.service"
+        ).read_text()
+
+        assert self._directives(service, "ExecStart") == [f"{self.LIB}/compose up"]
+        assert self._directives(service, "ExecStop") == [
+            "docker compose -p demo-app-container down --remove-orphans"
+        ]
+        assert "sh -c" not in service
+
+    def test_stop_targets_shipped_project_name(self, tmp_path):
+        """CasaOS-converted apps set a top-level name:, which a pre-wrapper
+        unit's `up` ran under; the stop after an upgrade must reach it."""
+        service = (
+            self._render(
+                tmp_path, routed=False, compose={"name": "syncthing", "services": {}}
+            )
+            / "demo-app-container.service"
+        ).read_text()
+
+        assert self._directives(service, "ExecStop") == [
+            "docker compose -p syncthing down --remove-orphans"
+        ]
+
+    @pytest.mark.parametrize("routed", [True, False])
+    def test_validation_runs_last_before_start(self, tmp_path, routed):
+        """Validation needs the labels file and runtime.env, so it follows
+        configure-container-routing and prestart.sh, and checks the same file
+        set that ExecStart will run."""
+        service = (
+            self._render(tmp_path, routed=routed) / "demo-app-container.service"
+        ).read_text()
+
+        start_wrapper = self._directives(service, "ExecStart")[0].split()[0]
+        expected = [f"{self.LIB}/prestart.sh", f"{start_wrapper} config --quiet"]
+        if routed:
+            expected.insert(0, "/usr/bin/configure-container-routing demo-app")
+        assert self._directives(service, "ExecStartPre") == expected
+
+    def test_rules_install_wrapper_and_empty_compose_d(self, tmp_path):
+        rules = (self._render(tmp_path, routed=False) / "rules").read_text()
+
+        assert (
+            "\tinstall -D -m 755 compose \\\n"
+            f"\t\tdebian/demo-app-container/{self.LIB}/compose\n"
+        ) in rules
+        assert f"\tinstall -d debian/demo-app-container/{self.LIB}/compose.d\n" in rules

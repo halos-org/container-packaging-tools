@@ -505,10 +505,12 @@ StartLimitBurst=5
 [Service]
 Type=simple
 WorkingDirectory={{ service.working_directory }}
+ExecStartPre={{ service.working_directory }}/prestart.sh
+ExecStartPre={{ service.compose_wrapper }} config --quiet
 EnvironmentFile=-{{ service.env_defaults_file }}
 EnvironmentFile=-{{ service.env_file }}
-ExecStart=/bin/sh -c 'docker compose --ansi never up'
-ExecStop=/bin/sh -c 'docker compose --ansi never down'
+ExecStart={{ service.compose_wrapper }} up
+ExecStop=docker compose -p {{ service.compose_project }} down --remove-orphans
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -519,6 +521,8 @@ WantedBy=multi-user.target
 ```
 
 **Note**: Type=simple runs docker-compose in foreground mode, allowing systemd to properly manage the container lifecycle. Container logs are streamed to journal via stdout/stderr. Restart=always ensures the container restarts after both failures and clean exits (e.g., in-app restart requests), while `systemctl stop` still works correctly.
+
+**Note on the compose wrapper**: `ExecStartPre` and `ExecStart` run compose through the generated `compose` script beside `docker-compose.yml`, which adds the routing-labels file for routed apps and the admin's `compose.d/` fragments (see the README section "Overriding Compose Settings with compose.d"). The `config --quiet` step fails the start on an invalid project. `ExecStop` tears down by project name without `-f`, so a fragment edited, broken or deleted while the app runs cannot fail the stop or leave containers behind.
 
 **Note on StartLimit and recovery**: `Restart=always` alone makes a deterministically-failing `ExecStartPre` (the prestart, `configure-container-routing`, or an `app-prestart.sh` hook running under `set -e`) retry every `RestartSec` forever. `StartLimitIntervalSec=600` / `StartLimitBurst=5` bound this: 5 failed starts within 600s drive the unit to `failed` (~40s with `RestartSec=10`) instead of looping silently, while legitimate in-app restarts spaced further apart than `interval/burst` never accumulate. A unit that hits the start limit stays in `failed` and does **not** self-heal — recover with `systemctl reset-failed <package>.service && systemctl start <package>.service` after fixing the underlying cause. A package upgrade does clear it in practice: postinst runs `systemctl restart --no-block <package>.service`, which starts an inactive unit on first install and restarts a running one on upgrade.
 

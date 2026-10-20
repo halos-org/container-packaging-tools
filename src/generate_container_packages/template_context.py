@@ -481,15 +481,31 @@ def _build_service_context(
         Dictionary with systemd service configuration
     """
     default_config = metadata.get("default_config", {})
+    working_directory = f"/var/lib/container-apps/{package_name}"
     return {
         "name": f"{package_name}.service",
         "description": f"{metadata['name']} Container",
-        "working_directory": f"/var/lib/container-apps/{package_name}",
+        "working_directory": working_directory,
+        "compose_wrapper": f"{working_directory}/compose",
+        "compose_project": _compose_project_name(package_name, compose),
         "env_defaults_file": f"/etc/container-apps/{package_name}/env.defaults",
         "env_file": f"/etc/container-apps/{package_name}/env",
         "runtime_env_file": f"/run/container-apps/{package_name}/runtime.env",
+        "domain_env_file": "/run/halos/domain.env",
         "volume_directories": _extract_volume_ownership(compose, default_config),
     }
+
+
+def _compose_project_name(package_name: str, compose: dict[str, Any]) -> str:
+    """The project name a `docker compose up` without -p uses for this app.
+
+    Compose takes the shipped file's top-level name: when present (every
+    CasaOS-converted app sets one), else the app directory's basename, and
+    normalises it like compose-go's NormalizeProjectName. Matching it lets the
+    stop after an upgrade reach containers that a pre-wrapper unit started.
+    """
+    name = re.sub(r"[^a-z0-9_-]", "", str(compose.get("name") or package_name).lower())
+    return name.lstrip("_-")
 
 
 def _extract_volume_directories(compose: dict[str, Any]) -> list[str]:
