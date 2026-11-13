@@ -4,6 +4,7 @@ import logging
 import stat
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email.utils import format_datetime
 from pathlib import Path
 from typing import Any
 
@@ -84,11 +85,7 @@ class AppDefinition:
         now = datetime.now(UTC)
         self.timestamp = now.isoformat()  # ISO 8601 for general use
 
-        # RFC 2822 for Debian changelog (with colon in timezone offset)
-        tz_str = now.strftime("%z")
-        self.timestamp_rfc2822 = (
-            now.strftime("%a, %d %b %Y %H:%M:%S ") + tz_str[:3] + ":" + tz_str[3:]
-        )
+        self.timestamp_rfc2822 = format_datetime(now)  # Debian changelog trailer
 
         self.date_only = now.strftime("%Y-%m-%d")  # YYYY-MM-DD for AppStream
         self.tool_version = __version__
