@@ -1,5 +1,6 @@
 """Unit tests for file loader module."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -81,6 +82,20 @@ class TestAppDefinition:
         # Should be ISO 8601 format (contains T and Z or +)
         assert "T" in app_def.timestamp
         assert "Z" in app_def.timestamp or "+" in app_def.timestamp
+
+    def test_changelog_timestamp_has_debian_offset(self):
+        """dpkg >= 1.23 rejects a colon in the changelog trailer's UTC offset."""
+        app_def = AppDefinition(
+            metadata={"name": "Test App"},
+            compose={},
+            config={},
+            input_dir=Path("/test/dir"),
+        )
+
+        assert re.fullmatch(
+            r"[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} [+-]\d{4}",
+            app_def.timestamp_rfc2822,
+        )
 
 
 class TestLoadInputFiles:
