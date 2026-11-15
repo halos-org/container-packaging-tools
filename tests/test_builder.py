@@ -395,6 +395,21 @@ class TestCollectArtifacts:
         assert (output_dir / "test-app_1.0.0_arm64.changes").exists()
         assert (output_dir / "test-app_1.0.0_arm64.buildinfo").exists()
 
+    def test_collect_artifacts_for_version_with_epoch(self, tmp_path):
+        """dpkg leaves the epoch out of artifact filenames."""
+        build_dir = tmp_path / "build"
+        build_dir.mkdir()
+        output_dir = tmp_path / "output"
+
+        (build_dir / "test-app_20261102-1_all.deb").write_text("deb")
+        (build_dir / "test-app_20261102-1_arm64.changes").write_text("changes")
+        (build_dir / "test-app_20261102-1_arm64.buildinfo").write_text("buildinfo")
+
+        artifacts = collect_artifacts(build_dir, output_dir, "test-app", "1:20261102-1")
+
+        assert len(artifacts) == 3
+        assert (output_dir / "test-app_20261102-1_all.deb").exists()
+
     def test_no_artifacts_found(self, tmp_path):
         """Test when no artifacts are found."""
         build_dir = tmp_path / "build"

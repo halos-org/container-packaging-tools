@@ -354,11 +354,14 @@ def collect_artifacts(
     # Ensure output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # dpkg leaves the epoch out of artifact filenames
+    file_version = version.split(":", 1)[-1]
+
     # Patterns for artifacts in build_dir (not source_dir)
     patterns = [
-        f"{pkg_name}_{version}_*.deb",
-        f"{pkg_name}_{version}_*.buildinfo",
-        f"{pkg_name}_{version}_*.changes",
+        f"{pkg_name}_{file_version}_*.deb",
+        f"{pkg_name}_{file_version}_*.buildinfo",
+        f"{pkg_name}_{file_version}_*.changes",
     ]
 
     artifacts = []
