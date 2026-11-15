@@ -4,6 +4,7 @@ Tests the complete pipeline: validation -> loading -> rendering -> building
 """
 
 import shutil
+import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -290,6 +291,34 @@ class TestEndToEndPipeline:
         assert deb_path.exists()
         assert deb_path.suffix == ".deb"
         assert "simple-test-app-container" in deb_path.name
+
+    @pytest.mark.install
+    @pytest.mark.skipif(
+        shutil.which("dpkg-buildpackage") is None,
+        reason="dpkg-buildpackage not available",
+    )
+    def test_build_with_epoch_version(self, tmp_path):
+        """A version with an epoch builds, and the .deb carries the epoch."""
+        fixture_dir = Path("tests/fixtures/valid/simple-app")
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        app_def = load_input_files(fixture_dir)
+        app_def.metadata["version"] = f"1:{app_def.metadata['version']}"
+
+        render_dir = tmp_path / "rendered"
+        render_dir.mkdir()
+        render_all_templates(app_def, render_dir)
+
+        deb_path = build_package(app_def, render_dir, output_dir)
+
+        version = subprocess.run(
+            ["dpkg-deb", "-f", str(deb_path), "Version"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        assert version == app_def.metadata["version"]
 
     def test_invalid_input_fails_validation(self):
         """Test that invalid input fails at validation stage."""
